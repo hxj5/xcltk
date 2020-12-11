@@ -1,2 +1,2 @@
-# celltk
-Single-cell sequencing toolkit
+# celllib
+Single-cell sequencing toolkit (Warning: under development, not stable)
