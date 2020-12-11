@@ -4,7 +4,7 @@
 import os
 import sys
 import gzip 
-from .gtf_utils import load_genes
+from .gtf import load_genes
 
 CHROM_LEN_HG19 = (249250621, 243199373, 198022430, 191154276, 180915260, 171115067,  # chr1 - chr6
                   159138663, 146364022, 141213431, 135534747, 135006516, 133851895,  # chr7 - chr12

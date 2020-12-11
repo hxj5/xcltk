@@ -6,32 +6,8 @@
 import os
 import sys
 import getopt
-import time
 import gzip
-import time
-
-def check_path_exists(path, _type, name):
-    """
-    @abstract     Check if path exists and exit the program if not
-    @param path   Path to the file/dir [str]
-    @param _type  Path type: file or dir [str]
-    @param name   Path name [str]
-    @return       Void
-    @example      check_path_exists("test.sh", "file", "test script")
-    """
-    if not path:
-        raise ValueError("path is empty")
-    exist = False
-    if _type and _type.lower() == "file":
-        if os.path.isfile(path):
-            exist = True
-    elif _type and _type.lower() == "dir":
-        if os.path.isdir(path):
-            exist = True
-    else:
-        raise ValueError("path type should be file or dir.")
-    if not exist:
-        raise IOError("%s '%s' does not exist." % (name, path))
+from ..utils.base import assert_path_exists, log
 
 def format_chrom(chrom):
     """
@@ -40,23 +16,6 @@ def format_chrom(chrom):
     @return      Formatted chrom name [str]
     """
     return chrom[3:] if chrom.startswith("chr") else chrom
-
-def get_now_str(fmt = "%Y-%m-%d %H:%M:%S"):
-    """
-    @abstract   Return string of now
-    @param fmt  Time string format [str]
-    @return     String of now [str] 
-    """
-    return time.strftime(fmt, time.localtime())
-
-def log(msg, fp = sys.stdout):
-    """
-    @abstract   Format log message and print
-    @param msg  Log message to be printed [str]
-    @param fp   File pointer [FILE*]
-    @return     Void
-    """
-    fp.write("[%s] %s\n" % (get_now_str(), msg))
 
 def load_snp_mtx(fn):
     """
@@ -257,9 +216,9 @@ def phase_snp2block(sid, snp_ad_file, snp_dp_file, phase_file, region_file, out_
     # check args
     if not sid:
         raise ValueError("Sample ID needed.")
-    check_path_exists(snp_ad_file, "file", "SNP AD mtx") 
-    check_path_exists(snp_ad_file, "file", "SNP DP mtx")
-    check_path_exists(region_file, "file", "Region file")
+    assert_path_exists(snp_ad_file, "file", "SNP AD mtx") 
+    assert_path_exists(snp_ad_file, "file", "SNP DP mtx")
+    assert_path_exists(region_file, "file", "Region file")
     if not out_dir:
         raise ValueError("Out dir needed.")
     elif not os.path.isdir(out_dir):
@@ -366,10 +325,10 @@ Options:
                 Both start and stop are 1-based and included.
   --outdir DIR  Path to output dir.
   -h, --help    Print this message.
-\n''' % sys.argv[0]
+\n''' % APP_NAME
     fp.write(msg)
 
-def main():
+def baf_phase_snp():
     # parse and check command line
     if len(sys.argv) < 2:
         usage(sys.stderr)
@@ -389,6 +348,8 @@ def main():
 
     phase_snp2block(sid, snp_ad_file, snp_dp_file, phase_file, region_file, out_dir)
 
+APP_NAME = "%s-baf phase_snp" % __APP__
+
 if __name__ == "__main__":
-    main()
+    baf_phase_snp()
 

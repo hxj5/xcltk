@@ -4,7 +4,7 @@
 import os
 import sys
 from optparse import OptionParser
-from .utils.region_utils import get_fixsize_regions, load_regions, output_regions
+from .lib.region import get_fixsize_regions, load_regions, output_regions
 from .version import __version__
 
 def main():
