@@ -313,7 +313,8 @@ def __phase_snp2block(sid, snp_ad_file, snp_dp_file, phase_file, region_file, ou
     log("All Done")
 
 def __usage(fp = sys.stderr):
-    msg =  "%s %s [options]\n" % (APP, COMMAND)
+    msg =  "\n"
+    msg += "%s %s [options]\n" % (APP, COMMAND)
     msg += "\n"                                                  \
            "Options:\n"                                           \
            "  --sid STR       Sample ID.\n"                        \
@@ -324,7 +325,8 @@ def __usage(fp = sys.stderr):
            "  --region FILE   Path to region file, 3 columns: <chr> <start> <end>;\n"             \
            "                  Both start and stop are 1-based and included.\n"                    \
            "  --outdir DIR    Path to output dir.\n"                                             \
-           "  -h, --help      Print this message.\n" 
+           "  -h, --help      Print this message.\n"                                             \
+           "\n"
     fp.write(msg)
 
 def phase_snp(argc, argv):

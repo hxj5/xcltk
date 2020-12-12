@@ -6,11 +6,13 @@ from .convert import convert
 from .config import APP
 
 def __usage(fp = sys.stderr):
-    msg =  "%s <command> [options]\n" % APP 
+    msg =  "\n"
+    msg += "%s <command> [options]\n" % APP 
     msg += "\n"                                          \
            "Commands:\n"                                  \
            "  convert        Convert different region file formats.\n"  \
-           "  -h, --help     Print this message.\n"
+           "  -h, --help     Print this message.\n"                    \
+           "\n"
     fp.write(msg)
 
 def main():

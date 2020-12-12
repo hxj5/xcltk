@@ -26,7 +26,7 @@ def convert():
 
     # check options and args
     (options, args) = parser.parse_args()
-    if len(sys.argv[1:]) == 0:
+    if len(sys.argv) < 3:
         sys.stderr.write("Welcome to %s %s v%s!\n\n" % (APP, COMMAND, VERSION))
         sys.stderr.write("use -h or --help for help on argument.\n")
         sys.exit(1)

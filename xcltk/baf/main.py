@@ -6,11 +6,13 @@ from .phase_snp import phase_snp
 from .config import APP
 
 def __usage(fp = sys.stderr):
-    msg =  "%s <command> [options]\n" % APP
+    msg =  "\n"
+    msg += "%s <command> [options]\n" % APP
     msg += "\n"                                          \
            "Commands:\n"                                  \
            "  phase_snp      Aggregate SNPs into haplotype blocks.\n"     \
-           "  -h, --help     Print this message.\n"
+           "  -h, --help     Print this message.\n"                      \
+           "\n"
     fp.write(msg)
 
 def main():
