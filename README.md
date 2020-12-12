@@ -1,2 +1,2 @@
-# celllib
-Single-cell sequencing toolkit (Warning: under development, not stable)
+# xcltk
+Toolkit for XClone (Warning: under development, not stable)

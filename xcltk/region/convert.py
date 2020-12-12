@@ -5,9 +5,10 @@ import os
 import sys
 from optparse import OptionParser
 from .lib.region import get_fixsize_regions, load_regions, output_regions
-from .version import __version__
+from .config import APP
+from ..config import VERSION
 
-def main():
+def convert():
     # parse command line options
     parser = OptionParser()
     parser.add_option("--input", "-i", dest="in_file", default=None,
@@ -26,7 +27,7 @@ def main():
     # check options and args
     (options, args) = parser.parse_args()
     if len(sys.argv[1:]) == 0:
-        sys.stderr.write("Welcome to cellRegion in cellSNP v%s!\n\n" %(__version__))
+        sys.stderr.write("Welcome to %s %s v%s!\n\n" % (APP, COMMAND, VERSION))
         sys.stderr.write("use -h or --help for help on argument.\n")
         sys.exit(1)
 
@@ -75,5 +76,7 @@ def main():
     # output regions
     output_regions(reg_list, out_file, out_type)
 
+COMMAND = "convert"
+
 if __name__ == "__main__":
-    main()
+    convert()

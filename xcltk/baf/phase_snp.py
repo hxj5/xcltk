@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #-*-coding:utf8-*-
-#this script is aimed to aggregate SNPs into feature blocks to get BAF matrices within each cell.
+#this script is aimed to aggregate SNPs into haplotype blocks to get BAF matrices within each cell.
 #Author: Xianjie Huang <hxj5@hku.hk>
 
 import os
@@ -8,8 +8,9 @@ import sys
 import getopt
 import gzip
 from ..utils.base import assert_path_exists, log
+from .config import APP
 
-def format_chrom(chrom):
+def __format_chrom(chrom):
     """
     @abstract    Format chrom name to keep the chroms used in this script in the same style
     @param chrom Chrom name [str]
@@ -17,7 +18,7 @@ def format_chrom(chrom):
     """
     return chrom[3:] if chrom.startswith("chr") else chrom
 
-def load_snp_mtx(fn):
+def __load_snp_mtx(fn):
     """
     @abstract  Load data from SNP AD/DP mtx
     @param fn  Path to mtx file [str]
@@ -45,7 +46,7 @@ def load_snp_mtx(fn):
             snp_cell.setdefault(c[0], {})[c[1]] = depth
     return (nsnp, ncell, nrecord, snp_cell)
 
-def load_phase(fn):
+def __load_phase(fn):
     """
     @abstract  Load data from phase file
     @param fn  Path to phase file [str]
@@ -67,12 +68,12 @@ def load_phase(fn):
         assert len(c) >= 4, "too few columns in phase file"
         i += 1
         if (c[2] == "0" and c[3] == "1") or (c[2] == "1" and c[3] == "0"):
-            chrom = format_chrom(c[0])
+            chrom = __format_chrom(c[0])
             phases.setdefault(chrom, []).append((int(c[1]), c[2], c[3], str(i)))
             j += 1
     return (i, j, phases)
 
-def load_region(fn):
+def __load_region(fn):
     """
     @abstract  Load data from region file.
     @param fn  Path to region file [str]
@@ -90,11 +91,11 @@ def load_region(fn):
     regions = {}
     for i, c in enumerate(cols):    # here enumerate is efficient as region file is usually small.
         assert len(c) >= 3, "too few columns in region file"
-        chrom = format_chrom(c[0])
+        chrom = __format_chrom(c[0])
         regions.setdefault(chrom, []).append((int(c[1]), int(c[2]), i + 1))
     return (i + 1, regions)
 
-def get_block_cell(snp_ad, snp_dp, phase, blocks):
+def __get_block_cell(snp_ad, snp_dp, phase, blocks):
     """
     @abstract        Get block-cell AD & DP matrices.
     @param snp_ad    SNP AD mtx, A dict of {snp_idx:{cell_idx:depth, }} pairs [dict]
@@ -157,7 +158,7 @@ def get_block_cell(snp_ad, snp_dp, phase, blocks):
                         block_cell[reg_idx][cell_idx]["dp"] += dp_depth
     return block_cell
                     
-def output_block_mtx(block_cell, nblock, ncell, block_ad_file, block_dp_file, _gzip = 0):
+def __output_block_mtx(block_cell, nblock, ncell, block_ad_file, block_dp_file, _gzip = 0):
     """
     @abstract            Output block-cell AD & DP matrices to mtx file
     @param block_cell    A dict of {reg_idx:{cell_idx:{ad:ad_depth, dp:dp_depth}, }} pairs [dict]
@@ -200,7 +201,7 @@ def output_block_mtx(block_cell, nblock, ncell, block_ad_file, block_dp_file, _g
     dp_fp.close()
     return 0
 
-def phase_snp2block(sid, snp_ad_file, snp_dp_file, phase_file, region_file, out_dir):
+def __phase_snp2block(sid, snp_ad_file, snp_dp_file, phase_file, region_file, out_dir):
     """
     @abstract           Phase (aggregate) SNP into haplotype blocks, output AD & DP mtx of each block.
     @param sid          Sample ID [str]
@@ -226,14 +227,14 @@ def phase_snp2block(sid, snp_ad_file, snp_dp_file, phase_file, region_file, out_
 
     # load SNP AD & DP mtx
     log("loading SNP AD mtx ...")
-    res_ad = load_snp_mtx(snp_ad_file)
+    res_ad = __load_snp_mtx(snp_ad_file)
     assert res_ad, "failed to load SNP AD mtx."
     nsnp_ad, ncell_ad, nrec_ad, snp_ad = res_ad[:4]
     log("AD mtx header: nsnp = %d, ncell = %d, nrec = %d" % (nsnp_ad, ncell_ad, nrec_ad))
     log("AD mtx: #uniq SNPs = %d" % len(snp_ad))
 
     log("loading SNP DP mtx ...")
-    res_dp = load_snp_mtx(snp_dp_file)
+    res_dp = __load_snp_mtx(snp_dp_file)
     assert res_dp, "failed to load SNP DP mtx."
     nsnp_dp, ncell_dp, nrec_dp, snp_dp = res_dp[:4]
     log("DP mtx header: nsnp = %d, ncell = %d, nrec = %d" % (nsnp_dp, ncell_dp, nrec_dp))
@@ -258,7 +259,7 @@ def phase_snp2block(sid, snp_ad_file, snp_dp_file, phase_file, region_file, out_
 
     # load phase file
     log("loading phase file ...")
-    res_phase = load_phase(phase_file)
+    res_phase = __load_phase(phase_file)
     assert res_phase, "failed to load phase file."
     nsnp_phase, nsnp_phase_valid, phase = res_phase[:3]
     log("Phase file: total SNPs = %d, valid SNPs = %d" % (nsnp_phase, nsnp_phase_valid))
@@ -282,7 +283,7 @@ def phase_snp2block(sid, snp_ad_file, snp_dp_file, phase_file, region_file, out_
 
     # load region file
     log("loading region file ...")
-    res_block = load_region(region_file)
+    res_block = __load_region(region_file)
     assert res_block, "failed to load region file."
     nblock, blocks = res_block[:2]
 
@@ -298,7 +299,7 @@ def phase_snp2block(sid, snp_ad_file, snp_dp_file, phase_file, region_file, out_
 
     # get block-cell AD & DP matrices
     log("get block-cell AD & DP matrices ...")
-    block_cell = get_block_cell(snp_ad, snp_dp, phase, blocks)
+    block_cell = __get_block_cell(snp_ad, snp_dp, phase, blocks)
     assert block_cell, "failed to get block-cell AD & DP matrices."
 
     # output block AD & DP matrices
@@ -306,35 +307,33 @@ def phase_snp2block(sid, snp_ad_file, snp_dp_file, phase_file, region_file, out_
     log("output block AD & DP matrices ...")
     block_ad_file = os.path.join(out_dir, sid + ".block.AD.mtx")
     block_dp_file = os.path.join(out_dir, sid + ".block.DP.mtx")
-    ret = output_block_mtx(block_cell, nblock, ncell, block_ad_file, block_dp_file, 0)
+    ret = __output_block_mtx(block_cell, nblock, ncell, block_ad_file, block_dp_file, 0)
     assert ret == 0, "failed to output block AD & DP matrices."
 
     log("All Done")
 
-def usage(fp = sys.stderr):
-    msg = '''
-%s [options]
-
-Options:
-  --sid STR     Sample ID.
-  --snpAD FILE  Path to the SNP AD mtx, snp_idx and cell_idx are both 1-based.
-  --snpDP FILE  Path to the SNP DP mtx, snp_idx and cell_idx are both 1-based.
-  --phase FILE  Path to the SNP phase file, 4 columns: 
-                <chr> <pos> <allele1:0|1> <allele2:0|1>; pos is 1-based.
-  --region FILE Path to region file, 3 columns: <chr> <start> <end>; 
-                Both start and stop are 1-based and included.
-  --outdir DIR  Path to output dir.
-  -h, --help    Print this message.
-\n''' % APP_NAME
+def __usage(fp = sys.stderr):
+    msg =  "%s %s [options]\n" % (APP, COMMAND)
+    msg += "\n"                                                  \
+           "Options:\n"                                           \
+           "  --sid STR       Sample ID.\n"                        \
+           "  --snpAD FILE    Path to the SNP AD mtx, snp_idx and cell_idx are both 1-based.\n"   \
+           "  --snpDP FILE    Path to the SNP DP mtx, snp_idx and cell_idx are both 1-based.\n"   \
+           "  --phase FILE    Path to the SNP phase file, 4 columns:\n"                           \
+           "                  <chr> <pos> <allele1:0|1> <allele2:0|1>; pos is 1-based.\n"         \
+           "  --region FILE   Path to region file, 3 columns: <chr> <start> <end>;\n"             \
+           "                  Both start and stop are 1-based and included.\n"                    \
+           "  --outdir DIR    Path to output dir.\n"                                             \
+           "  -h, --help      Print this message.\n" 
     fp.write(msg)
 
-def baf_phase_snp():
+def phase_snp(argc, argv):
     # parse and check command line
-    if len(sys.argv) < 2:
-        usage(sys.stderr)
+    if argc < 3:
+        __usage(sys.stderr)
         sys.exit(1)
         
-    opts, args = getopt.getopt(sys.argv[1:], "-h", ["help", "sid=", "snpAD=", "snpDP=", "phase=", "region=", "outdir="])
+    opts, args = getopt.getopt(argv[2:], "-h", ["help", "sid=", "snpAD=", "snpDP=", "phase=", "region=", "outdir="])
     sid = snp_ad_file = snp_dp_file = phase_file = region_file = out_dir = None
     for op, val in opts:
         if op in ("--sid", ): sid = val
@@ -343,13 +342,13 @@ def baf_phase_snp():
         elif op in ("--phase", ): phase_file = val
         elif op in ("--region", ): region_file = val
         elif op in ("--outdir", ): out_dir = val
-        elif op in ("-h", "--help"): usage(sys.stderr); sys.exit(1)
+        elif op in ("-h", "--help"): __usage(sys.stderr); sys.exit(1)
         else: sys.stderr.write("invalid option: %s\n" % op); sys.exit(1)
 
-    phase_snp2block(sid, snp_ad_file, snp_dp_file, phase_file, region_file, out_dir)
+    __phase_snp2block(sid, snp_ad_file, snp_dp_file, phase_file, region_file, out_dir)
 
-APP_NAME = "%s-baf phase_snp" % __APP__
+COMMAND = "phase_snp"
 
 if __name__ == "__main__":
-    baf_phase_snp()
+    phase_snp()
 
