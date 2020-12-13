@@ -2,6 +2,10 @@
 History
 =======
 
+Release v0.0.2 (13/12/2020)
+===========================
+* add xcltk cmdline
+
 Release v0.0.1 (12/12/2020)
 ===========================
 * init modules: baf, rdr and reg
