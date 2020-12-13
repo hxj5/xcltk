@@ -314,7 +314,7 @@ def __phase_snp2block(sid, snp_ad_file, snp_dp_file, phase_file, region_file, ou
 
 def __usage(fp = sys.stderr):
     msg =  "\n"
-    msg += "%s %s [options]\n" % (APP, COMMAND)
+    msg += "Usage: %s %s [options]\n" % (APP, COMMAND)
     msg += "\n"                                                  \
            "Options:\n"                                           \
            "  --sid STR       Sample ID.\n"                        \
