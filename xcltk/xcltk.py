@@ -4,6 +4,7 @@
 import sys
 from .config import PROGRAM, VERSION
 from .baf.phase_snp import phase_snp as baf_phase_snp
+from .rdr.basefc import base_fc as rdr_base_fc
 from .region.convert import convert as reg_convert
 
 def __usage(fp = sys.stderr):
@@ -18,6 +19,7 @@ def __usage(fp = sys.stderr):
            "     phase_snp        Aggregate SNPs into haplotype blocks\n"    \
            "\n"                                                              \
            "  -- RDR calculation\n"                                          \
+           "     basefc           Basic feature count\n"                     \
            "\n"                                                              \
            "  -- Region operations\n"                                        \
            "     convert          Convert different region file formats\n"   \
@@ -36,6 +38,7 @@ def main():
 
     command = sys.argv[1]
     if command == "phase_snp": baf_phase_snp(argc, sys.argv)
+    elif command == "basefc": rdr_base_fc()
     elif command == "convert": reg_convert()
     elif command in ("-h", "--help"): __usage(); sys.exit(3)
     elif command in ("-V", "--version"): sys.stderr.write("%s\n" % VERSION); sys.exit(3)

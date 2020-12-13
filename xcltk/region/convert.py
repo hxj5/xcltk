@@ -4,7 +4,7 @@
 import os
 import sys
 from optparse import OptionParser
-from .lib.region import get_fixsize_regions, load_regions, output_regions
+from ..utils.region import get_fixsize_regions, load_regions, output_regions
 from .config import APP
 from ..config import VERSION
 

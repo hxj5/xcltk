@@ -1,26 +1,26 @@
 # Count reads for features in each cell
 # Author: Yuanhua Huang
 # Date: 27-04-2020
-# Modified by Xianjie Huang <hxj5@hku.hk>
+# Modified by Xianjie Huang 
 
 import os
 import sys
-import gzip
 import time
-import pysam
-import subprocess
 import numpy as np
 import multiprocessing
 from optparse import OptionParser, OptionGroup
 
-from .version import __version__
-from .utils.count_utils import feature_count
-from .utils.region_utils import load_regions
+from .config import APP
+from ..config import VERSION
+from ..utils.count import feature_count
+from ..utils.region import load_regions
 
 FID = None
 PROCESSED = 0
 TOTAL_REGION = 0
 START_TIME = time.time()
+
+COMMAND = "basefc"
 
 def show_progress(RV=None):
     global PROCESSED, TOTAL_REGION, START_TIME, FID
@@ -39,7 +39,7 @@ def show_progress(RV=None):
     sys.stderr.flush()
     return RV
 
-def main():
+def base_fc():
     # import warnings
     # warnings.filterwarnings('error')
 
@@ -80,8 +80,8 @@ def main():
 
     # check options and args
     (options, args) = parser.parse_args()
-    if len(sys.argv[1:]) == 0:
-        print("Welcome to cf-count in cellSNP v%s!\n" %(__version__))
+    if len(sys.argv) < 3:
+        print("Welcome to %s %s v%s!\n" % (APP, COMMAND, VERSION))
         print("use -h or --help for help on argument.")
         sys.exit(1)
         
@@ -183,4 +183,5 @@ def main():
     
 
 if __name__ == "__main__":
-    main()
+    base_fc()
+
