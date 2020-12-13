@@ -8,9 +8,16 @@ from ..utils.region import get_fixsize_regions, load_regions, output_regions
 from .config import APP
 from ..config import VERSION
 
-def convert():
+COMMAND = "convert"
+
+def convert(argv):
     # parse command line options
-    parser = OptionParser()
+    if len(argv) < 3:
+        sys.stderr.write("Welcome to %s %s v%s!\n\n" % (APP, COMMAND, VERSION))
+        sys.stderr.write("use -h or --help for help on argument.\n")
+        sys.exit(1)
+
+    parser = OptionParser(usage = "Usage: %s %s [options]" % (APP, COMMAND))
     parser.add_option("--input", "-i", dest="in_file", default=None,
         help=("Path to input region file."))
     parser.add_option("--inType", "-I", dest="in_type", default=None,
@@ -25,11 +32,7 @@ def convert():
         help=("Version of human genome, one of 19|38; set together with @p binsize [default: %default]"))
 
     # check options and args
-    (options, args) = parser.parse_args()
-    if len(sys.argv) < 3:
-        sys.stderr.write("Welcome to %s %s v%s!\n\n" % (APP, COMMAND, VERSION))
-        sys.stderr.write("use -h or --help for help on argument.\n")
-        sys.exit(1)
+    (options, args) = parser.parse_args(args = argv[2:])
 
     in_file, in_type = options.in_file, options.in_type
     out_file, out_type = options.out_file, options.out_type
@@ -75,8 +78,6 @@ def convert():
 
     # output regions
     output_regions(reg_list, out_file, out_type)
-
-COMMAND = "convert"
 
 if __name__ == "__main__":
     convert()

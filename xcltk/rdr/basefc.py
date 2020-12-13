@@ -39,12 +39,17 @@ def show_progress(RV=None):
     sys.stderr.flush()
     return RV
 
-def base_fc():
+def base_fc(argv):
     # import warnings
     # warnings.filterwarnings('error')
 
     # parse command line options
-    parser = OptionParser()
+    if len(argv) < 3:
+        print("Welcome to %s %s v%s!\n" % (APP, COMMAND, VERSION))
+        print("use -h or --help for help on argument.")
+        sys.exit(1)
+        
+    parser = OptionParser(usage = "Usage: %s %s [options]" % (APP, COMMAND))
     parser.add_option("--samFile", "-s", dest="sam_file", default=None,
         help=("Indexed & sorted sam/bam/cram file, possibly from CellRanger."))
     parser.add_option("--outDir", "-O", dest="out_dir", default=None,
@@ -79,12 +84,7 @@ def base_fc():
     parser.add_option_group(group2)
 
     # check options and args
-    (options, args) = parser.parse_args()
-    if len(sys.argv) < 3:
-        print("Welcome to %s %s v%s!\n" % (APP, COMMAND, VERSION))
-        print("use -h or --help for help on argument.")
-        sys.exit(1)
-        
+    (options, args) = parser.parse_args(args = argv[2:])
     if options.sam_file is None or options.barcode_file is None:
         print("Error: need samFile and barcodeFile.")
         sys.exit(1)

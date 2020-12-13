@@ -329,9 +329,9 @@ def __usage(fp = sys.stderr):
            "\n"
     fp.write(msg)
 
-def phase_snp(argc, argv):
+def phase_snp(argv):
     # parse and check command line
-    if argc < 3:
+    if len(argv) < 3:
         __usage(sys.stderr)
         sys.exit(1)
         

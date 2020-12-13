@@ -37,9 +37,9 @@ def main():
         sys.exit(1)
 
     command = sys.argv[1]
-    if command == "phase_snp": baf_phase_snp(argc, sys.argv)
-    elif command == "basefc": rdr_base_fc()
-    elif command == "convert": reg_convert()
+    if command == "phase_snp": baf_phase_snp(sys.argv)
+    elif command == "basefc": rdr_base_fc(sys.argv)
+    elif command == "convert": reg_convert(sys.argv)
     elif command in ("-h", "--help"): __usage(); sys.exit(3)
     elif command in ("-V", "--version"): sys.stderr.write("%s\n" % VERSION); sys.exit(3)
     else: sys.stderr.write("Error: wrong command '%s'\n" % command); sys.exit(5)
