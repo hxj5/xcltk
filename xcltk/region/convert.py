@@ -80,4 +80,4 @@ def convert(argv):
     output_regions(reg_list, out_file, out_type)
 
 if __name__ == "__main__":
-    convert()
+    convert(sys.argv)

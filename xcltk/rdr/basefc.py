@@ -183,5 +183,5 @@ def base_fc(argv):
     
 
 if __name__ == "__main__":
-    base_fc()
+    base_fc(sys.argv)
 

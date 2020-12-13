@@ -352,5 +352,5 @@ def phase_snp(argv):
 COMMAND = "phase_snp"
 
 if __name__ == "__main__":
-    phase_snp()
+    phase_snp(sys.argv)
 
