@@ -6,7 +6,7 @@ from .config import APP
 
 def __usage(fp = sys.stderr):
     msg =  "\n"
-    msg += "%s <command> [options]\n" % APP
+    msg += "Usage: %s <command> [options]\n" % APP
     msg += "\n"                                          \
            "Commands:\n"                                  \
            "  -h, --help     Print this message.\n"       \
@@ -22,4 +22,7 @@ def main():
     command = sys.argv[1]
     if command in ("-h", "--help"): __usage(); sys.exit(3)
     else: sys.stderr.write("Error: wrong command '%s'\n" % command); sys.exit(5)
+
+if __name__ == "__main__":
+    main()
 

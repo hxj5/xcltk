@@ -45,11 +45,17 @@ setup(
     # simple. Or you can use find_packages().
     packages = find_packages(),
 
+    #entry_points={
+    #    'console_scripts': [
+    #        'xcltk-baf = xcltk.baf.baf:main',
+    #        'xcltk-rdr = xcltk.rdr.rdr:main',
+    #        'xcltk-reg = xcltk.region.region:main'
+    #    ],
+    #}, 
+
     entry_points={
         'console_scripts': [
-            'xcltk-baf = xcltk.baf.main:main',
-            'xcltk-rdr = xcltk.rdr.main:main',
-            'xcltk-reg = xcltk.region.main:main'
+            'xcltk = xcltk.xcltk:main'
         ],
     }, 
 
