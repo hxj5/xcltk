@@ -34,8 +34,8 @@ def show_progress(RV=None):
     filled_len = int(round(bar_len * percents / 100))
     bar = '=' * filled_len + '-' * (bar_len - filled_len)
     
-    sys.stderr.write('[cf-count] [%s] %.1f%% done in %.1f sec.\n' 
-        % (bar, percents, run_time))
+    sys.stderr.write('[%s] [%s] %.1f%% done in %.1f sec.\n' 
+        % (COMMAND, bar, percents, run_time))
     sys.stderr.flush()
     return RV
 
@@ -139,8 +139,8 @@ def base_fc(argv):
     for _reg_id in reg_ids:
         fid.writelines(_reg_id + "\n")
     fid.close()
-    print("[cf-count] Count reads for %d features in %d cells with %d cores." 
-          % (len(reg_ids), len(barcodes), nproc))
+    print("[%s] Count reads for %d features in %d cells with %d cores." 
+          % (COMMAND, len(reg_ids), len(barcodes), nproc))
 
     fid = open(out_dir + "/barcodes.tsv", "w")
     for _cell_id in barcodes:
