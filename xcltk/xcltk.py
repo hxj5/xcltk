@@ -1,6 +1,11 @@
 # cmdline options
 # Author: Xianjie Huang <hxj5@hku.hk>
 
+#TODO: 
+#  1. add install list (conda + pip)
+#  2. add fixref
+#  3. add pipeline
+
 import sys
 from .config import PROGRAM, VERSION
 from .baf.phase_snp import phase_snp as baf_phase_snp
