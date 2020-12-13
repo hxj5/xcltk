@@ -2,6 +2,10 @@
 History
 =======
 
+Release v0.1.0 (13/12/2020)
+===========================
+* add feature-count
+
 Release v0.0.2 (13/12/2020)
 ===========================
 * add xcltk cmdline
