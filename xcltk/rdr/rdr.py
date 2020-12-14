@@ -1,5 +1,5 @@
 # cmdline options
-# Author: Xianjie Huang <hxj5@hku.hk>
+# Author: Xianjie Huang
 
 import sys
 from .config import APP

@@ -10,3 +10,12 @@ if [ $# -lt 1 ]; then
     exit 1
 fi
 
+itype=$1
+if [ "$itype" == "all" ]; then
+
+elif [ "$itype" == "pre" ]; then
+
+el
+work_dir=`cd $(dirname $0); pwd`
+
+

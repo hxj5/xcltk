@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #-*-coding:utf8-*-
 #this script is aimed to aggregate SNPs into haplotype blocks to get BAF matrices within each cell.
-#Author: Xianjie Huang <hxj5@hku.hk>
+#Author: Xianjie Huang 
 
 import os
 import sys

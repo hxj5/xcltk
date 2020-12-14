@@ -1,5 +1,5 @@
 # Convert Region file format
-# Author: Xianjie Huang <hxj5@hku.hk>
+# Author: Xianjie Huang 
 
 import os
 import sys

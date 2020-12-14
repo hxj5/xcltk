@@ -1,5 +1,5 @@
 # cmdline options
-# Author: Xianjie Huang <hxj5@hku.hk>
+# Author: Xianjie Huang 
 
 #TODO: 
 #  1. add install list (conda + pip)
@@ -8,6 +8,7 @@
 
 import sys
 from .config import PROGRAM, VERSION
+from .baf.fixref import fixref as baf_fix_ref
 from .baf.phase_snp import phase_snp as baf_phase_snp
 from .rdr.basefc import base_fc as rdr_base_fc
 from .region.convert import convert as reg_convert
@@ -21,6 +22,7 @@ def __usage(fp = sys.stderr):
     msg += "\n"                                          \
            "Commands:\n"                                  \
            "  -- BAF calculation\n"                                        \
+           "     fixref           Fix REF, ALT and GT\n"                    \
            "     phase_snp        Aggregate SNPs into haplotype blocks\n"    \
            "\n"                                                              \
            "  -- RDR calculation\n"                                          \
@@ -42,7 +44,8 @@ def main():
         sys.exit(1)
 
     command = sys.argv[1]
-    if command == "phase_snp": baf_phase_snp(sys.argv)
+    if command == "fixref": baf_fix_ref(sys.argv)
+    elif command == "phase_snp": baf_phase_snp(sys.argv)
     elif command == "basefc": rdr_base_fc(sys.argv)
     elif command == "convert": reg_convert(sys.argv)
     elif command in ("-h", "--help"): __usage(); sys.exit(3)
