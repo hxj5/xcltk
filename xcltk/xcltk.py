@@ -3,7 +3,6 @@
 
 #TODO: 
 #  1. add install list (conda + pip)
-#  2. add fixref
 #  3. add pipeline
 
 import sys
