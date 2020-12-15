@@ -1,2 +1,38 @@
 # Utils
 
+function __now() {
+    date '+%Y-%m-%d %H:%M:%S'
+}
+
+function __exit() {
+    echo "[`__now`]$1" >&2
+    exit 1
+}
+
+#@abstract  Execute command and check running status
+#@param $1  Command [str]
+#@param $2  Aim of this command [str]
+#@return    No RetCode
+#@note      Will exit the program if error.
+#@example   eval_cmd "echo hello world" "test this function"
+function eval_cmd() {
+    if [ $# -lt 2 ]; then
+        __exit "[E::eval_cmd] too few arguments."
+    fi
+    local cmd="$1"
+    local aim="$2"
+
+    echo "==================== START `__now` ===================="
+    echo "+++++++ AIM +++++++++"
+    echo "$aim"
+    echo "++++++ COMMAND ++++++"
+    echo "$cmd"
+    echo "++++++ OUTPUT ++++++"
+    eval "$cmd"
+    if [ $? -ne 0 ]; then
+        __exit "[E::eval_cmd] failed to run PART $aim"
+    fi
+    echo "===================== END `__now` ====================="
+    echo
+}
+
