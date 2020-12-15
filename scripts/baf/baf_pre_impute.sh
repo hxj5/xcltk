@@ -1,11 +1,14 @@
 #!/bin/bash
 #this script is aimed to build a pipeline for steps from calling germline SNPs to pre-imputation.
 
-bin_bcftools=bcftools
-bin_cellsnp_lite=cellsnp-lite
-bin_freebayes=freebayes
-bin_python=python
-bin_samtools=samtools
+###### Global settings ######
+work_dir=`cd $(dirname $0); pwd`
+
+# config file for binary paths
+bin_cfg=$work_dir/baf_pre_impute.bin.cfg
+
+# utils file
+utils=$work_dir/../utils.sh
 
 function print_usage() {
     echo

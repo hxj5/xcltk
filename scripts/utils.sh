@@ -36,3 +36,15 @@ function eval_cmd() {
     echo
 }
 
+function load_cfg() {
+    if [ $# -lt 1 ]; then
+        __exit "[E::load_cfg] too few arguments."
+    fi
+    local cfg=$1
+    local cmd=
+    while read line; do
+        cmd=`echo "$line" | sed 's/ *= */=/'`
+        eval "$cmd"
+    done < $cfg
+}
+
