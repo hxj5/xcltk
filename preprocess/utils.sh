@@ -1,4 +1,5 @@
 # Utils
+# Author: Xianjie Huang
 
 function __now() {
     date '+%Y-%m-%d %H:%M:%S'
@@ -46,5 +47,13 @@ function load_cfg() {
         cmd=`echo "$line" | sed 's/ *= */=/'`
         eval "$cmd"
     done < $cfg
+}
+
+function log_err() {
+    echo "[`__now`] $1" >&2
+}
+
+function log_msg() {
+    echo "[`__now`] $1"
 }
 
