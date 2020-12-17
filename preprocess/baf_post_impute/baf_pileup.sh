@@ -13,7 +13,9 @@ cfg=$work_dir/${prog_name%.sh}.cfg
 utils=$work_dir/../utils.sh
 
 # ensembl2ucsc file
-=$work_dir/impute/ucsc2ensembl.txt
+ensembl2ucsc=$work_dir/annotate/ensembl2ucsc.txt
+
+
 
 function usage() {
     echo
