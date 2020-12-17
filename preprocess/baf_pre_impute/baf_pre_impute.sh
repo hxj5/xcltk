@@ -7,7 +7,8 @@ prog_path=$0
 prog_name=`basename $0`
 
 # default config file 
-cfg=$work_dir/${prog_name%.sh}.cfg
+cfg_fn=${prog_name%.sh}.cfg
+cfg=$work_dir/$cfg_fn
 
 # utils file
 utils=$work_dir/../utils/utils.sh
@@ -39,11 +40,11 @@ function usage() {
     echo "  -g, --hg INT        Version of fasta, 19 or 38"
     echo "  -O, --outdir DIR    Path to output dir"
     echo "  -c, --config FILE   Path to config file. If not set, use the"
-    echo "                      default config baf_pre_impute.cfg"
+    echo "                      default config $cfg_fn"
     echo "  -h, --help          This message"
     echo
     echo "Note:"
-    echo "  It's recommended to make a copy of the config file baf_pre_impute.cfg"
+    echo "  It's recommended to make a copy of the config file $cfg_fn"
     echo "  and then modify the new copy instead of modifying the original file"
     echo "  in place."
     echo
@@ -105,41 +106,41 @@ fi
 aim="call germline SNPs"
 raw_vname=${sid}.hg${hg}.raw.vcf.gz
 raw_vpath=$out_dir/${sid}.hg${hg}.raw.vcf.gz
-cmd="$bin_freebayes -C 2 -F 0.1 -m 20 --min-coverage 20 -f $fasta $bam | \\
+cmd="$bin_freebayes -C 2 -F 0.1 -m 20 --min-coverage 20 -f $fasta $bam | 
      $bin_bgzip -c > $raw_vpath"
 eval_cmd "$cmd" "$aim"
 
 # Sanger Imputation Server fasta: chroms have no leading 'chr'
 # bcftools annotate --rename-chrs is to removing the leading 'chr'
-aim="QC: \\
-      + filter low QUAL and DP;                                          \\
-      + filter records that are not of SNP type;                         \\
-      + rename chroms, remove the leading 'chr' from the name of chroms; \\
-      + filter records not in target chroms (default chr1-22, X, Y);"
+aim="QC: 
+  + filter low QUAL and DP;                                          
+  + filter records that are not of SNP type;                         
+  + rename chroms, remove the leading 'chr' from the name of chroms; 
+  + filter records not in target chroms (default chr1-22, X, Y);"
 qc_vname=${raw_vname/.vcf/.qc.vcf}
 qc_vpath=$out_dir/$qc_vname
 target_chroms="`seq 1 22` X Y"
 tgt_chroms=`echo $target_chroms | tr ' ' ',' | sed 's/,$//'`
-cmd="$bin_bcftools view -Ou $raw_vpath |                         \\
-     $bin_bcftools view -Ou -i 'QUAL > 20 && INFO/DP > 0' |       \\
-     $bin_bcftools view -Ou -i 'TYPE = \"snp\"' |                  \\
-     $bin_bcftools annotate -Ou --rename-chrs $ucsc2ensembl |     \\
-     $bin_bcftools view -Oz -t $tgt_chroms                        \\
-      > $qc_vpath"
+cmd="$bin_bcftools view -Ou $raw_vpath | 
+  $bin_bcftools view -Ou -i 'QUAL > 20 && INFO/DP > 0' |     
+  $bin_bcftools view -Ou -i 'TYPE = \"snp\"' |        
+  $bin_bcftools annotate -Ou --rename-chrs $ucsc2ensembl | 
+  $bin_bcftools view -Oz -t $tgt_chroms   
+    > $qc_vpath"
 eval_cmd "$cmd" "$aim"
 
 aim="filter by GQ"
 gq_bed=${qc_vname%.vcf.gz}.gq.bed
 gq_vname=${qc_vname/.vcf/.gq.vcf}
 gq_vpath=$out_dir/$gq_vname
-cmd="$bin_bcftools view -Ou $qc_vpath |                          \\
-     $bin_bcftools query -f '%CHROM\t%POS[\t%GL]\n' |             \\
-     $bin_gl2gq |                                                \\
-     awk '\$NF > 20 { printf(\"%s\t%d\t%d\t%s\n\", \$1, \$2 - 1, \$2, \$NF) }' \\
-       > $gq_bed &&                                                            \\
-     $bin_bcftools view -Ou $qc_vpath |                                     \\
-     $bin_bcftools view -Oz -T $gq_bed                                      \\
-       > $gq_vpath"
+cmd="$bin_bcftools view -Ou $qc_vpath |                          
+  $bin_bcftools query -f '%CHROM\t%POS[\t%GL]\n' |             
+  $bin_gl2gq |                                                
+  awk '\$NF > 20 { printf(\"%s\t%d\t%d\t%s\n\", \$1, \$2 - 1, \$2, \$NF) }' 
+    > $gq_bed &&                                                         
+  $bin_bcftools view -Ou $qc_vpath |                                 
+  $bin_bcftools view -Oz -T $gq_bed                     
+    > $gq_vpath"
 eval_cmd "$cmd" "$aim"
 
 flt_vname=$gq_vname
@@ -154,11 +155,11 @@ if [ $hg -eq 19 ]; then
     lift_vname=$flt_vname
     lift_vpath=$flt_vpath
 else
-    cmd="$bin_python $bin_py_liftover -c $chain_hg38to19 -i $flt_vpath \\
-           -o ${lift_vpath}.tmp -P $bin_liftover &&                    \\
-         $bin_bcftools view -i 'POS > 0' -Oz ${lift_vpath}.tmp         \\
-           > ${lift_vpath} &&                                          \\
-         rm ${lift_vpath}.tmp"
+    cmd="$bin_python $bin_py_liftover -c $chain_hg38to19 -i $flt_vpath 
+      -o ${lift_vpath}.tmp -P $bin_liftover &&                  
+      $bin_bcftools view -i 'POS > 0' -Oz ${lift_vpath}.tmp      
+        > ${lift_vpath} &&                                      
+      rm ${lift_vpath}.tmp"
     eval_cmd "$cmd" "$aim"
 fi
 
@@ -169,13 +170,13 @@ eval_cmd "$cmd" "$aim"
 aim="xcltk fixref"
 fix_vname=${lift_vname/.vcf/.fixref.sort.vcf}
 fix_vpath=$out_dir/$fix_vname
-cmd="$bin_bcftools query -f '%CHROM:%POS-%POS\n' $lift_vpath          \\
-       > ${lift_vpath}.region.lst &&                                  \\
-     $bin_samtools faidx -r ${lift_vpath}.region.lst $fa_impute |     \\
-     $bin_bgzip -c > ${lift_vpath}.fa.gz &&                           \\
-     $bin_xcltk fixref -i $lift_vpath -r ${lift_vpath}.fa.gz |        \\
-     $bin_bcftools sort -Oz > $fix_vpath &&                           \\
-     rm ${lift_vpath}.region.lst"
+cmd="$bin_bcftools query -f '%CHROM:%POS-%POS\n' $lift_vpath         
+  > ${lift_vpath}.region.lst &&                                
+  $bin_samtools faidx -r ${lift_vpath}.region.lst $fa_impute |  
+  $bin_bgzip -c > ${lift_vpath}.fa.gz &&                       
+  $bin_xcltk fixref -i $lift_vpath -r ${lift_vpath}.fa.gz |   
+  $bin_bcftools sort -Oz > $fix_vpath &&                 
+  rm ${lift_vpath}.region.lst"
 eval_cmd "$cmd" "$aim"
 
 aim="bcftools fixref checking"
