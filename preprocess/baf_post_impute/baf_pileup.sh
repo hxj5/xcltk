@@ -6,6 +6,15 @@ work_dir=`cd $(dirname $0); pwd`
 prog_path=$0
 prog_name=`basename $0`
 
+# default config file 
+cfg=$work_dir/${prog_name%.sh}.cfg
+
+# utils file
+utils=$work_dir/../utils.sh
+
+# ensembl2ucsc file
+=$work_dir/impute/ucsc2ensembl.txt
+
 function usage() {
     echo
     echo "Usage: $1 [options]"

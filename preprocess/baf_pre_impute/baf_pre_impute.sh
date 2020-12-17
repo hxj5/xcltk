@@ -13,7 +13,7 @@ cfg=$work_dir/${prog_name%.sh}.cfg
 utils=$work_dir/../utils.sh
 
 # ucsc2ensembl file
-ucsc2ensembl=$work_dir/impute/ucsc2ensembl.txt
+ucsc2ensembl=$work_dir/annotate/ucsc2ensembl.txt
 
 # some scripts
 bin_gl2gq=$work_dir/gl2gq.awk
