@@ -2,6 +2,10 @@
 History
 =======
 
+Release v0.1.4 (17/12/2020)
+===========================
+* add baf_pileup pipeline
+
 Release v0.1.3 (16/12/2020)
 ===========================
 * add baf_pre_imputation pipeline
