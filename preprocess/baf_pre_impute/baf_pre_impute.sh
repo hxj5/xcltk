@@ -10,18 +10,18 @@ prog_name=`basename $0`
 cfg=$work_dir/${prog_name%.sh}.cfg
 
 # utils file
-utils=$work_dir/../utils.sh
+utils=$work_dir/../utils/utils.sh
 
 # ucsc2ensembl file
-ucsc2ensembl=$work_dir/../annotate/ucsc2ensembl.txt
+ucsc2ensembl=$work_dir/../data/annotate/ucsc2ensembl.txt
 
 # some scripts
 bin_gl2gq=$work_dir/gl2gq.awk
 bin_pl2gq=$work_dir/pl2gq.awk
 
 # liftover files
-bin_py_liftover=$work_dir/../liftover/liftOver_vcf.py
-chain_hg38to19=$work_dir/../liftover/hg38ToHg19.over.chain.gz
+bin_py_liftover=$work_dir/../utils/liftOver_vcf.py
+chain_hg38to19=$work_dir/../data/liftover/hg38ToHg19.over.chain.gz
 
 ###### Init running ######
 # import utils
