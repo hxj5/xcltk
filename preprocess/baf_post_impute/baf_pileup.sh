@@ -134,10 +134,9 @@ if [ $hg -eq 19 ]; then
     lift_vname=$flt_vname
     lift_vpath=$flt_vpath
 else
-    cmd="$bin_python $bin_py_liftover -c $chain_hg19to38 -i $flt_vpath 
+    cmd="$bin_python $bin_py_liftover -c $chain_hg19to38 -i $flt_vpath \\
            -o ${lift_vpath}.tmp -P $bin_liftover &&                    
-         $bin_bcftools view -i 'POS > 0' -Oz ${lift_vpath}.tmp         
-           > ${lift_vpath} &&     
+         $bin_bcftools view -i 'POS > 0' -Oz ${lift_vpath}.tmp > ${lift_vpath} &&     
          rm ${lift_vpath}.tmp"
     eval_cmd "$cmd" "$aim"
 fi
@@ -148,8 +147,7 @@ chr_vname=${lift_vname/.vcf/.chr.vcf}
 chr_vpath=$out_dir/$chr_vname
 cat $fasta | awk 'NR == 1 {print; exit}' | grep -i '^>chr'
 if [ $? -eq 0 ]; then   # chrom names have leading chr
-    cmd="$bin_bcftools annotate -Oz --rename-chrs $ensembl2ucsc_file 
-           $lift_vpath > $chr_vpath"
+    cmd="$bin_bcftools annotate -Oz --rename-chrs $ensembl2ucsc_file $lift_vpath > $chr_vpath"
     eval_cmd "$cmd" "$aim"
 else
     log_msg "$aim"
@@ -165,8 +163,7 @@ eval_cmd "$cmd" "$aim"
 aim="xcltk fixref"
 fix_vname=${chr_vname/.vcf/.fixref.vcf}
 fix_vpath=$out_dir/$fix_vname
-cmd="$bin_bcftools query -f '%CHROM:%POS-%POS\n' $chr_vpath         
-       > ${chr_vpath}.region.lst &&  
+cmd="$bin_bcftools query -f '%CHROM:%POS-%POS\n' $chr_vpath > ${chr_vpath}.region.lst &&  
      $bin_samtools faidx -r ${chr_vpath}.region.lst $fasta | 
      $bin_bgzip -c > ${chr_vpath}.fa.gz &&                     
      $bin_xcltk fixref -i $chr_vpath -r ${chr_vpath}.fa.gz |  
@@ -191,17 +188,17 @@ csp_in_vpath=$uniq_vpath
 aim="cellsnp pileup"
 csp_dir=$out_dir/cellsnp
 if [ "$seq_type" == "dna" ]; then
-    cmd="$bin_cellsnp -s $bam -b $barcode -O $csp_dir -R $csp_in_vpath --minCOUNT 1 --minMAF 0
-      --minLEN 30 --minMAPQ 20 --inclFLAG 0 --exclFLAG 1796 --UMItag None -p $ncores
+    cmd="$bin_cellsnp -s $bam -b $barcode -O $csp_dir -R $csp_in_vpath --minCOUNT 1 --minMAF 0 \\
+      --minLEN 30 --minMAPQ 20 --inclFLAG 0 --exclFLAG 1796 --UMItag None -p $ncores  \\
       --genotype --gzip"
 elif [ "$seq_type" == "rna" ]; then
-    cmd="$bin_cellsnp -s $bam -b $barcode -O $csp_dir -R $csp_in_vpath --minCOUNT 1 --minMAF 0
-      --minLEN 30 --minMAPQ 20 --inclFLAG 0 --exclFLAG 772 --UMItag UR -p $ncores
+    cmd="$bin_cellsnp -s $bam -b $barcode -O $csp_dir -R $csp_in_vpath --minCOUNT 1 --minMAF 0 \\
+      --minLEN 30 --minMAPQ 20 --inclFLAG 0 --exclFLAG 772 --UMItag UR -p $ncores      \\
       --genotype --gzip"
 else  # unknown
     log_msg "Warning: unknown seq type $seq_type, use the dna pileup method"
-    cmd="$bin_cellsnp -s $bam -b $barcode -O $csp_dir -R $csp_in_vpath --minCOUNT 1 --minMAF 0
-      --minLEN 30 --minMAPQ 20 --inclFLAG 0 --exclFLAG 1796 --UMItag None -p $ncores
+    cmd="$bin_cellsnp -s $bam -b $barcode -O $csp_dir -R $csp_in_vpath --minCOUNT 1 --minMAF 0  \\
+      --minLEN 30 --minMAPQ 20 --inclFLAG 0 --exclFLAG 1796 --UMItag None -p $ncores           \\
       --genotype --gzip"
 fi
 eval_cmd "$cmd" "$aim"
@@ -218,3 +215,4 @@ eval_cmd "$cmd" "$aim"
 ###### END ######
 log_msg "All Done!"
 log_msg "End"
+

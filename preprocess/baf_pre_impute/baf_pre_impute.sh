@@ -125,8 +125,7 @@ cmd="$bin_bcftools view -Ou $raw_vpath |
   $bin_bcftools view -Ou -i 'QUAL > 20 && INFO/DP > 0' |     
   $bin_bcftools view -Ou -i 'TYPE = \"snp\"' |        
   $bin_bcftools annotate -Ou --rename-chrs $ucsc2ensembl | 
-  $bin_bcftools view -Oz -t $tgt_chroms   
-    > $qc_vpath"
+  $bin_bcftools view -Oz -t $tgt_chroms > $qc_vpath"
 eval_cmd "$cmd" "$aim"
 
 aim="filter by GQ"
@@ -136,11 +135,9 @@ gq_vpath=$out_dir/$gq_vname
 cmd="$bin_bcftools view -Ou $qc_vpath |                          
   $bin_bcftools query -f '%CHROM\t%POS[\t%GL]\n' |             
   $bin_gl2gq |                                                
-  awk '\$NF > 20 { printf(\"%s\t%d\t%d\t%s\n\", \$1, \$2 - 1, \$2, \$NF) }' 
-    > $gq_bed &&                                                         
+  awk '\$NF > 20 { printf(\"%s\t%d\t%d\t%s\n\", \$1, \$2 - 1, \$2, \$NF) }' > $gq_bed &&                                                         
   $bin_bcftools view -Ou $qc_vpath |                                 
-  $bin_bcftools view -Oz -T $gq_bed                     
-    > $gq_vpath"
+  $bin_bcftools view -Oz -T $gq_bed > $gq_vpath"
 eval_cmd "$cmd" "$aim"
 
 flt_vname=$gq_vname
@@ -155,10 +152,9 @@ if [ $hg -eq 19 ]; then
     lift_vname=$flt_vname
     lift_vpath=$flt_vpath
 else
-    cmd="$bin_python $bin_py_liftover -c $chain_hg38to19 -i $flt_vpath 
-      -o ${lift_vpath}.tmp -P $bin_liftover &&                  
-      $bin_bcftools view -i 'POS > 0' -Oz ${lift_vpath}.tmp      
-        > ${lift_vpath} &&                                      
+    cmd="$bin_python $bin_py_liftover -c $chain_hg38to19 -i $flt_vpath \\
+      -o ${lift_vpath}.tmp -P $bin_liftover &&  
+      $bin_bcftools view -i 'POS > 0' -Oz ${lift_vpath}.tmp > ${lift_vpath} &&                                      
       rm ${lift_vpath}.tmp"
     eval_cmd "$cmd" "$aim"
 fi
@@ -170,12 +166,11 @@ eval_cmd "$cmd" "$aim"
 aim="xcltk fixref"
 fix_vname=${lift_vname/.vcf/.fixref.sort.vcf}
 fix_vpath=$out_dir/$fix_vname
-cmd="$bin_bcftools query -f '%CHROM:%POS-%POS\n' $lift_vpath         
-  > ${lift_vpath}.region.lst &&                                
+cmd="$bin_bcftools query -f '%CHROM:%POS-%POS\n' $lift_vpath > ${lift_vpath}.region.lst &&                                
   $bin_samtools faidx -r ${lift_vpath}.region.lst $fa_impute |  
   $bin_bgzip -c > ${lift_vpath}.fa.gz &&                       
   $bin_xcltk fixref -i $lift_vpath -r ${lift_vpath}.fa.gz |   
-  $bin_bcftools sort -Oz > $fix_vpath &&                 
+  $bin_bcftools sort -Oz > $fix_vpath && 
   rm ${lift_vpath}.region.lst"
 eval_cmd "$cmd" "$aim"
 
