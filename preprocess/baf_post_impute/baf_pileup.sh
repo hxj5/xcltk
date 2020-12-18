@@ -123,7 +123,7 @@ else
     cmd="$bin_bcftools view -Ou -i 'MAX(GP) > 0.99' $raw_vpath | 
       $bin_bcftools view -Oz -i 'GT = \"het\"' > $flt_vpath"
 fi
-eval_cmd "$aim" "$cmd"
+eval_cmd "$cmd" "$aim"
 
 aim="convert genome build, target build is hg$hg"
 lift_vname=${flt_vname%.vcf.gz}.hg$hg.vcf.gz
@@ -163,16 +163,17 @@ eval_cmd "$cmd" "$aim"
 aim="xcltk fixref"
 fix_vname=${chr_vname/.vcf/.fixref.vcf}
 fix_vpath=$out_dir/$fix_vname
-cmd="$bin_bcftools query -f '%CHROM:%POS-%POS\n' $chr_vpath > ${chr_vpath}.region.lst &&  
-     $bin_samtools faidx -r ${chr_vpath}.region.lst $fasta | 
-     $bin_bgzip -c > ${chr_vpath}.fa.gz &&                     
-     $bin_xcltk fixref -i $chr_vpath -r ${chr_vpath}.fa.gz |  
+tmp_prefix=${chr_vpath%.vcf.gz}
+cmd="$bin_bcftools query -f '%CHROM:%POS-%POS\n' $chr_vpath > ${tmp_prefix}.region.lst &&  
+     $bin_samtools faidx -r ${tmp_prefix}.region.lst $fasta | 
+     $bin_bgzip -c > ${tmp_prefix}.fa.gz &&                     
+     $bin_xcltk fixref -i $chr_vpath -r ${tmp_prefix}.fa.gz |  
      $bin_bgzip -c > $fix_vpath && 
-     rm ${chr_vpath}.region.lst"
+     rm ${tmp_prefix}.region.lst"
 eval_cmd "$cmd" "$aim"
 
 aim="bcftools fixref checking"
-cmd="$bin_bcftools +fixref $fix_vpath -- -f $fa_impute"
+cmd="$bin_bcftools +fixref $fix_vpath -- -f $fasta"
 eval_cmd "$cmd" "$aim"
 
 aim="filter duplicates (chrom + pos) and sort"
