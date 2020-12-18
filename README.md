@@ -3,7 +3,7 @@
 [![](https://img.shields.io/pypi/v/xcltk.svg)][pypi]
 [![](https://img.shields.io/github/license/hxj5/xcltk)][licence]
 
-xcltk is a toolkit for XClone (warning: under development, not stable)
+xcltk is a toolkit for XClone (**warning: under development, not stable**)
 
 All release notes are available at [doc/release.rst][release]
 

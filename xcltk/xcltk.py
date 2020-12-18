@@ -2,8 +2,12 @@
 # Author: Xianjie Huang 
 
 #TODO: 
-#  1. add install list (conda + pip)
-#  3. add pipeline
+# - convert (region) could deal with zipped file (for both input and output)
+# - modify phase_snp:
+#   * --snpAD and --snpDP could take 0-based, 1-based or any other?
+#   * --phase could deal with vcf
+#   * --region could take bed|gff|tsv, both plain or zipped
+# - add install list (conda + pip)
 
 import sys
 from .config import PROGRAM, VERSION
