@@ -115,6 +115,7 @@ eval_cmd "$cmd" "$aim"
 aim="QC: 
   + filter low QUAL and DP;                                          
   + filter records that are not of SNP type;                         
+  + filter strlen(REF) != 1 || strlen(ALT) != 1;
   + rename chroms, remove the leading 'chr' from the name of chroms; 
   + filter records not in target chroms (default chr1-22, X, Y);"
 qc_vname=${raw_vname/.vcf/.qc.vcf}
@@ -124,6 +125,7 @@ tgt_chroms=`echo $target_chroms | tr ' ' ',' | sed 's/,$//'`
 cmd="$bin_bcftools view -Ou $raw_vpath | 
   $bin_bcftools view -Ou -i 'QUAL > 20 && INFO/DP > 0' |     
   $bin_bcftools view -Ou -i 'TYPE = \"snp\"' |        
+  $bin_bcftools view -Ou -i 'STRLEN(REF) == 1 && STRLEN(ALT) == 1' |
   $bin_bcftools annotate -Ou --rename-chrs $ucsc2ensembl | 
   $bin_bcftools view -Oz -t $tgt_chroms > $qc_vpath"
 eval_cmd "$cmd" "$aim"
@@ -153,9 +155,9 @@ if [ $hg -eq 19 ]; then
     lift_vpath=$flt_vpath
 else
     cmd="$bin_python $bin_py_liftover -c $chain_hg38to19 -i $flt_vpath \\
-      -o ${lift_vpath}.tmp -P $bin_liftover &&  
-      $bin_bcftools view -i 'POS > 0' -Oz ${lift_vpath}.tmp > ${lift_vpath} &&                                      
-      rm ${lift_vpath}.tmp"
+      -o ${lift_vpath/.vcf/.tmp.vcf} -P $bin_liftover &&  
+      $bin_bcftools view -i 'POS > 0' -Oz ${lift_vpath/.vcf/.tmp.vcf} > ${lift_vpath} &&                                      
+      rm ${lift_vpath/.vcf/.tmp.vcf}"
     eval_cmd "$cmd" "$aim"
 fi
 

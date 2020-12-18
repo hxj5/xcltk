@@ -108,7 +108,7 @@ else
 fi
 
 ###### Core Part ######
-raw_vname=${sid}.${phase_type}.vcf.gz
+raw_vname=${sid}.vcf.gz
 raw_vpath=$vcf
 
 if [ "$phase_type" == "phase" ]; then
@@ -135,9 +135,9 @@ if [ $hg -eq 19 ]; then
     lift_vpath=$flt_vpath
 else
     cmd="$bin_python $bin_py_liftover -c $chain_hg19to38 -i $flt_vpath \\
-           -o ${lift_vpath}.tmp -P $bin_liftover &&                    
-         $bin_bcftools view -i 'POS > 0' -Oz ${lift_vpath}.tmp > ${lift_vpath} &&     
-         rm ${lift_vpath}.tmp"
+           -o ${lift_vpath/.vcf/.tmp.vcf} -P $bin_liftover &&                    
+         $bin_bcftools view -i 'POS > 0' -Oz ${lift_vpath/.vcf/.tmp.vcf} > ${lift_vpath} &&     
+         rm ${lift_vpath/.vcf/.tmp.vcf}"
     eval_cmd "$cmd" "$aim"
 fi
 
@@ -147,7 +147,7 @@ chr_vname=${lift_vname/.vcf/.chr.vcf}
 chr_vpath=$out_dir/$chr_vname
 cat $fasta | awk 'NR == 1 {print; exit}' | grep -i '^>chr'
 if [ $? -eq 0 ]; then   # chrom names have leading chr
-    cmd="$bin_bcftools annotate -Oz --rename-chrs $ensembl2ucsc_file $lift_vpath > $chr_vpath"
+    cmd="$bin_bcftools annotate -Oz --rename-chrs $ensembl2ucsc $lift_vpath > $chr_vpath"
     eval_cmd "$cmd" "$aim"
 else
     log_msg "$aim"

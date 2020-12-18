@@ -7,6 +7,7 @@
 #   * --snpAD and --snpDP could take 0-based, 1-based or any other?
 #   * --phase could deal with vcf
 #   * --region could take bed|gff|tsv, both plain or zipped
+# - test using cellsnp-lite to call germline SNPs
 # - add install list (conda + pip)
 
 import sys
