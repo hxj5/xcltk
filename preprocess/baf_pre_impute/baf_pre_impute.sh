@@ -129,7 +129,7 @@ cmd="$bin_bcftools view -Ou $raw_vpath |
 eval_cmd "$cmd" "$aim"
 
 aim="filter by GQ"
-gq_bed=${qc_vname%.vcf.gz}.gq.bed
+gq_bed=$out_dir/${qc_vname%.vcf.gz}.gq.bed
 gq_vname=${qc_vname/.vcf/.gq.vcf}
 gq_vpath=$out_dir/$gq_vname
 cmd="$bin_bcftools view -Ou $qc_vpath |                          
@@ -166,12 +166,13 @@ eval_cmd "$cmd" "$aim"
 aim="xcltk fixref"
 fix_vname=${lift_vname/.vcf/.fixref.sort.vcf}
 fix_vpath=$out_dir/$fix_vname
-cmd="$bin_bcftools query -f '%CHROM:%POS-%POS\n' $lift_vpath > ${lift_vpath}.region.lst &&                                
-  $bin_samtools faidx -r ${lift_vpath}.region.lst $fa_impute |  
-  $bin_bgzip -c > ${lift_vpath}.fa.gz &&                       
-  $bin_xcltk fixref -i $lift_vpath -r ${lift_vpath}.fa.gz |   
+tmp_prefix=${lift_vpath%.vcf.gz}
+cmd="$bin_bcftools query -f '%CHROM:%POS-%POS\n' $lift_vpath > ${tmp_prefix}.region.lst &&                                
+  $bin_samtools faidx -r ${tmp_prefix}.region.lst $fa_impute |  
+  $bin_bgzip -c > ${tmp_prefix}.fa.gz &&                       
+  $bin_xcltk fixref -i $lift_vpath -r ${tmp_prefix}.fa.gz |   
   $bin_bcftools sort -Oz > $fix_vpath && 
-  rm ${lift_vpath}.region.lst"
+  rm ${tmp_prefix}.region.lst"
 eval_cmd "$cmd" "$aim"
 
 aim="bcftools fixref checking"
