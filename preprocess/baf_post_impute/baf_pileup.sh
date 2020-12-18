@@ -206,9 +206,15 @@ eval_cmd "$cmd" "$aim"
 
 csp_vpath=$csp_dir/cellSNP.base.vcf.gz
 
+aim="merge pileup vcf and phase GT vcf"
+gt_vname=${csp_in_vname/.vcf/.gt.vcf}
+gt_vpath=$out_dir/$gt_vname
+cmd="$bin_bcftools view -Oz -T $csp_vpath $csp_in_vpath > $gt_vpath"
+eval_cmd "$cmd" "$aim"
+
 aim="extract phased GT"
-gt_tsv=$out_dir/${csp_in_vname%.vcf.gz}.phase.gt.tsv.gz
-cmd="$bin_bcftools query -T $csp_vpath -f '%CHROM\t%POS[\t%GT]\n' $csp_in_vpath | 
+gt_tsv=$out_dir/${csp_in_vname%.vcf.gz}.gt.tsv.gz
+cmd="$bin_bcftools query -f '%CHROM\t%POS[\t%GT]\n' $gt_vpath | 
      awk '{split(\$3, a, \"|\"); printf(\"%s\t%s\t%s\t%s\n\", \$1, \$2, a[1], a[2]); }' | 
      $bin_bgzip -c > $gt_tsv"
 eval_cmd "$cmd" "$aim"
