@@ -2,6 +2,11 @@
 History
 =======
 
+Release v0.1.5 (19/12/2020)
+===========================
+* small fix
+* baf_pre_impute and baf_pileup pass tests
+
 Release v0.1.4 (17/12/2020)
 ===========================
 * add baf_pileup pipeline
