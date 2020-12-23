@@ -38,7 +38,10 @@ function usage() {
     echo "  -s, --bam FILE      Path to bam file"
     echo "  -f, --fasta FILE    Path to fasta file"
     echo "  -g, --hg INT        Version of fasta, 19 or 38"
+    echo "  -C, --call STR      Germline SNP calling app, cellsnp-lite or"
+    echo "                      freebayes [cellsnp-lite]"
     echo "  -O, --outdir DIR    Path to output dir"
+    echo "  -p, --ncores INT    Number of cores"
     echo "  -c, --config FILE   Path to config file. If not set, use the"
     echo "                      default config $cfg_fn"
     echo "  -h, --help          This message"
@@ -61,7 +64,7 @@ if [ $# -lt 1 ]; then
     exit 1
 fi
 
-ARGS=`getopt -o N:s:f:g:O:c:h --long name:,bam:,fasta:,hg:,outdir:,config:,help -n "" -- "$@"`
+ARGS=`getopt -o N:s:f:g:C:O:p:c:h --long name:,bam:,fasta:,hg:,call:,outdir:,ncores:,config:,help -n "" -- "$@"`
 if [ $? -ne 0 ]; then
     log_err "Error: failed to parse command line. Terminating..."
     exit 1
@@ -74,7 +77,9 @@ while true; do
         -s|--bam) bam=$2; shift 2;;
         -f|--fasta) fasta=$2; shift 2;;
         -g|--hg) hg=$2; shift 2;;
+        -C|--call) app_call=$2; shift 2;;
         -O|--outdir) out_dir=$2; shift 2;;
+        -p|--ncores) ncores=$2; shift 2;;
         -c|--config) cfg=$2; shift 2;;
         -h|--help) usage $prog_path; shift; exit 0;;
         --) shift; break;;
@@ -102,12 +107,23 @@ else
     exit 1
 fi
 
+if [ -n "$ncores" ]; then 
+  ncores=1
+fi
+
 ###### Core Part ######
 aim="call germline SNPs"
 raw_vname=${sid}.hg${hg}.raw.vcf.gz
-raw_vpath=$out_dir/${sid}.hg${hg}.raw.vcf.gz
-cmd="$bin_freebayes -C 2 -F 0.1 -m 20 --min-coverage 20 -f $fasta $bam | 
-     $bin_bgzip -c > $raw_vpath"
+raw_vpath=$out_dir/$raw_vpath
+if [ "$app_call" == "freebayes" ]; then
+    cmd="$bin_freebayes -C 2 -F 0.1 -m 20 --min-coverage 20 -f $fasta $bam | 
+         $bin_bgzip -c > $raw_vpath"
+else
+    cmd="$bin_cellsnp -s $bam -O $out_dir/cellsnp_pre -p $ncores --minMAF 0.1 \\
+         --minCOUNT 20 --minLEN 30 --minMAPQ 20 --exclFLAG 1796 --cellTAG None \\
+         --UMItag None --gzip --genotype"
+    raw_vpath=$out_dir/cellsnp_pre/cellSNP.cells.vcf.gz
+fi
 eval_cmd "$cmd" "$aim"
 
 # Sanger Imputation Server fasta: chroms have no leading 'chr'
@@ -122,24 +138,40 @@ qc_vname=${raw_vname/.vcf/.qc.vcf}
 qc_vpath=$out_dir/$qc_vname
 target_chroms="`seq 1 22` X Y"
 tgt_chroms=`echo $target_chroms | tr ' ' ',' | sed 's/,$//'`
-cmd="$bin_bcftools view -Ou $raw_vpath | 
-  $bin_bcftools view -Ou -i 'QUAL > 20 && INFO/DP > 0' |     
-  $bin_bcftools view -Ou -i 'TYPE = \"snp\"' |        
-  $bin_bcftools view -Ou -i 'STRLEN(REF) == 1 && N_ALT == 1' |
-  $bin_bcftools annotate -Ou --rename-chrs $ucsc2ensembl | 
-  $bin_bcftools view -Oz -t $tgt_chroms > $qc_vpath"
+if [ "$app_call" == "freebayes" ]; then
+    cmd="$bin_bcftools view -Ou $raw_vpath | 
+      $bin_bcftools view -Ou -i 'QUAL > 20 && INFO/DP > 0' |     
+      $bin_bcftools view -Ou -i 'TYPE = \"snp\"' |        
+      $bin_bcftools view -Ou -i 'STRLEN(REF) == 1 && N_ALT == 1' |
+      $bin_bcftools annotate -Ou --rename-chrs $ucsc2ensembl | 
+      $bin_bcftools view -Oz -t $tgt_chroms > $qc_vpath"
+else
+    cmd="$bin_bcftools view -Ou $raw_vpath | 
+      $bin_bcftools view -Ou -i 'TYPE = \"snp\"' |        
+      $bin_bcftools annotate -Ou --rename-chrs $ucsc2ensembl | 
+      $bin_bcftools view -Oz -t $tgt_chroms > $qc_vpath"
+fi
 eval_cmd "$cmd" "$aim"
 
 aim="filter by GQ"
 gq_bed=$out_dir/${qc_vname%.vcf.gz}.gq.bed
 gq_vname=${qc_vname/.vcf/.gq.vcf}
 gq_vpath=$out_dir/$gq_vname
-cmd="$bin_bcftools view -Ou $qc_vpath |                          
-  $bin_bcftools query -f '%CHROM\t%POS[\t%GL]\n' |             
-  $bin_gl2gq |                                                
-  awk '\$NF > 20 { printf(\"%s\t%d\t%d\t%s\n\", \$1, \$2 - 1, \$2, \$NF) }' > $gq_bed &&                                                         
-  $bin_bcftools view -Ou $qc_vpath |                                 
-  $bin_bcftools view -Oz -T $gq_bed > $gq_vpath"
+if [ "$app_call" == "freebayes" ]; then
+    cmd="$bin_bcftools view -Ou $qc_vpath |                          
+      $bin_bcftools query -f '%CHROM\t%POS[\t%GL]\n' |             
+      $bin_gl2gq |                                                
+      awk '\$NF > 20 { printf(\"%s\t%d\t%d\t%s\n\", \$1, \$2 - 1, \$2, \$NF) }' > $gq_bed &&                                                         
+      $bin_bcftools view -Ou $qc_vpath |                                 
+      $bin_bcftools view -Oz -T $gq_bed > $gq_vpath"
+else
+    cmd="$bin_bcftools view -Ou $qc_vpath |                          
+      $bin_bcftools query -f '%CHROM\t%POS[\t%PL]\n' |             
+      $bin_pl2gq |                                                
+      awk '\$NF > 20 { printf(\"%s\t%d\t%d\t%s\n\", \$1, \$2 - 1, \$2, \$NF) }' > $gq_bed &&                                                         
+      $bin_bcftools view -Ou $qc_vpath |                                 
+      $bin_bcftools view -Oz -T $gq_bed > $gq_vpath"
+fi
 eval_cmd "$cmd" "$aim"
 
 flt_vname=$gq_vname
