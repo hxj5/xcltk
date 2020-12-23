@@ -2,13 +2,12 @@
 # Author: Xianjie Huang 
 
 #TODO: 
-# - update preprocess README
-# - add cellSNP and modify it to solve double check problem
 # - convert (region) could deal with zipped file (for both input and output)
 # - modify phase_snp:
 #   * --snpAD and --snpDP could take 0-based, 1-based or any other?
 #   * --phase could deal with vcf
 #   * --region could take bed|gff|tsv, both plain or zipped
+# - add cellSNP and modify it to solve double check problem
 # - test using cellsnp-lite to call germline SNPs
 # - add install list (conda + pip)
 
