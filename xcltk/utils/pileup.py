@@ -156,7 +156,8 @@ def fmt_umi_tag(read, cell_tag, umi_tag):
     return read.get_tag(cell_tag) + '>' + read.get_tag(umi_tag) if cell_tag is not None else read.get_tag(umi_tag)
 
 def fetch_bases(samFile, chrom, POS, cell_tag="CR", UMI_tag="UR", min_MAPQ=20, 
-                max_FLAG=255, min_LEN=30):
+                max_FLAG=255, min_LEN=30, uniq_count=False, last_chrom=None, 
+                last_POS=None, verbose=False):
     """ Fetch bases from all reads mapped to a given genome position.
     Filtering is also applied, including cell and UMI tags and read mapping 
     quality.
@@ -174,10 +175,22 @@ def fetch_bases(samFile, chrom, POS, cell_tag="CR", UMI_tag="UR", min_MAPQ=20,
     if type(POS) != int:
         POS = int(POS)
 
+    if last_POS and type(last_POS) != int:
+        last_POS = int(last_POS)
+
     for _read in samFile.fetch(chrom, POS-1, POS):
         try:
             idx = _read.positions.index(POS-1)
         except:
+            continue
+
+        # check double counting
+        if uniq_count and last_chrom is not None and last_chrom == chrom and \
+          last_POS is not None and last_POS - 1 in _read.positions:
+            if verbose:
+                print("[uniq_count] both %s:%d and %s:%d are on read %s" % (
+                      last_chrom, last_POS, chrom, POS, _read.query_name
+                ))
             continue
 
         ## filtering reads
@@ -231,7 +244,7 @@ def fetch_positions(samFile_list, chroms, positions, REF=None, ALT=None,
                     barcodes=None, sample_ids=None, out_file=None, 
                     cell_tag="CR", UMI_tag="UR", min_COUNT=20, min_MAF=0.1, 
                     min_MAPQ=20, max_FLAG=255, min_LEN=30, doublet_GL=False, 
-                    verbose=True):
+                    verbose=True, uniq_count=False):
     """Fetch allelic expression for a list of variants across multiple samples.
     Option 1: one single-cell sam file, a list of barcodes
     Option 2: multiple bulk sam files, multiple sample ids
@@ -258,6 +271,9 @@ def fetch_positions(samFile_list, chroms, positions, REF=None, ALT=None,
             print("%.2f%% positions processed." % (POS_CNT / POS_CNT_TOTAL * 100.0))
             POS_CNT_PERC_N += POS_CNT_PERC_M
             POS_CNT_PERC_N = POS_CNT_PERC_N if POS_CNT_PERC_N <= POS_CNT_TOTAL else POS_CNT_TOTAL
+
+        last_chrom = None if i == 0 else chroms[i - 1]
+        last_POS = None if i == 0 else positions[i - 1]
         
         base_cells_sample = []
         qual_cells_sample = []
@@ -266,7 +282,7 @@ def fetch_positions(samFile_list, chroms, positions, REF=None, ALT=None,
             samFile, chrom = check_pysam_chrom(samFile, chroms[i])
             base_list, qual_list, UMIs_list, cell_list = fetch_bases(samFile, 
                 chrom, positions[i], cell_tag, UMI_tag, min_MAPQ, max_FLAG, 
-                min_LEN)
+                min_LEN, uniq_count, last_chrom, last_POS)
 
             base_merge, base_cells, qual_cells = map_barcodes(base_list, 
                 qual_list, cell_list, UMIs_list, barcodes)

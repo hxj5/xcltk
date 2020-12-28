@@ -4,10 +4,12 @@
 # Date: 21-12-2018
 # Modified by: Xianjie Huang
 
-# upileup 
+# pileup --uniq 
 #   - uniquely pileup each SNP: if one read covers more than one SNPs, then this 
 #     read would only be counted once for the SNP with the smallest pos. Then the
 #     double counting problem is solved this way.
+#   - now it only supports mode 1a and mode 1b (pileup SNPs) while not support mode
+#     2 (pileup chromosomes)
 
 import os
 import sys
@@ -25,7 +27,7 @@ from ..utils.pileup import fetch_positions
 from ..utils.pileup_regions import pileup_regions
 from ..utils.vcf import load_VCF, merge_vcf, VCF_to_sparseMat
 
-COMMAND = "upileup"
+COMMAND = "pileup"
 
 DEF_FLAG_WITH_UMI = 4096       # default value of max_FLAG when using UMIs, i.e., UMI_tag is not None
 DEF_FLAG_WITHOUT_UMI = 255     # default value of max_FLAG when not using UMIs, i.e., UMI_tag is None
@@ -35,7 +37,7 @@ START_TIME = time.time()
 def show_progress(RV=None):
     return RV
 
-def upileup(argv):
+def pileup(argv):
     # import warnings
     # warnings.filterwarnings('error')
 
@@ -89,6 +91,8 @@ def upileup(argv):
         help="If use, keep doublet GT likelihood, i.e., GT=0.5 and GT=1.5")
     group1.add_option("--saveHDF5", dest="save_HDF5", action="store_true", 
         default=False, help="If use, save an output file in HDF5 format.")
+    group1.add_option("--uniqCOUNT", dest="uniq_count", action="store_true", 
+        default=False, help="If use, read covering more than one SNPs would be counted only once.")
     
     group2 = OptionGroup(parser, "Read filtering")
     group2.add_option("--minLEN", type="int", dest="min_LEN", default=30, 
@@ -211,6 +215,7 @@ def upileup(argv):
     min_COUNT = options.min_COUNT
     doubletGL = options.doubletGL
     max_FLAG = options.max_FLAG
+    uniq_count = options.uniq_count
     if options.max_FLAG is None:
         max_FLAG = DEF_FLAG_WITHOUT_UMI if UMI_tag is None else DEF_FLAG_WITH_UMI
 
@@ -248,7 +253,7 @@ def upileup(argv):
             result = fetch_positions(sam_file_list,                 
                 chrom_list, pos_list, REF_list, ALT_list, barcodes, sample_ids, 
                 out_file_tmp, cell_tag, UMI_tag, min_COUNT, min_MAF, 
-                min_MAPQ, max_FLAG, min_LEN, doubletGL, True) 
+                min_MAPQ, max_FLAG, min_LEN, doubletGL, True, uniq_count) 
             show_progress(1)
         else:
             LEN_div = int(len(chrom_list) / nproc)
@@ -271,7 +276,7 @@ def upileup(argv):
                 result.append(pool.apply_async(fetch_positions, (sam_file_list,                 
                     _chrom, _pos, _REF_list, _ALT_list, barcodes, sample_ids, 
                     out_file_tmp, cell_tag, UMI_tag, min_COUNT, min_MAF, 
-                    min_MAPQ, max_FLAG, min_LEN, doubletGL, True), 
+                    min_MAPQ, max_FLAG, min_LEN, doubletGL, True, uniq_count), 
                     callback=show_progress))
 
             pool.close()
@@ -291,4 +296,4 @@ def upileup(argv):
     print("[cellSNP] All done: %d min %.1f sec" %(int(run_time / 60), 
                                                   run_time % 60))
 if __name__ == "__main__":
-    upileup(sys.argv)
+    pileup(sys.argv)
