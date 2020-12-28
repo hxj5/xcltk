@@ -2,8 +2,6 @@
 # Author: Xianjie Huang 
 
 #TODO: 
-# - modify phase_snp:
-#   * --region could take bed|gff|tsv, both plain or zipped
 # - add cellSNP and modify it to solve double check problem
 # - test using cellsnp-lite to call germline SNPs
 # - add install list (conda + pip)

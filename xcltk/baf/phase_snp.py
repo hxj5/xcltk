@@ -8,6 +8,7 @@ import sys
 import getopt
 import gzip
 from ..utils.base import assert_e, assert_n, log
+from ..utils.region import load_regions
 from .config import APP
 
 def __format_chrom(chrom):
@@ -30,7 +31,7 @@ def __load_snp_mtx(fn):
     """
     assert_e(fn, "snp mtx")
     cols = []
-    if fn.endswith(".gz"):
+    if os.path.splitext(fn)[1] in (".gz", ".gzip"):
         cols = [line[:-1].split("\t")[:3] for line in gzip.open(fn, "rt")]
     else:
         cols = [line[:-1].split("\t")[:3] for line in open(fn, "r")]
@@ -137,16 +138,16 @@ def __load_region(fn):
                  - a dict of {chrom:[(start, end, reg_idx),]} pairs [dict]
     """
     assert_e(fn, "region file")
-    cols = []
-    if fn.endswith(".gz"):
-        cols = [line[:-1].split("\t")[:3] for line in gzip.open(fn, "rt")]
-    else:
-        cols = [line[:-1].split("\t")[:3] for line in open(fn, "rt")]
+    suffix = os.path.splitext(fn[:-3])[1] if fn.endswith(".gz") else \
+             os.path.splitext(fn)[1]
+    assert suffix.lower() in ("bed", "tsv", "gff"), "region type should be bed|tsv|gff"
+    reg_list = load_regions(fn, suffix)
+    if reg_list is None:
+        return None
     regions = {}
-    for i, c in enumerate(cols):    # here enumerate is efficient as region file is usually small.
-        assert len(c) >= 3, "too few columns in region file"
-        chrom = __format_chrom(c[0])
-        regions.setdefault(chrom, []).append((int(c[1]), int(c[2]), i + 1))
+    for i, r in enumerate(reg_list):    # here enumerate is efficient as region file is usually small.
+        chrom = __format_chrom(r.chrom)
+        regions.setdefault(chrom, []).append((r.start, r.end, i + 1))
     return (i + 1, regions)
 
 def __get_block_cell(snp_ad, snp_dp, phase, blocks):
@@ -374,8 +375,8 @@ def __usage(fp = sys.stderr):
            "  --snpDP FILE    Path to the SNP DP mtx, snp_idx and cell_idx are both 1-based.\n"   \
            "  --phase FILE    Path to the SNP phase file, either VCF file or\n"                   \
            "                  a tsv with 3 columns: <chr> <pos> <GT>; pos is 1-based.\n"         \
-           "  --region FILE   Path to region file, 3 columns: <chr> <start> <end>;\n"             \
-           "                  Both start and stop are 1-based and included.\n"                    \
+           "  --region FILE   Path to region file: bed, gff or a tsv with 3 columns:\n"          \
+           "                  <chr> <start> <end>, both start and end are 1-based and included.\n"  \
            "  --outdir DIR    Path to output dir.\n"                                             \
            "  -h, --help      Print this message.\n"                                             \
            "\n"

@@ -23,13 +23,13 @@ class Region:
     @abstract      A wrapper for different region formats, e.g. bed/gff
     @param chrom   Chromosome name [str]
     @param start   Start pos of this region: 1-based, included [int]
-    @param stop    End pos of this region: 1-based, included [int]
+    @param end     End pos of this region: 1-based, included [int]
     @param _id     Region ID [str]
     '''
-    def __init__(self, chrom = None, start = None, stop = None, _id = None):
+    def __init__(self, chrom = None, start = None, end = None, _id = None):
         self.chrom = chrom
         self.start = start
-        self.stop = stop
+        self.end = end
         self.id = _id
     
 def load_regions(reg_file, reg_type):
@@ -60,14 +60,14 @@ def load_regions(reg_file, reg_type):
     for idx, ln in enumerate(lines):   # it's probably fine to use enumerate here for bed files are usually small.
         parts = ln[:-1].split("\t")
         try:
-            start, stop = int(parts[1]), int(parts[2])
+            start, end = int(parts[1]), int(parts[2])
         except (IndexError, ValueError) as e:
             print("Error: invalid bed record in No.%d line: %s" % (idx + 1, str(e)))
             return None
         if reg_type == "bed":
             start += 1
-        _id = "%s:%d-%d" % (parts[0], start, stop)
-        reg_list.append(Region(parts[0], start, stop, _id))
+        _id = "%s:%d-%d" % (parts[0], start, end)
+        reg_list.append(Region(parts[0], start, end, _id))
 
     return reg_list
 
@@ -115,9 +115,9 @@ def chr2reg(chrom_name, chrom_len, bin_size):
     reg_list = []
     for i in range(nbins):
         start = bin_size * i + 1
-        stop = bin_size * (i + 1)
-        _id = "%s:%d-%d" % (chrom_name, start, stop)
-        reg_list.append(Region(chrom_name, start, stop, _id))
+        end = bin_size * (i + 1)
+        _id = "%s:%d-%d" % (chrom_name, start, end)
+        reg_list.append(Region(chrom_name, start, end, _id))
     
     return reg_list
 
@@ -197,11 +197,11 @@ def output_regions(reg_list, fname, ftype):
 
     if ftype == "bed":
         for reg in reg_list:
-            rec = "\t".join([reg.chrom, str(reg.start - 1), str(reg.stop), reg.id])
+            rec = "\t".join([reg.chrom, str(reg.start - 1), str(reg.end), reg.id])
             fp.write(rec + "\n")
     elif ftype == "tsv":
         for reg in reg_list:
-            rec = "\t".join([reg.chrom, str(reg.start), str(reg.stop)])
+            rec = "\t".join([reg.chrom, str(reg.start), str(reg.end)])
             fp.write(rec + "\n")
     else:
         return -3
