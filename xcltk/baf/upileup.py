@@ -1,6 +1,8 @@
+# Copied from cellSNP, https://github.com/single-cell-genetics/cellSNP/blob/purePython/cellSNP/cellSNP.py
 # pileup SNPs across the genome with pysam's fetch or pileup reads
 # Author: Yuanhua Huang
 # Date: 21-12-2018
+# Modified by: Xianjie Huang
 
 import os
 import sys
@@ -12,10 +14,13 @@ import numpy as np
 import multiprocessing
 from optparse import OptionParser, OptionGroup
 
-from .version import __version__
-from .utils.pileup_utils import fetch_positions
-from .utils.pileup_regions import pileup_regions
-from .utils.vcf_utils import load_VCF, merge_vcf, VCF_to_sparseMat
+from .config import APP
+from ..config import VERSION
+from ..utils.pileup import fetch_positions
+from ..utils.pileup_regions import pileup_regions
+from ..utils.vcf import load_VCF, merge_vcf, VCF_to_sparseMat
+
+COMMAND = "upileup"
 
 DEF_FLAG_WITH_UMI = 4096       # default value of max_FLAG when using UMIs, i.e., UMI_tag is not None
 DEF_FLAG_WITHOUT_UMI = 255     # default value of max_FLAG when not using UMIs, i.e., UMI_tag is None
@@ -25,12 +30,17 @@ START_TIME = time.time()
 def show_progress(RV=None):
     return RV
 
-def main():
+def upileup(argv):
     # import warnings
     # warnings.filterwarnings('error')
 
     # parse command line options
-    parser = OptionParser()
+    if len(argv) < 3:
+        print("Welcome to %s %s v%s!\n" %(APP, COMMAND, VERSION))
+        print("use -h or --help for help on argument.")
+        sys.exit(1)
+
+    parser = OptionParser(usage = "Usage: %s %s [options]" % (APP, COMMAND))
     parser.add_option("--samFile", "-s", dest="sam_file", default=None,
         help=("Indexed sam/bam file(s), comma separated multiple samples. "
               "Mode 1&2: one sam/bam file with single cell barcode; "
@@ -45,7 +55,7 @@ def main():
               "given outDir. [optional]"))
     
     parser.add_option("--regionsVCF", "-R", dest="region_file", default=None,
-        help=("A vcf file listing all candidate SNPs, for fetch each variants. "
+        help=("A sorted vcf file listing all candidate SNPs, for fetch each variants. "
               "If None, pileup the genome. Needed for bulk samples."))
     parser.add_option("--barcodeFile", "-b", dest="barcode_file", default=None,
         help=("A plain file listing all effective cell barcode."))
@@ -86,12 +96,8 @@ def main():
     parser.add_option_group(group1)
     parser.add_option_group(group2)
 
-    (options, args) = parser.parse_args()
-    if len(sys.argv[1:]) == 0:
-        print("Welcome to cellSNP v%s!\n" %(__version__))
-        print("use -h or --help for help on argument.")
-        sys.exit(1)
-        
+    # check options and args
+    (options, args) = parser.parse_args(args = argv[2:])
     if options.sam_file is None and options.sam_file_list is None:
         print("Error: need samFile for sam file.")
         sys.exit(1)
@@ -279,7 +285,5 @@ def main():
     run_time = time.time() - START_TIME
     print("[cellSNP] All done: %d min %.1f sec" %(int(run_time / 60), 
                                                   run_time % 60))
-    
-        
 if __name__ == "__main__":
-    main()
+    upileup(sys.argv)

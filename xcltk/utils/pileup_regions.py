@@ -3,9 +3,10 @@
 # originally in from pileup_utils.py
 # Author: Yuanhua Huang
 # Date: 21/05/2018
+# Modified by: Xianjie Huang
 
-from .pileup_utils import *
-from .cellsnp_utils import get_query_bases, get_query_qualities
+from .pileup import *
+from .sam import get_query_bases, get_query_qualities
 
 ## ealier high error in pileup whole genome might come from
 ## using _read.query_sequence, which has only partially aligned
