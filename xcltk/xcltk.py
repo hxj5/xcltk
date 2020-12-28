@@ -2,7 +2,6 @@
 # Author: Xianjie Huang 
 
 #TODO: 
-# - convert (region) could deal with zipped file (for both input and output)
 # - modify phase_snp:
 #   * --snpAD and --snpDP could take 0-based, 1-based or any other?
 #   * --phase could deal with vcf
