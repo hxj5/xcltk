@@ -7,7 +7,7 @@ import os
 import sys
 import getopt
 import gzip
-from ..utils.base import assert_path_exists, log
+from ..utils.base import assert_e, assert_n, log
 from .config import APP
 
 def __format_chrom(chrom):
@@ -28,8 +28,7 @@ def __load_snp_mtx(fn):
                  - number of records [int]
                  - a dict of {snp_idx:{cell_idx:depth, }} pairs [dict]
     """
-    if not fn or not os.path.isfile(fn):
-        return None
+    assert_e(fn, "snp mtx")
     cols = []
     if fn.endswith(".gz"):
         cols = [line[:-1].split("\t")[:3] for line in gzip.open(fn, "rt")]
@@ -55,8 +54,7 @@ def __load_phase(fn):
                  - number of valid snps whose one allele is 0 and the other is 1 [int]
                  - a dict of {chrom:[(pos, allele1, allele2, snp_idx),]} pairs [dict]
     """
-    if not fn or not os.path.isfile(fn):
-        return None
+    assert_e(fn, "phase file")
     cols = []
     if fn.endswith(".gz"):
         cols = [line[:-1].split("\t")[:4] for line in gzip.open(fn, "rt")]
@@ -81,8 +79,7 @@ def __load_region(fn):
                  - number of blocks [int]
                  - a dict of {chrom:[(start, end, reg_idx),]} pairs [dict]
     """
-    if not fn or not os.path.isfile(fn):
-        return None
+    assert_e(fn, "region file")
     cols = []
     if fn.endswith(".gz"):
         cols = [line[:-1].split("\t")[:3] for line in gzip.open(fn, "rt")]
@@ -215,14 +212,12 @@ def __phase_snp2block(sid, snp_ad_file, snp_dp_file, phase_file, region_file, ou
     @return             Void
     """
     # check args
-    if not sid:
-        raise ValueError("Sample ID needed.")
-    assert_path_exists(snp_ad_file, "file", "SNP AD mtx") 
-    assert_path_exists(snp_ad_file, "file", "SNP DP mtx")
-    assert_path_exists(region_file, "file", "Region file")
-    if not out_dir:
-        raise ValueError("Out dir needed.")
-    elif not os.path.isdir(out_dir):
+    assert_n(sid, "Sample ID")
+    assert_e(snp_ad_file, "SNP AD mtx") 
+    assert_e(snp_ad_file, "SNP DP mtx")
+    assert_e(region_file, "Region file")
+    assert_n(out_dir, "Output dir")
+    if not os.path.isdir(out_dir):
         os.mkdir(out_dir)
 
     # load SNP AD & DP mtx

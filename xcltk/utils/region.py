@@ -26,7 +26,7 @@ class Region:
     @param stop    End pos of this region: 1-based, included [int]
     @param _id     Region ID [str]
     '''
-    def __init__(self, chrom=None, start=None, stop=None, _id=None):
+    def __init__(self, chrom = None, start = None, stop = None, _id = None):
         self.chrom = chrom
         self.start = start
         self.stop = stop
@@ -187,15 +187,13 @@ def output_regions(reg_list, fname, ftype):
     @return          0 if success, negative integer if error [int]
     """
     fp = None
-    if fname is None: 
-        fp = sys.stdout
-    elif fname:
+    if fname:
         if os.path.splitext(fname)[1] in (".gz", ".gzip"):
             fp = gzip.open(fname, "wb")
         else:
             fp = open(fname, "w")
     else:
-        return -1
+        fp = sys.stdout
 
     if ftype == "bed":
         for reg in reg_list:
@@ -208,7 +206,7 @@ def output_regions(reg_list, fname, ftype):
     else:
         return -3
     
-    if fname is not None:
+    if fname:
         fp.close()
     return 0
 

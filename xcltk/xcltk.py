@@ -3,7 +3,6 @@
 
 #TODO: 
 # - modify phase_snp:
-#   * --snpAD and --snpDP could take 0-based, 1-based or any other?
 #   * --phase could deal with vcf
 #   * --region could take bed|gff|tsv, both plain or zipped
 # - add cellSNP and modify it to solve double check problem
