@@ -1,7 +1,8 @@
+# Copied from cellSNP, https://github.com/single-cell-genetics/cellSNP/blob/feature-count/cellSNP/cellFeatureCount.py
 # Count reads for features in each cell
 # Author: Yuanhua Huang
 # Date: 27-04-2020
-# Modified by Xianjie Huang 
+# Modified by: Xianjie Huang 
 
 import os
 import sys

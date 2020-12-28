@@ -2,7 +2,7 @@
 # Utilility functions for pileup SNPs
 # Author: Yuanhua Huang
 # Date: 22/08/2018
-# Modified by Xianjie Huang
+# Modified by: Xianjie Huang
 
 ## TODO: samFile.fetch is more efficient, but may gives
 ## low quality reads, e.g., deletion or refskip
@@ -14,6 +14,7 @@ import sys
 import pysam
 import numpy as np
 from .base import id_mapping, unique_list
+from .sam import get_query_bases, get_query_qualities
 from ..config import VERSION
 
 VCF_HEADER = (
@@ -87,22 +88,26 @@ def check_pysam_chrom(samFile, chrom=None):
     CACHE_CHROM = chrom
     CACHE_SAMFILE = samFile
     return samFile, chrom
+    
 
 def qual_vector(qual=None, capBQ=45, minBQ=0.25):
     """convert the base call quality score to related values for different genotypes
     http://emea.support.illumina.com/bulletins/2016/04/fastq-files-explained.html
     https://linkinghub.elsevier.com/retrieve/pii/S0002-9297(12)00478-8
     
+    @Note  The parameter "qual" is the qual value that is not the ASCII-encoded values typically seen in 
+           FASTQ or SAM formatted files, so no need to substract 33.
+
     Return: a vector of loglikelihood for 
     AA, AA+AB (doublet), AB, B or E (see Demuxlet paper online methods)
     """
     if qual is None:
         return [0, 0, 0, 0]
-    BQ = ord(qual) - 33
-    BQ = max(min(capBQ, BQ), minBQ)
+    BQ = max(min(capBQ, qual), minBQ)
     P = 0.1**(BQ / 10) # Sanger coding, error probability
     RV = [np.log(1-P), np.log(3/4 - 2/3*P), np.log(1/2 - 1/3*P), np.log(P)]
     return RV
+
 
 def qual_matrix_to_geno(qual_matrix, base_count, REF, ALT, doublet_GL=False):
     """
@@ -140,6 +145,16 @@ def qual_matrix_to_geno(qual_matrix, base_count, REF, ALT, doublet_GL=False):
 
     return GT_out, PL_out
 
+def fmt_umi_tag(read, cell_tag, umi_tag):
+    """
+    @abstract        Return formatted UMI string according to cell_tag and umi_tag.
+    @param read      An alignment read [AlignmentSegment].
+    @param cell_tag  Cell tag, e.g., "CB". None means do not use cell tag [STR].
+    @param umi_tag   UMI tag, e.g., "UR". Should not be None [STR].
+    @return          A formatted (joined) UMI string used for UMI grouping [STR].
+    """
+    return read.get_tag(cell_tag) + '>' + read.get_tag(umi_tag) if cell_tag is not None else read.get_tag(umi_tag)
+
 def fetch_bases(samFile, chrom, POS, cell_tag="CR", UMI_tag="UR", min_MAPQ=20, 
                 max_FLAG=255, min_LEN=30):
     """ Fetch bases from all reads mapped to a given genome position.
@@ -175,14 +190,15 @@ def fetch_bases(samFile, chrom, POS, cell_tag="CR", UMI_tag="UR", min_MAPQ=20,
             continue
 
         if UMI_tag is not None:
-            UMIs_list.append(_read.get_tag(UMI_tag))
+            UMIs_list.append(fmt_umi_tag(_read, cell_tag, UMI_tag))
         if cell_tag is not None:
             cell_list.append(_read.get_tag(cell_tag))
 
-        _base = _read.query_alignment_sequence[idx].upper()
+        _base = get_query_bases(_read)[idx].upper()
         base_list.append(_base)
-        qual_list.append(_read.qqual[idx])
+        qual_list.append(get_query_qualities(_read)[idx])
     return base_list, qual_list, UMIs_list, cell_list
+
 
 def filter_reads(read_list, cell_tag="CR", UMI_tag="UR", min_MAPQ=20, 
                  max_FLAG=255, min_LEN=30):
@@ -199,6 +215,7 @@ def filter_reads(read_list, cell_tag="CR", UMI_tag="UR", min_MAPQ=20,
         if UMI_tag is not None and _read.has_tag(UMI_tag) == False: 
             continue
         if UMI_tag is not None:
+            #UMIs_list.append(fmt_umi_tag(_read, cell_tag, UMI_tag))
             UMIs_list.append(_read.get_tag(UMI_tag))
         if cell_tag is not None:
             cell_list.append(_read.get_tag(cell_tag))
@@ -208,6 +225,7 @@ def filter_reads(read_list, cell_tag="CR", UMI_tag="UR", min_MAPQ=20,
     RV["UMIs_list"] = UMIs_list
     RV["cell_list"] = cell_list
     return RV
+
 
 def fetch_positions(samFile_list, chroms, positions, REF=None, ALT=None, 
                     barcodes=None, sample_ids=None, out_file=None, 
@@ -227,13 +245,19 @@ def fetch_positions(samFile_list, chroms, positions, REF=None, ALT=None,
             fid.writelines("\t".join(VCF_COLUMN + barcodes) + "\n")
         else:
             fid.writelines("\t".join(VCF_COLUMN + sample_ids) + "\n")
-    
+
+    POS_CNT_TOTAL = len(positions)
+    POS_CNT_NPRINTS = 50           # expected times to print the percentage of positions.
+    POS_CNT_PERC_M = POS_CNT_TOTAL / POS_CNT_NPRINTS
+    POS_CNT_PERC_N = POS_CNT_PERC_M    
     POS_CNT = 0
     vcf_lines_all = []
     for i in range(len(positions)):
         POS_CNT += 1
-        if verbose and POS_CNT % 10000 == 0:
-            print("%.2fM positions processed." %(POS_CNT/1000000))
+        if verbose and POS_CNT_TOTAL and POS_CNT >= POS_CNT_PERC_N:
+            print("%.2f%% positions processed." % (POS_CNT / POS_CNT_TOTAL * 100.0))
+            POS_CNT_PERC_N += POS_CNT_PERC_M
+            POS_CNT_PERC_N = POS_CNT_PERC_N if POS_CNT_PERC_N <= POS_CNT_TOTAL else POS_CNT_TOTAL
         
         base_cells_sample = []
         qual_cells_sample = []
@@ -282,6 +306,7 @@ def fetch_positions(samFile_list, chroms, positions, REF=None, ALT=None,
         fid.close() 
     return vcf_lines_all
 
+
 def map_barcodes(base_list, qual_list, cell_list, UMIs_list, barcodes):
     """map cell barcodes and pileup bases
     """
@@ -322,6 +347,7 @@ def map_barcodes(base_list, qual_list, cell_list, UMIs_list, barcodes):
             qual_cells[0][BASE_IDX[base_list[i]], :] += qual_vector(qual_list[i])
         base_cells = [[base_merge[x] for x in "ACGTN"]]
     return base_merge, base_cells, qual_cells
+
 
 def get_vcf_line(base_merge, base_cells, qual_cells, chrom, POS, min_COUNT, 
                  min_MAF, REF=None, ALT=None, doublet_GL=False):

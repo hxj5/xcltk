@@ -1,3 +1,4 @@
+# Copied from cellSNP, https://github.com/single-cell-genetics/cellSNP/blob/feature-count/cellSNP/utils/count_utils.py
 # Utilility functions for count reads in each feature
 # Author: Yuanhua Huang
 # Date: 27/04/2020
