@@ -3,7 +3,6 @@
 
 #TODO: 
 # - modify phase_snp:
-#   * --phase could deal with vcf
 #   * --region could take bed|gff|tsv, both plain or zipped
 # - add cellSNP and modify it to solve double check problem
 # - test using cellsnp-lite to call germline SNPs

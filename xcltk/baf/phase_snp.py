@@ -45,6 +45,74 @@ def __load_snp_mtx(fn):
             snp_cell.setdefault(c[0], {})[c[1]] = depth
     return (nsnp, ncell, nrecord, snp_cell)
 
+def __load_phase_from_tsv(fn):
+    """
+    @abstract  Load data from phase file of tsv format
+    @param fn  Path to phase file [str]
+    @return    A tuple of three elements if success, None otherwise [tuple]:
+                 - number of total snps [int]
+                 - number of valid snps whose one allele is 0 and the other is 1 [int]
+                 - a dict of {chrom:[(pos, allele1, allele2, snp_idx),]} pairs [dict]
+    """
+    assert_e(fn, "phase file")
+    cols = []
+    if os.path.splitext(fn)[1] in (".gz", ".gzip"):
+        cols = [line[:-1].split("\t")[:4] for line in gzip.open(fn, "rt")]
+    else:
+        cols = [line[:-1].split("\t")[:4] for line in open(fn, "rt")]
+    phases = {}
+    i, j = 0, 0
+    for c in cols:
+        i += 1
+        assert len(c) >= 3, "too few columns in phase file '%s'" % fn
+        sep = ""
+        if "|" in c[2]: sep = "|"
+        elif "/" in c[2]: sep = "/"
+        else: return None
+        a1, a2 = c[2].split(sep)[:2]
+        if (a1 == "0" and a2 == "1") or (a2 == "1" and a1 == "0"):
+            chrom = __format_chrom(c[0])
+            phases.setdefault(chrom, []).append((int(c[1]), a1, a2, str(i)))
+            j += 1
+    return (i, j, phases)
+
+def __load_phase_from_vcf(fn):
+    """
+    @abstract  Load data from phase file of vcf format
+    @param fn  Path to phase file [str]
+    @return    A tuple of three elements if success, None otherwise [tuple]:
+                 - number of total snps [int]
+                 - number of valid snps whose one allele is 0 and the other is 1 [int]
+                 - a dict of {chrom:[(pos, allele1, allele2, snp_idx),]} pairs [dict]
+    """
+    assert_e(fn, "phase file")
+    fp = gzip.open(fn, "rt") if os.path.splitext(fn)[1] in (".gz", ".gzip") else \
+         open(fn, "r")
+    phases = {}
+    i, j = 0, 0
+    for line in fp:
+        i += 1
+        parts = line[:-1].split("\t")
+        assert len(parts) >= 10, "too few columns in vcf '%s'" % fn 
+        fields = parts[8].split(":")
+        assert "GT" in fields, "GT not in vcf '%s'" % fn
+        idx = fields.index("GT")
+        values = parts[9].split(":")
+        assert len(values) == len(fields), \
+               "length of fields should be the same with length of values in vcf '%s'" % fn
+        gt = values[idx]
+        sep = ""
+        if "|" in gt: sep = "|"
+        elif "/" in gt: sep = "/"
+        else: return None
+        a1, a2 = gt.split(sep)[:2]
+        if (a1 == "0" and a2 == "1") or (a2 == "1" and a1 == "0"):
+            chrom = __format_chrom(parts[0])
+            phases.setdefault(chrom, []).append((int(parts[1]), a1, a2, str(i)))
+            j += 1
+    fp.close()
+    return (i, j, phases)
+
 def __load_phase(fn):
     """
     @abstract  Load data from phase file
@@ -55,21 +123,10 @@ def __load_phase(fn):
                  - a dict of {chrom:[(pos, allele1, allele2, snp_idx),]} pairs [dict]
     """
     assert_e(fn, "phase file")
-    cols = []
-    if fn.endswith(".gz"):
-        cols = [line[:-1].split("\t")[:4] for line in gzip.open(fn, "rt")]
-    else:
-        cols = [line[:-1].split("\t")[:4] for line in open(fn, "rt")]
-    phases = {}
-    i, j = 0, 0
-    for c in cols:
-        assert len(c) >= 4, "too few columns in phase file"
-        i += 1
-        if (c[2] == "0" and c[3] == "1") or (c[2] == "1" and c[3] == "0"):
-            chrom = __format_chrom(c[0])
-            phases.setdefault(chrom, []).append((int(c[1]), c[2], c[3], str(i)))
-            j += 1
-    return (i, j, phases)
+    if os.path.splitext(fn)[1] in (".vcf", ".vcf.gz"):
+        return __load_phase_from_vcf(fn)
+    else
+        return __load_phase_from_tsv(fn)
 
 def __load_region(fn):
     """
@@ -315,8 +372,8 @@ def __usage(fp = sys.stderr):
            "  --sid STR       Sample ID.\n"                        \
            "  --snpAD FILE    Path to the SNP AD mtx, snp_idx and cell_idx are both 1-based.\n"   \
            "  --snpDP FILE    Path to the SNP DP mtx, snp_idx and cell_idx are both 1-based.\n"   \
-           "  --phase FILE    Path to the SNP phase file, 4 columns:\n"                           \
-           "                  <chr> <pos> <allele1:0|1> <allele2:0|1>; pos is 1-based.\n"         \
+           "  --phase FILE    Path to the SNP phase file, either VCF file or\n"                   \
+           "                  a tsv with 3 columns: <chr> <pos> <GT>; pos is 1-based.\n"         \
            "  --region FILE   Path to region file, 3 columns: <chr> <start> <end>;\n"             \
            "                  Both start and stop are 1-based and included.\n"                    \
            "  --outdir DIR    Path to output dir.\n"                                             \
