@@ -4,6 +4,11 @@
 # Date: 21-12-2018
 # Modified by: Xianjie Huang
 
+# upileup 
+#   - uniquely pileup each SNP: if one read covers more than one SNPs, then this 
+#     read would only be counted once for the SNP with the smallest pos. Then the
+#     double counting problem is solved this way.
+
 import os
 import sys
 import gzip
