@@ -1,3 +1,4 @@
+# Copied from cellSNP, https://github.com/single-cell-genetics/cellSNP/blob/purePython/cellSNP/utils/pileup_utils.py
 # Utilility functions for pileup SNPs
 # Author: Yuanhua Huang
 # Date: 22/08/2018

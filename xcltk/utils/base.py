@@ -1,6 +1,5 @@
 # Base Utils
-# Author: Yuanhua Huang
-# Modified by Xianjie Huang
+# Author: Xianjie Huang
 
 import os
 import sys
@@ -62,6 +61,9 @@ def log(msg, fp = sys.stdout):
     @return     Void
     """
     fp.write("[%s] %s\n" % (get_now_str(), msg))
+
+## The two function id_mapping() and unique_list() are copied from 
+## cellSNP, https://github.com/single-cell-genetics/cellSNP/blob/purePython/cellSNP/utils/base_utils.py
 
 def id_mapping(IDs1, IDs2, uniq_ref_only=True, IDs2_sorted=False):
     """
