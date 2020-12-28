@@ -2,6 +2,14 @@
 History
 =======
 
+Release v0.1.6 (28/12/2020)
+===========================
+* phase_snp: support bed,gff,tsv for input region
+* phase_snp: support vcf as input for phase file
+* add gzip support for region sub-module
+* baf_pre_impute: add -C/--call option and use cellsnp-lite
+  by default to call germline SNPs instead of freebayes
+
 Release v0.1.5 (19/12/2020)
 ===========================
 * small fix
