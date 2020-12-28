@@ -126,7 +126,7 @@ def __load_phase(fn):
     assert_e(fn, "phase file")
     if os.path.splitext(fn)[1] in (".vcf", ".vcf.gz"):
         return __load_phase_from_vcf(fn)
-    else
+    else:
         return __load_phase_from_tsv(fn)
 
 def __load_region(fn):

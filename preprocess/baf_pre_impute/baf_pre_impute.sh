@@ -1,6 +1,8 @@
 #!/bin/bash
 #this script is aimed to build a pipeline for steps from calling germline SNPs to pre-imputation.
 
+# TODO: add reference version into the VCF header
+
 ###### Global settings ######
 work_dir=`cd $(dirname $0); pwd`
 prog_path=$0
@@ -107,7 +109,7 @@ else
     exit 1
 fi
 
-if [ -n "$ncores" ]; then 
+if [ -z "$ncores" ]; then 
   ncores=1
 fi
 

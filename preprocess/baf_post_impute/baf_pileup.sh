@@ -1,6 +1,8 @@
 #!/bin/bash
 #this script is aimed to build a pipeline for steps from post-imputation to pileup.
 
+# TODO: add reference version into VCF header
+
 ###### Global settings ######
 work_dir=`cd $(dirname $0); pwd`
 prog_path=$0
@@ -212,12 +214,12 @@ gt_vpath=$out_dir/$gt_vname
 cmd="$bin_bcftools view -Oz -T $csp_vpath $csp_in_vpath > $gt_vpath"
 eval_cmd "$cmd" "$aim"
 
-aim="extract phased GT"
-gt_tsv=$out_dir/${csp_in_vname%.vcf.gz}.gt.tsv.gz
-cmd="$bin_bcftools query -f '%CHROM\t%POS[\t%GT]\n' $gt_vpath | 
-     awk '{split(\$3, a, \"|\"); printf(\"%s\t%s\t%s\t%s\n\", \$1, \$2, a[1], a[2]); }' | 
-     $bin_bgzip -c > $gt_tsv"
-eval_cmd "$cmd" "$aim"
+#aim="extract phased GT"
+#gt_tsv=$out_dir/${csp_in_vname%.vcf.gz}.gt.tsv.gz
+#cmd="$bin_bcftools query -f '%CHROM\t%POS[\t%GT]\n' $gt_vpath | 
+#     awk '{split(\$3, a, \"|\"); printf(\"%s\t%s\t%s\t%s\n\", \$1, \$2, a[1], a[2]); }' | 
+#     $bin_bgzip -c > $gt_tsv"
+#eval_cmd "$cmd" "$aim"
 
 ###### END ######
 log_msg "All Done!"
