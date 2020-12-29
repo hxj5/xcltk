@@ -6,7 +6,7 @@ function __now() {
 }
 
 function __exit() {
-    echo "[`__now`]$1" >&2
+    echo "[`__now`] $1" >&2
     exit 1
 }
 

@@ -2,6 +2,10 @@
 History
 =======
 
+Release v0.1.7 (29/12/2020)
+===========================
+* add pileup module and fix double counting
+
 Release v0.1.6 (28/12/2020)
 ===========================
 * phase_snp: support bed,gff,tsv for input region

@@ -2,7 +2,6 @@
 # Author: Xianjie Huang 
 
 #TODO: 
-# - add cellSNP and modify it to solve double check problem
 # - test using cellsnp-lite to call germline SNPs
 # - add install list (conda + pip)
 
