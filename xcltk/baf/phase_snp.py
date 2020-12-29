@@ -92,6 +92,8 @@ def __load_phase_from_vcf(fn):
     phases = {}
     i, j = 0, 0
     for line in fp:
+        if line[0] in ("#", "\n"):
+            continue
         i += 1
         parts = line[:-1].split("\t")
         assert len(parts) >= 10, "too few columns in vcf '%s'" % fn 
@@ -107,7 +109,7 @@ def __load_phase_from_vcf(fn):
         elif "/" in gt: sep = "/"
         else: return None
         a1, a2 = gt.split(sep)[:2]
-        if (a1 == "0" and a2 == "1") or (a2 == "1" and a1 == "0"):
+        if (a1 == "0" and a2 == "1") or (a1 == "1" and a2 == "0"):
             chrom = __format_chrom(parts[0])
             phases.setdefault(chrom, []).append((int(parts[1]), a1, a2, str(i)))
             j += 1
@@ -124,7 +126,7 @@ def __load_phase(fn):
                  - a dict of {chrom:[(pos, allele1, allele2, snp_idx),]} pairs [dict]
     """
     assert_e(fn, "phase file")
-    if os.path.splitext(fn)[1] in (".vcf", ".vcf.gz"):
+    if fn.endswith(".vcf") or fn.endswith(".vcf.gz"):
         return __load_phase_from_vcf(fn)
     else:
         return __load_phase_from_tsv(fn)
@@ -140,8 +142,9 @@ def __load_region(fn):
     assert_e(fn, "region file")
     suffix = os.path.splitext(fn[:-3])[1] if fn.endswith(".gz") else \
              os.path.splitext(fn)[1]
-    assert suffix.lower() in ("bed", "tsv", "gff"), "region type should be bed|tsv|gff"
-    reg_list = load_regions(fn, suffix)
+    assert suffix.lower() in (".bed", ".tsv", ".gff"), "region type should be bed|tsv|gff"
+    reg_type = suffix[1:].lower()
+    reg_list = load_regions(fn, reg_type)
     if reg_list is None:
         return None
     regions = {}
