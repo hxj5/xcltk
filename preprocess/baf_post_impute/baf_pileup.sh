@@ -25,8 +25,10 @@ function usage() {
     echo
     echo "Options:"
     echo "  -S, --seq STR        Seq type: dna|rna|atac"
-    echo "  -b, --barcode FILE   Path to barcode file"
+    echo "  -b, --barcode FILE   Path to barcode file for droplet-based dataset"
     echo "  -s, --bam FILE       Path to bam file, one barcode per line"
+    echo "  -L, --bamlist File   Path to bam list file for well-based dataset"
+    echo "  -u, --umi STR        UMI tag if available"
     echo "  -v, --vcf FILE       Path to phased vcf"
     echo "  -p, --ncores INT     Number of cores"
     echo "  -O, --outdir DIR     Path to output dir"
@@ -52,7 +54,7 @@ if [ $# -lt 1 ]; then
     exit 1
 fi
 
-ARGS=`getopt -o S:s:b:v:p:O:c:h --long seq:,bam:,barcode:,vcf:,ncores:,outdir:,config:,help -n "" -- "$@"`
+ARGS=`getopt -o S:s:b:L:u:v:p:O:c:h --long seq:,bam:,barcode:,bamlist:,umi:,vcf:,ncores:,outdir:,config:,help -n "" -- "$@"`
 if [ $? -ne 0 ]; then
     echo "Error: failed to parse command line args. Terminating..." >&2
     exit 1
@@ -64,6 +66,8 @@ while true; do
         -S|--seq) seq_type=$2; shift 2;;
         -s|--bam) bam=$2; shift 2;;
         -b|--barcode) barcode=$2; shift 2;;
+        -L|--bamlist) bam_list=$2; shift 2;;
+        -u|--umi) umi=$2; shift 2;;
         -v|--vcf) vcf=$2; shift 2;;
         -p|--ncores) ncores=$2; shift 2;;
         -O|--outdir) out_dir=$2; shift 2;;
@@ -82,6 +86,29 @@ load_cfg $cfg
 mkdir -p $out_dir &> /dev/null
 out_dir=`cd $out_dir; pwd`
 
+if [ -n "$bam" ] && [ -n "$bam_list" ]; then
+    log_err "Error: --bam and --bamlist should not be specified at the same time!"
+    exit 1
+fi
+
+if [ -n "$bam" ]; then            # droplet-based dataset
+    bam_opt="-s $bam -b $barcode"
+elif [ -n "$bam_list" ]; then     # well-based dataset
+    bam_opt="-S $bam_list"
+else
+    log_err "Error: either --bam or --bamlist should be specified!"
+    exit 1
+fi
+
+if [ -z "$umi" ]; then 
+    umi=None
+    excl_flag=1796
+    max_flag=255
+else
+    excl_flag=772
+    max_flag=4096
+fi
+
 csp_in_vpath=$vcf
 csp_in_vname=`basename $vcf`
 
@@ -89,17 +116,17 @@ csp_in_vname=`basename $vcf`
 aim="cellsnp-lite pileup"
 csp_dir=$out_dir/cellsnp-lite
 if [ "$seq_type" == "dna" ] || [ "$seq_type" == "atac" ]; then
-    cmd="$bin_cellsnp -s $bam -b $barcode -O $csp_dir -R $csp_in_vpath --minCOUNT 1 --minMAF 0 \\
-      --minLEN 30 --minMAPQ 20 --inclFLAG 0 --exclFLAG 1796 --UMItag None -p $ncores  \\
+    cmd="$bin_cellsnp $bam_opt -O $csp_dir -R $csp_in_vpath --minCOUNT 1 --minMAF 0 \\
+      --minLEN 30 --minMAPQ 20 --inclFLAG 0 --exclFLAG $excl_flag --UMItag $umi -p $ncores  \\
       --genotype --gzip"
 elif [ "$seq_type" == "rna" ]; then
-    cmd="$bin_cellsnp -s $bam -b $barcode -O $csp_dir -R $csp_in_vpath --minCOUNT 1 --minMAF 0 \\
-      --minLEN 30 --minMAPQ 20 --inclFLAG 0 --exclFLAG 772 --UMItag UR -p $ncores      \\
+    cmd="$bin_cellsnp $bam_opt -O $csp_dir -R $csp_in_vpath --minCOUNT 1 --minMAF 0 \\
+      --minLEN 30 --minMAPQ 20 --inclFLAG 0 --exclFLAG $excl_flag --UMItag $umi -p $ncores      \\
       --genotype --gzip"
 else  # unknown
     log_msg "Warning: unknown seq type $seq_type, use the dna pileup method"
-    cmd="$bin_cellsnp -s $bam -b $barcode -O $csp_dir -R $csp_in_vpath --minCOUNT 1 --minMAF 0  \\
-      --minLEN 30 --minMAPQ 20 --inclFLAG 0 --exclFLAG 1796 --UMItag None -p $ncores           \\
+    cmd="$bin_cellsnp $bam_opt -O $csp_dir -R $csp_in_vpath --minCOUNT 1 --minMAF 0  \\
+      --minLEN 30 --minMAPQ 20 --inclFLAG 0 --exclFLAG $excl_flag --UMItag $umi -p $ncores           \\
       --genotype --gzip"
 fi
 eval_cmd "$cmd" "$aim"
@@ -109,15 +136,15 @@ csp_vpath=$csp_dir/cellSNP.base.vcf.gz
 aim="xcltk pileup"
 xcsp_dir=$out_dir/xcltk-pileup
 if [ "$seq_type" == "dna" ] || [ "$seq_type" == "atac" ]; then
-    cmd="$bin_xcltk pileup -s $bam -b $barcode -O $xcsp_dir -R $csp_vpath --minCOUNT 1 --minMAF 0 \\
-      --minLEN 30 --minMAPQ 20 --maxFLAG 255 --UMItag None -p $ncores" 
+    cmd="$bin_xcltk pileup $bam_opt -O $xcsp_dir -R $csp_vpath --minCOUNT 1 --minMAF 0 \\
+      --minLEN 30 --minMAPQ 20 --maxFLAG $max_flag --UMItag $umi -p $ncores" 
 elif [ "$seq_type" == "rna" ]; then
-    cmd="$bin_xcltk pileup -s $bam -b $barcode -O $xcsp_dir -R $csp_vpath --minCOUNT 1 --minMAF 0 \\
-      --minLEN 30 --minMAPQ 20 --maxFLAG 4096 --UMItag UR -p $ncores" 
+    cmd="$bin_xcltk pileup $bam_opt -O $xcsp_dir -R $csp_vpath --minCOUNT 1 --minMAF 0 \\
+      --minLEN 30 --minMAPQ 20 --maxFLAG $max_flag --UMItag $umi -p $ncores" 
 else  # unknown
     log_msg "Warning: unknown seq type $seq_type, use the dna pileup method"
-    cmd="$bin_xcltk pileup -s $bam -b $barcode -O $xcsp_dir -R $csp_vpath --minCOUNT 1 --minMAF 0  \\
-      --minLEN 30 --minMAPQ 20 --maxFLAG 255 --UMItag None -p $ncores"
+    cmd="$bin_xcltk pileup $bam_opt -O $xcsp_dir -R $csp_vpath --minCOUNT 1 --minMAF 0  \\
+      --minLEN 30 --minMAPQ 20 --maxFLAG $max_flag --UMItag $umi -p $ncores"
 fi
 eval_cmd "$cmd" "$aim"
 
