@@ -66,8 +66,8 @@ ALT alleles, from SAM/BAM/CRAM file for each cell.
 
 To run this step, the [configure file][baf_pileup config] should be provided and then use 
 the script `baf_pileup.sh` in `preprocess/baf_post_impute` directory with proper settings. 
-The script wraps cellsnp-lite and cellSNP. All possible settings could be found with the 
-`-h` option,
+The script simply wraps cellsnp-lite and xcltk pileup. All possible settings could be 
+found with the `-h` option,
 
 ```shell
 cd preprocess/baf_post_impute
