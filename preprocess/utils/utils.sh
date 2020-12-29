@@ -23,17 +23,16 @@ function eval_cmd() {
     local cmd="$1"
     local aim="$2"
 
-    echo "==================== START `__now` ===================="
-    echo "+++++++ AIM +++++++++"
-    echo "$aim"
-    echo "++++++ COMMAND ++++++"
+    log_msg "START $aim"
+    echo "=> COMMAND"
     echo "$cmd"
-    echo "++++++ OUTPUT ++++++"
+    echo "=> OUTPUT"
     eval "$cmd"
+    echo "=> DONE"
     if [ $? -ne 0 ]; then
         __exit "[E::eval_cmd] failed to run PART $aim"
     fi
-    echo "===================== END `__now` ====================="
+    log_msg "END $aim"
     echo
 }
 
