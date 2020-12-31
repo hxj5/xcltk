@@ -2,6 +2,11 @@
 History
 =======
 
+Release v0.1.8 (31/12/2020)
+===========================
+* phase_snp: fix load_phase
+* baf_post: update pileup cmdline
+
 Release v0.1.7 (29/12/2020)
 ===========================
 * add pileup module and fix double counting
