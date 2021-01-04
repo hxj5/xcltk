@@ -88,7 +88,8 @@ done
 log_msg "Load config ..."
 load_cfg $cfg
 
-sid=${smp_name}-${seq_type}-${phase_type}
+#sid=${smp_name}-${seq_type}-${phase_type}
+sid=${smp_name}
 
 mkdir -p $out_dir &> /dev/null
 out_dir=`cd $out_dir; pwd`

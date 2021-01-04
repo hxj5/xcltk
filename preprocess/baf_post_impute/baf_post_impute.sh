@@ -135,7 +135,8 @@ eval_cmd "$cmd" "$aim"
 
 xcsp_dir=$out_dir/xcltk-pileup
 gt_vpath=`ls $out_dir/*.gt.vcf.gz`
-sid=${smp_name}-${seq_type}-${phase_type}
+#sid=${smp_name}-${seq_type}-${phase_type}
+sid=${smp_name}
 
 aim="phase SNPs into haplotype blocks of even size"
 phs_even_dir=$out_dir/phase-snp-even
