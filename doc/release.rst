@@ -2,6 +2,11 @@
 History
 =======
 
+Release v0.1.9 (04/01/2021)
+===========================
+* baf_pileup: add --uniqCOUNT
+* specify sample ID through cmdline option
+
 Release v0.1.8 (31/12/2020)
 ===========================
 * phase_snp: fix load_phase
