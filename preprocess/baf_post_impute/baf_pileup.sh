@@ -137,14 +137,14 @@ aim="xcltk pileup"
 xcsp_dir=$out_dir/xcltk-pileup
 if [ "$seq_type" == "dna" ] || [ "$seq_type" == "atac" ]; then
     cmd="$bin_xcltk pileup $bam_opt -O $xcsp_dir -R $csp_vpath --minCOUNT 1 --minMAF 0 \\
-      --minLEN 30 --minMAPQ 20 --maxFLAG $max_flag --UMItag $umi -p $ncores" 
+      --minLEN 30 --minMAPQ 20 --maxFLAG $max_flag --UMItag $umi -p $ncores --uniqCOUNT" 
 elif [ "$seq_type" == "rna" ]; then
     cmd="$bin_xcltk pileup $bam_opt -O $xcsp_dir -R $csp_vpath --minCOUNT 1 --minMAF 0 \\
-      --minLEN 30 --minMAPQ 20 --maxFLAG $max_flag --UMItag $umi -p $ncores" 
+      --minLEN 30 --minMAPQ 20 --maxFLAG $max_flag --UMItag $umi -p $ncores --uniqCOUNT" 
 else  # unknown
     log_msg "Warning: unknown seq type $seq_type, use the dna pileup method"
     cmd="$bin_xcltk pileup $bam_opt -O $xcsp_dir -R $csp_vpath --minCOUNT 1 --minMAF 0  \\
-      --minLEN 30 --minMAPQ 20 --maxFLAG $max_flag --UMItag $umi -p $ncores"
+      --minLEN 30 --minMAPQ 20 --maxFLAG $max_flag --UMItag $umi -p $ncores --uniqCOUNT"
 fi
 eval_cmd "$cmd" "$aim"
 
