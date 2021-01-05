@@ -116,7 +116,7 @@ fi
 ###### Core Part ######
 aim="call germline SNPs"
 raw_vname=${sid}.hg${hg}.raw.vcf.gz
-raw_vpath=$out_dir/$raw_vpath
+raw_vpath=$out_dir/$raw_vname
 if [ "$app_call" == "freebayes" ]; then
     cmd="$bin_freebayes -C 2 -F 0.1 -m 20 --min-coverage 20 -f $fasta $bam | 
          $bin_bgzip -c > $raw_vpath"
