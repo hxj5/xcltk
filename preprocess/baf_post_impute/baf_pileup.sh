@@ -91,10 +91,12 @@ if [ -n "$bam" ] && [ -n "$bam_list" ]; then
     exit 1
 fi
 
+cell_tag=CB
 if [ -n "$bam" ]; then            # droplet-based dataset
     bam_opt="-s $bam -b $barcode"
 elif [ -n "$bam_list" ]; then     # well-based dataset
     bam_opt="-S $bam_list"
+    cell_tag=None
 else
     log_err "Error: either --bam or --bamlist should be specified!"
     exit 1
@@ -118,16 +120,16 @@ csp_dir=$out_dir/cellsnp-lite
 if [ "$seq_type" == "dna" ] || [ "$seq_type" == "atac" ]; then
     cmd="$bin_cellsnp $bam_opt -O $csp_dir -R $csp_in_vpath --minCOUNT 1 --minMAF 0 \\
       --minLEN 30 --minMAPQ 20 --inclFLAG 0 --exclFLAG $excl_flag --UMItag $umi -p $ncores  \\
-      --genotype --gzip"
+      --cellTAG $cell_tag --genotype --gzip"
 elif [ "$seq_type" == "rna" ]; then
     cmd="$bin_cellsnp $bam_opt -O $csp_dir -R $csp_in_vpath --minCOUNT 1 --minMAF 0 \\
       --minLEN 30 --minMAPQ 20 --inclFLAG 0 --exclFLAG $excl_flag --UMItag $umi -p $ncores      \\
-      --genotype --gzip"
+      --cellTAG $cell_tag --genotype --gzip"
 else  # unknown
     log_msg "Warning: unknown seq type $seq_type, use the dna pileup method"
     cmd="$bin_cellsnp $bam_opt -O $csp_dir -R $csp_in_vpath --minCOUNT 1 --minMAF 0  \\
       --minLEN 30 --minMAPQ 20 --inclFLAG 0 --exclFLAG $excl_flag --UMItag $umi -p $ncores           \\
-      --genotype --gzip"
+      --cellTAG $cell_tag --genotype --gzip"
 fi
 eval_cmd "$cmd" "$aim"
 
@@ -137,14 +139,17 @@ aim="xcltk pileup"
 xcsp_dir=$out_dir/xcltk-pileup
 if [ "$seq_type" == "dna" ] || [ "$seq_type" == "atac" ]; then
     cmd="$bin_xcltk pileup $bam_opt -O $xcsp_dir -R $csp_vpath --minCOUNT 1 --minMAF 0 \\
-      --minLEN 30 --minMAPQ 20 --maxFLAG $max_flag --UMItag $umi -p $ncores --uniqCOUNT" 
+      --minLEN 30 --minMAPQ 20 --maxFLAG $max_flag --UMItag $umi -p $ncores --uniqCOUNT \\
+      --cellTAG $cell_tag" 
 elif [ "$seq_type" == "rna" ]; then
     cmd="$bin_xcltk pileup $bam_opt -O $xcsp_dir -R $csp_vpath --minCOUNT 1 --minMAF 0 \\
-      --minLEN 30 --minMAPQ 20 --maxFLAG $max_flag --UMItag $umi -p $ncores --uniqCOUNT" 
+      --minLEN 30 --minMAPQ 20 --maxFLAG $max_flag --UMItag $umi -p $ncores --uniqCOUNT \\
+      --cellTAG $cell_tag" 
 else  # unknown
     log_msg "Warning: unknown seq type $seq_type, use the dna pileup method"
     cmd="$bin_xcltk pileup $bam_opt -O $xcsp_dir -R $csp_vpath --minCOUNT 1 --minMAF 0  \\
-      --minLEN 30 --minMAPQ 20 --maxFLAG $max_flag --UMItag $umi -p $ncores --uniqCOUNT"
+      --minLEN 30 --minMAPQ 20 --maxFLAG $max_flag --UMItag $umi -p $ncores --uniqCOUNT \\
+      --cellTAG $cell_tag"
 fi
 eval_cmd "$cmd" "$aim"
 
