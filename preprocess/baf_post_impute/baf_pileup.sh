@@ -25,8 +25,8 @@ function usage() {
     echo
     echo "Options:"
     echo "  -S, --seq STR        Seq type: dna|rna|atac"
-    echo "  -b, --barcode FILE   Path to barcode file for droplet-based dataset"
-    echo "  -s, --bam FILE       Path to bam file, one barcode per line"
+    echo "  -b, --barcode FILE   Path to barcode file, one barcode per line"
+    echo "  -s, --bam FILE       Path to bam file for droplet-based dataset"
     echo "  -L, --bamlist File   Path to bam list file for well-based dataset"
     echo "  -u, --umi STR        UMI tag if available"
     echo "  -v, --vcf FILE       Path to phased vcf"

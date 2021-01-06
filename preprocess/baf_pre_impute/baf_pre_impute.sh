@@ -37,7 +37,8 @@ function usage() {
     echo
     echo "Options:"
     echo "  -N, --name STR      Sample name"
-    echo "  -s, --bam FILE      Path to bam file"
+    echo "  -s, --bam FILE      Path to bam file for droplet-based dataset"
+    echo "  -L, --bamlist File  Path to bam list file for well-based dataset"
     echo "  -f, --fasta FILE    Path to fasta file"
     echo "  -g, --hg INT        Version of fasta, 19 or 38"
     echo "  -C, --call STR      Germline SNP calling app, cellsnp-lite or"
@@ -66,7 +67,7 @@ if [ $# -lt 1 ]; then
     exit 1
 fi
 
-ARGS=`getopt -o N:s:f:g:C:O:p:c:h --long name:,bam:,fasta:,hg:,call:,outdir:,ncores:,config:,help -n "" -- "$@"`
+ARGS=`getopt -o N:s:L:f:g:C:O:p:c:h --long name:,bam:,bamList:,fasta:,hg:,call:,outdir:,ncores:,config:,help -n "" -- "$@"`
 if [ $? -ne 0 ]; then
     log_err "Error: failed to parse command line. Terminating..."
     exit 1
@@ -77,6 +78,7 @@ while true; do
     case "$1" in
         -N|--name) smp_name=$2; shift 2;;
         -s|--bam) bam=$2; shift 2;;
+        -L|--bamlist) bam_list=$2; shift 2;;
         -f|--fasta) fasta=$2; shift 2;;
         -g|--hg) hg=$2; shift 2;;
         -C|--call) app_call=$2; shift 2;;
@@ -98,6 +100,24 @@ sid=$smp_name       # Sample ID
 
 mkdir -p $out_dir &> /dev/null
 out_dir=`cd $out_dir; pwd`
+
+if [ -n "$bam" ] && [ -n "$bam_list" ]; then
+    log_err "Error: --bam and --bamlist should not be specified at the same time!"
+    exit 1
+fi
+
+if [ -n "$bam" ]; then            # droplet-based dataset
+    bam_opt="-s $bam"
+elif [ -n "$bam_list" ]; then     # well-based dataset
+    bam_opt="-S $bam_list"
+    if [ "$app_call" == "freebayes" ]; then
+        log_err "Error: should not specify --bamList for freebayes!"
+        exit 1
+    fi
+else
+    log_err "Error: either --bam or --bamlist should be specified!"
+    exit 1
+fi
 
 if [ -n "$hg" ]; then
     if [ $hg -ne 19 ] && [ $hg -ne 38 ]; then
@@ -121,7 +141,7 @@ if [ "$app_call" == "freebayes" ]; then
     cmd="$bin_freebayes -C 2 -F 0.1 -m 20 --min-coverage 20 -f $fasta $bam | 
          $bin_bgzip -c > $raw_vpath"
 else
-    cmd="$bin_cellsnp -s $bam -O $out_dir/cellsnp_pre -p $ncores --minMAF 0.1 \\
+    cmd="$bin_cellsnp $bam_opt -O $out_dir/cellsnp_pre -p $ncores --minMAF 0.1 \\
          --minCOUNT 20 --minLEN 30 --minMAPQ 20 --exclFLAG 1796 --cellTAG None \\
          --UMItag None --gzip --genotype"
     raw_vpath=$out_dir/cellsnp_pre/cellSNP.cells.vcf.gz
