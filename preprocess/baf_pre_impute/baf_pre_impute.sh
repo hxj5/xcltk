@@ -137,13 +137,15 @@ fi
 aim="call germline SNPs"
 raw_vname=${sid}.hg${hg}.raw.vcf.gz
 raw_vpath=$out_dir/$raw_vname
+target_chroms="`seq 1 22` X Y"
+tgt_chroms=`echo $target_chroms | tr ' ' ',' | sed 's/,$//'`
 if [ "$app_call" == "freebayes" ]; then
     cmd="$bin_freebayes -C 2 -F 0.1 -m 20 --min-coverage 20 -f $fasta $bam | 
          $bin_bgzip -c > $raw_vpath"
 else
     cmd="$bin_cellsnp $bam_opt -O $out_dir/cellsnp_pre -p $ncores --minMAF 0.1 \\
          --minCOUNT 20 --minLEN 30 --minMAPQ 20 --exclFLAG 1796 --cellTAG None \\
-         --UMItag None --gzip --genotype"
+         --UMItag None --chrom $tgt_chroms --gzip --genotype"
     raw_vpath=$out_dir/cellsnp_pre/cellSNP.cells.vcf.gz
 fi
 eval_cmd "$cmd" "$aim"
@@ -158,8 +160,6 @@ aim="QC:
   + filter records not in target chroms (default chr1-22, X, Y);"
 qc_vname=${raw_vname/.vcf/.qc.vcf}
 qc_vpath=$out_dir/$qc_vname
-target_chroms="`seq 1 22` X Y"
-tgt_chroms=`echo $target_chroms | tr ' ' ',' | sed 's/,$//'`
 if [ "$app_call" == "freebayes" ]; then
     cmd="$bin_bcftools view -Ou $raw_vpath | 
       $bin_bcftools view -Ou -i 'QUAL > 20 && INFO/DP > 0' |     
