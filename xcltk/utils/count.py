@@ -30,11 +30,11 @@ def fetch_reads(sam_file, region, cell_tag="CR", UMI_tag="UR", min_MAPQ=20,
     samFile, _chrom = check_pysam_chrom(sam_file, region.chrom)
     
     UMIs_list, cell_list = [], []
-    for _read in samFile.fetch(_chrom, region.start - 1, region.stop):
+    for _read in samFile.fetch(_chrom, region.start - 1, region.end):
         ## filtering reads
         # this might be further speed up
         overhang = sum((np.array(_read.positions) >= (region.start - 1)) *   
-                       (np.array(_read.positions) <= (region.stop - 1)))
+                       (np.array(_read.positions) <= (region.end - 1)))
 
         if _read.mapq < min_MAPQ or _read.flag > max_FLAG or overhang < min_LEN: 
             continue
