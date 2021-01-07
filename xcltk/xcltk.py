@@ -2,7 +2,7 @@
 # Author: Xianjie Huang 
 
 #TODO: 
-# - test using cellsnp-lite to call germline SNPs
+# - basefc: support multiple bam files
 # - add install list (conda + pip)
 
 import sys

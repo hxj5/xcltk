@@ -4,6 +4,8 @@
 # Date: 27-04-2020
 # Modified by: Xianjie Huang 
 
+# TODO: support multiple bam files
+
 import os
 import sys
 import time
