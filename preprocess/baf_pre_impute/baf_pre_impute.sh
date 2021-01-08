@@ -164,14 +164,14 @@ qc_vname=${raw_vname/.vcf/.qc.vcf}
 qc_vpath=$out_dir/$qc_vname
 if [ "$app_call" == "freebayes" ]; then
     cmd="$bin_bcftools view -Ou $raw_vpath | 
-      $bin_bcftools view -Ou -i 'QUAL > 20 && INFO/DP > 0' |     
-      $bin_bcftools view -Ou -i 'TYPE = \"snp\"' |        
-      $bin_bcftools view -Ou -i 'STRLEN(REF) == 1 && N_ALT == 1' |
+      $bin_bcftools view -Ou -i 'QUAL > 20 && INFO/DP > 0' | 
+      $bin_bcftools view -Ou -i 'TYPE = \"snp\"' | 
+      $bin_bcftools view -Ou -i 'STRLEN(REF) == 1 && N_ALT == 1' | 
       $bin_bcftools annotate -Ou --rename-chrs $ucsc2ensembl | 
       $bin_bcftools view -Oz -t $tgt_chroms > $qc_vpath"
 else
     cmd="$bin_bcftools view -Ou $raw_vpath | 
-      $bin_bcftools view -Ou -i 'TYPE = \"snp\"' |        
+      $bin_bcftools view -Ou -i 'TYPE = \"snp\"' | 
       $bin_bcftools annotate -Ou --rename-chrs $ucsc2ensembl | 
       $bin_bcftools view -Oz -t $tgt_chroms > $qc_vpath"
 fi
@@ -182,18 +182,18 @@ gq_bed=$out_dir/${qc_vname%.vcf.gz}.gq.bed
 gq_vname=${qc_vname/.vcf/.gq.vcf}
 gq_vpath=$out_dir/$gq_vname
 if [ "$app_call" == "freebayes" ]; then
-    cmd="$bin_bcftools view -Ou $qc_vpath |                          
-      $bin_bcftools query -f '%CHROM\t%POS[\t%GL]\n' |             
-      $bin_gl2gq |                                                
-      awk '\$NF > 20 { printf(\"%s\t%d\t%d\t%s\n\", \$1, \$2 - 1, \$2, \$NF) }' > $gq_bed &&                                                         
-      $bin_bcftools view -Ou $qc_vpath |                                 
+    cmd="$bin_bcftools view -Ou $qc_vpath | 
+      $bin_bcftools query -f '%CHROM\t%POS[\t%GL]\n' | 
+      $bin_gl2gq | 
+      awk '\$NF > 20 { printf(\"%s\t%d\t%d\t%s\n\", \$1, \$2 - 1, \$2, \$NF) }' > $gq_bed && 
+      $bin_bcftools view -Ou $qc_vpath | 
       $bin_bcftools view -Oz -T $gq_bed > $gq_vpath"
 else
-    cmd="$bin_bcftools view -Ou $qc_vpath |                          
-      $bin_bcftools query -f '%CHROM\t%POS[\t%PL]\n' |             
-      $bin_pl2gq |                                                
-      awk '\$NF > 20 { printf(\"%s\t%d\t%d\t%s\n\", \$1, \$2 - 1, \$2, \$NF) }' > $gq_bed &&                                                         
-      $bin_bcftools view -Ou $qc_vpath |                                 
+    cmd="$bin_bcftools view -Ou $qc_vpath | 
+      $bin_bcftools query -f '%CHROM\t%POS[\t%PL]\n' | 
+      $bin_pl2gq | 
+      awk '\$NF > 20 { printf(\"%s\t%d\t%d\t%s\n\", \$1, \$2 - 1, \$2, \$NF) }' > $gq_bed && 
+      $bin_bcftools view -Ou $qc_vpath | 
       $bin_bcftools view -Oz -T $gq_bed > $gq_vpath"
 fi
 eval_cmd "$cmd" "$aim"
@@ -211,8 +211,8 @@ if [ $hg -eq 19 ]; then
     lift_vpath=$flt_vpath
 else
     cmd="$bin_python $bin_py_liftover -c $chain_hg38to19 -i $flt_vpath \\
-      -o ${lift_vpath/.vcf/.tmp.vcf} -P $bin_liftover &&  
-      $bin_bcftools view -i 'POS > 0' -Oz ${lift_vpath/.vcf/.tmp.vcf} > ${lift_vpath} &&                                      
+      -o ${lift_vpath/.vcf/.tmp.vcf} -P $bin_liftover && 
+      $bin_bcftools view -i 'POS > 0' -Oz ${lift_vpath/.vcf/.tmp.vcf} > ${lift_vpath} && 
       rm ${lift_vpath/.vcf/.tmp.vcf}"
     eval_cmd "$cmd" "$aim"
 fi
@@ -225,10 +225,10 @@ aim="xcltk fixref"
 fix_vname=${lift_vname/.vcf/.fixref.sort.vcf}
 fix_vpath=$out_dir/$fix_vname
 tmp_prefix=${lift_vpath%.vcf.gz}
-cmd="$bin_bcftools query -f '%CHROM:%POS-%POS\n' $lift_vpath > ${tmp_prefix}.region.lst &&                                
-  $bin_samtools faidx -r ${tmp_prefix}.region.lst $fa_impute |  
-  $bin_bgzip -c > ${tmp_prefix}.fa.gz &&                       
-  $bin_xcltk fixref -i $lift_vpath -r ${tmp_prefix}.fa.gz |   
+cmd="$bin_bcftools query -f '%CHROM:%POS-%POS\n' $lift_vpath > ${tmp_prefix}.region.lst && 
+  $bin_samtools faidx -r ${tmp_prefix}.region.lst $fa_impute | 
+  $bin_bgzip -c > ${tmp_prefix}.fa.gz && 
+  $bin_xcltk fixref -i $lift_vpath -r ${tmp_prefix}.fa.gz | 
   $bin_bcftools sort -Oz > $fix_vpath && 
   rm ${tmp_prefix}.region.lst"
 eval_cmd "$cmd" "$aim"

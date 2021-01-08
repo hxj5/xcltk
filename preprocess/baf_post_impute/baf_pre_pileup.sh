@@ -132,8 +132,8 @@ if [ $hg -eq 19 ]; then
     lift_vpath=$flt_vpath
 else
     cmd="$bin_python $bin_py_liftover -c $chain_hg19to38 -i $flt_vpath \\
-           -o ${lift_vpath/.vcf/.tmp.vcf} -P $bin_liftover &&                    
-         $bin_bcftools view -i 'POS > 0' -Oz ${lift_vpath/.vcf/.tmp.vcf} > ${lift_vpath} &&     
+           -o ${lift_vpath/.vcf/.tmp.vcf} -P $bin_liftover && 
+         $bin_bcftools view -i 'POS > 0' -Oz ${lift_vpath/.vcf/.tmp.vcf} > ${lift_vpath} && 
          rm ${lift_vpath/.vcf/.tmp.vcf}"
     eval_cmd "$cmd" "$aim"
 fi
@@ -161,10 +161,10 @@ aim="xcltk fixref"
 fix_vname=${chr_vname/.vcf/.fixref.vcf}
 fix_vpath=$out_dir/$fix_vname
 tmp_prefix=${chr_vpath%.vcf.gz}
-cmd="$bin_bcftools query -f '%CHROM:%POS-%POS\n' $chr_vpath > ${tmp_prefix}.region.lst &&  
+cmd="$bin_bcftools query -f '%CHROM:%POS-%POS\n' $chr_vpath > ${tmp_prefix}.region.lst && 
      $bin_samtools faidx -r ${tmp_prefix}.region.lst $fasta | 
-     $bin_bgzip -c > ${tmp_prefix}.fa.gz &&                     
-     $bin_xcltk fixref -i $chr_vpath -r ${tmp_prefix}.fa.gz |  
+     $bin_bgzip -c > ${tmp_prefix}.fa.gz && 
+     $bin_xcltk fixref -i $chr_vpath -r ${tmp_prefix}.fa.gz | 
      $bin_bgzip -c > $fix_vpath && 
      rm ${tmp_prefix}.region.lst"
 eval_cmd "$cmd" "$aim"
@@ -176,7 +176,7 @@ eval_cmd "$cmd" "$aim"
 aim="filter duplicates (chrom + pos) and sort"
 uniq_vname=${fix_vname/.vcf/.uniq.sort.vcf}
 uniq_vpath=$out_dir/$uniq_vname
-cmd="zcat $fix_vpath | awk '\$0 ~ /^#/ {print; next;} ! a[\$1\":\"\$2] {print; a[\$1\":\"\$2]=1}' |
+cmd="zcat $fix_vpath | awk '\$0 ~ /^#/ {print; next;} ! a[\$1\":\"\$2] {print; a[\$1\":\"\$2]=1}' | 
      $bin_bcftools sort -Oz > $uniq_vpath"
 eval_cmd "$cmd" "$aim"
 
