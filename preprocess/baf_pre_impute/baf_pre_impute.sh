@@ -1,7 +1,9 @@
 #!/bin/bash
 #this script is aimed to build a pipeline for steps from calling germline SNPs to pre-imputation.
 
-# TODO: add reference version into the VCF header
+# TODO: 
+# - add reference version into the VCF header
+# - support calling germline SNPs for multiple bam files (-L)
 
 ###### Global settings ######
 work_dir=`cd $(dirname $0); pwd`
@@ -38,7 +40,7 @@ function usage() {
     echo "Options:"
     echo "  -N, --name STR      Sample name"
     echo "  -s, --bam FILE      Path to bam file for droplet-based dataset"
-    echo "  -L, --bamlist File  Path to bam list file for well-based dataset"
+#   echo "  -L, --bamlist File  Path to bam list file for well-based dataset"
     echo "  -f, --fasta FILE    Path to fasta file"
     echo "  -g, --hg INT        Version of fasta, 19 or 38"
     echo "  -C, --call STR      Germline SNP calling app, cellsnp-lite or"
