@@ -108,7 +108,7 @@ fi
 if [ -n "$bam" ]; then            # droplet-based dataset
     bam_opt="-s $bam -b $barcode"
 elif [ -n "$bam_list" ]; then     # well-based dataset
-    bam_opt="-S $bam_list"
+    bam_opt="-L $bam_list"
 else
     log_err "Error: either --bam or --bamlist should be specified!"
     exit 1
