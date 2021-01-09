@@ -158,7 +158,10 @@ xcsp_vpath=$xcsp_dir/cellSNP.base.vcf.gz
 aim="merge pileup vcf and phase GT vcf"
 gt_vname=${csp_in_vname/.vcf/.gt.vcf}
 gt_vpath=$out_dir/$gt_vname
-cmd="$bin_bcftools view -Oz -T $xcsp_vpath $csp_in_vpath > $gt_vpath"
+cmd="zcat $csp_in_vpath | sed 's/^chr//' | $bin_bgzip -c > ${csp_in_vpath}.tmp &&
+     zcat $xcsp_vpath | sed 's/^chr//' | $bin_bgzip -c > ${xcsp_vpath}.tmp &&
+     $bin_bcftools view -Oz -T ${xcsp_vpath}.tmp ${csp_in_vpath}.tmp > $gt_vpath &&
+     rm ${csp_in_vpath}.tmp && rm ${xcsp_vpath}.tmp"
 eval_cmd "$cmd" "$aim"
 
 #aim="extract phased GT"
