@@ -2,6 +2,15 @@
 History
 =======
 
+Release v0.1.10 (09/01/2021)
+============================
+* baf_post: support multiple BAMs
+* baf_pileup: set cellTAG None when given bam list
+* copy barcode file for baf_pileup and copy barcode & region
+  files for phase_snp
+* basefc: replace region.stop with region.end
+* small fixes
+
 Release v0.1.9 (04/01/2021)
 ===========================
 * baf_pileup: add --uniqCOUNT
