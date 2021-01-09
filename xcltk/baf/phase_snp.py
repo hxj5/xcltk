@@ -3,6 +3,8 @@
 #this script is aimed to aggregate SNPs into haplotype blocks to get BAF matrices within each cell.
 #Author: Xianjie Huang 
 
+# TODO: output region file to out_dir
+
 import os
 import sys
 import getopt
