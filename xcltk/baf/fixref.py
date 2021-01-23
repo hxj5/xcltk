@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #this script is aimed to make sure REFs match certain genome reference build.
-#it would change corresponding ALT & GT while keep other fields unchanged.
+#it would change corresponding ALT & GT while delete other fields in FORMAT
 #Author: Xianjie Huang 
 
 import sys
@@ -39,9 +39,8 @@ def __fix_rec(nr, ref0, line):
     @param line    The vcf record whose ref is to be checked, ends with '\n' [str]
     @return        A tuple of two elements: the running state and the checked line [tuple<int, str>]
                    The running state: 
-                     0, if vcf ref match with fasta ref;
                      -1, if error;
-                     1, if vcf ref not match with fasta ref and is successfully fixref-ed.
+                     1, if vcf record is successfully fixref-ed.
     """
     parts = line[:-1].split("\t")
     try:
@@ -49,7 +48,6 @@ def __fix_rec(nr, ref0, line):
     except:
         sys.stderr.write("[W::fix_rec] skip No.%d line for failing to parse vcf line.\n" % nr)
         return((-1, None))
-    if ref == ref0: return ((0, None))
     fmt_parts = fmt.split(":")
     fval_parts = fval.split(":")
     try:
@@ -58,59 +56,64 @@ def __fix_rec(nr, ref0, line):
     except:
         sys.stderr.write("[W::fix_rec] skip No.%d %s:%s for error GT, format str: %s; format value: %s\n" % (nr, chrom, pos, fmt, fval))
         return((-1, None))
-    sep = None
-    if "/" in gt: 
-        sep = "/"
-    elif "|" in gt: 
-        sep = "|"
-    else:
-        sys.stderr.write("[W::fix_rec] skip No.%d %s:%s for error GT sep, GT str: %s\n" % (nr, chrom, pos, gt))
-        return((-1, None))
-    ra_idx = gt.split(sep)    # index of ref/alt: 0, 1, 2
-    if len(ra_idx) != 2: 
-        sys.stderr.write("[W::fix_rec] skip No.%d %s:%s for error GT alleles, GT str: %s\n" % (nr, chrom, pos, gt))
-        return((-1, None))
-    try:
-        idx1, idx2 = int(ra_idx[0]), int(ra_idx[1])
-    except:
-        sys.stderr.write("[W::fix_rec] skip No.%d %s:%s for error GT allele index, GT str: %s\n" % (nr, chrom, pos, gt))
-        return((-1, None))
-    allele1 = allele2 = None
-    multi_alt = alt.split(",")
-    try:
-        if idx1 == 0: allele1 = ref
-        else: allele1 = multi_alt[idx1 - 1]
-        if idx2 == 0: allele2 = ref
-        else: allele2 = multi_alt[idx2 - 1]
-    except:
-        sys.stderr.write("[W::fix_rec] skip No.%d %s:%s for error ALT, ALT str: %s\n" % (nr, chrom, pos, alt))
-        return((-1, None))
-    if len(allele1) != 1 or len(allele2) != 1 or allele1 not in "ACGTN" or allele2 not in "ACGTN":
-        sys.stderr.write("[W::fix_rec] skip No.%d %s:%s for invalid allele, allele1 = %s; allele2 = %s\n" % (nr, chrom, pos, allele1, allele2))
-        return((-1, None))
-    new_alts = []
-    new_idx1 = new_idx2 = None
-    if allele1 == ref0: new_idx1 = 0
-    else: new_idx1 = 1; new_alts.append(allele1)
-    if allele2 == ref0: new_idx2 = 0
-    elif allele2 == allele1: new_idx2 = new_idx1
-    else: new_idx2 = new_idx1 + 1; new_alts.append(allele2)
-    new_alt = ",".join(new_alts) if new_alts else "."
-    new_gt = sep.join([str(i) for i in [new_idx1, new_idx2]])   # CHECK ME! does the order of allele indexes matter?
-    #if new_idx1 == 0 and new_idx2 == 0:
-    #    sys.stderr.write("[W::fix_rec] skip %s:%s for new gt being 0/0, from %s:%s:%s to %s:%s:%s.\n" % (chrom, pos, ref, alt, gt, ref0, new_alt, new_gt))
-    #    return((-1, None))
-    fval_parts[gt_idx] = new_gt
+    new_alt = alt
+    new_gt = gt
+    if ref != ref0:
+        sep = None
+        if "/" in gt: 
+            sep = "/"
+        elif "|" in gt: 
+            sep = "|"
+        else:
+            sys.stderr.write("[W::fix_rec] skip No.%d %s:%s for error GT sep, GT str: %s\n" % (nr, chrom, pos, gt))
+            return((-1, None))
+        ra_idx = gt.split(sep)    # index of ref/alt: 0, 1, 2
+        if len(ra_idx) != 2: 
+            sys.stderr.write("[W::fix_rec] skip No.%d %s:%s for error GT alleles, GT str: %s\n" % (nr, chrom, pos, gt))
+            return((-1, None))
+        try:
+            idx1, idx2 = int(ra_idx[0]), int(ra_idx[1])
+        except:
+            sys.stderr.write("[W::fix_rec] skip No.%d %s:%s for error GT allele index, GT str: %s\n" % (nr, chrom, pos, gt))
+            return((-1, None))
+        allele1 = allele2 = None
+        multi_alt = alt.split(",")
+        try:
+            if idx1 == 0: allele1 = ref
+            else: allele1 = multi_alt[idx1 - 1]
+            if idx2 == 0: allele2 = ref
+            else: allele2 = multi_alt[idx2 - 1]
+        except:
+            sys.stderr.write("[W::fix_rec] skip No.%d %s:%s for error ALT, ALT str: %s\n" % (nr, chrom, pos, alt))
+            return((-1, None))
+        if len(allele1) != 1 or len(allele2) != 1 or allele1 not in "ACGTN" or allele2 not in "ACGTN":
+            sys.stderr.write("[W::fix_rec] skip No.%d %s:%s for invalid allele, allele1 = %s; allele2 = %s\n" % (nr, chrom, pos, allele1, allele2))
+            return((-1, None))
+        new_alts = []
+        new_idx1 = new_idx2 = None
+        if allele1 == ref0: new_idx1 = 0
+        else: new_idx1 = 1; new_alts.append(allele1)
+        if allele2 == ref0: new_idx2 = 0
+        elif allele2 == allele1: new_idx2 = new_idx1
+        else: new_idx2 = new_idx1 + 1; new_alts.append(allele2)
+        new_alt = ",".join(new_alts) if new_alts else "."
+        new_gt = sep.join([str(i) for i in [new_idx1, new_idx2]])   # CHECK ME! does the order of allele indexes matter?
+        #if new_idx1 == 0 and new_idx2 == 0:
+        #    sys.stderr.write("[W::fix_rec] skip %s:%s for new gt being 0/0, from %s:%s:%s to %s:%s:%s.\n" % (chrom, pos, ref, alt, gt, ref0, new_alt, new_gt))
+        #    return((-1, None))
+    parts[2] = parts[5] = parts[7] = "."
     parts[3] = ref0
     parts[4] = new_alt
-    parts[9] = ":".join(fval_parts)
+    parts[8] = "GT"
+    parts[9] = new_gt
     new_vcf_line = "\t".join(parts) + "\n"
-    sys.stderr.write("[I::fix_rec] change No.%d %s:%s from %s:%s:%s to %s:%s:%s\n" % (nr, chrom, pos, ref, alt, gt, ref0, new_alt, new_gt))
+    if ref != ref0:
+        sys.stderr.write("[I::fix_rec] change No.%d %s:%s from %s:%s:%s to %s:%s:%s\n" % (nr, chrom, pos, ref, alt, gt, ref0, new_alt, new_gt))
     return((1, new_vcf_line))
 
 def __fix_file(in_fn, out_fn, ref_fn):
     """
-    @abstract       Fix REF, ALT & GT while keep other fields unchanged
+    @abstract       Fix REF, ALT & GT while delete other fields in FORMAT
     @param in_fn    Input vcf file to be fixed [str]
     @param out_fn   Output vcf file [str]
     @param ref_fn   Ref fasta file generated by samtools faidx [str]
@@ -150,8 +153,7 @@ def __fix_file(in_fn, out_fn, ref_fn):
             nr += 1
             continue
         ret, new_line = __fix_rec(nr + 1, ref_alleles[nr], line)
-        if ret == 0: ofp.write(line)
-        elif ret == -1: pass
+        if ret < 0: pass
         elif ret == 1: ofp.write(new_line)
         else: pass
         nr += 1
