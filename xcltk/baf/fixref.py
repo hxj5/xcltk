@@ -7,6 +7,7 @@ import sys
 import getopt
 import time
 import gzip
+import pysam
 from .config import APP
 
 COMMAND = "fixref"
@@ -40,6 +41,7 @@ def __fix_rec(nr, ref0, line):
     @return        A tuple of two elements: the running state and the checked line [tuple<int, str>]
                    The running state: 
                      -1, if error;
+                     0, if ref == ref0, i.e., no fix is needed
                      1, if vcf record is successfully fixref-ed.
     """
     parts = line[:-1].split("\t")
@@ -48,6 +50,11 @@ def __fix_rec(nr, ref0, line):
     except:
         sys.stderr.write("[W::fix_rec] skip No.%d line for failing to parse vcf line.\n" % nr)
         return((-1, None))
+    
+    # No fix is needed
+    if ref == ref0:
+        return (0, line)
+    
     fmt_parts = fmt.split(":")
     fval_parts = fval.split(":")
     try:
@@ -120,7 +127,9 @@ def __fix_file(in_fn, out_fn, ref_fn):
     @return         0 if success, -1 otherwise
     """
     # load ref fasta and input vcf
-    ref_alleles = __load_ref(ref_fn)
+    # ref_alleles = __load_ref(ref_fn)
+    
+    FASTA = pysam.FastaFile(ref_fn)
 
     ifp = gzip.open(in_fn, "rt") if in_fn.endswith(".gz") else open(in_fn, "r")
     vcf_lines = ifp.readlines()
@@ -129,10 +138,10 @@ def __fix_file(in_fn, out_fn, ref_fn):
     for line in vcf_lines:
         if line[0] == "#": nc += 1
         else: break
-    sys.stderr.write("Info: len(vcf_lines) = %d; len(ref_alleles) = %d; len(comment_lines) = %d\n" % (len(vcf_lines), len(ref_alleles), nc))
-    if len(vcf_lines) - nc != len(ref_alleles):
-        sys.stderr.write("Error: nlines of ref_alleles is not equal to nrecords of vcf!\n")
-        return(-1)
+    # sys.stderr.write("Info: len(vcf_lines) = %d; len(ref_alleles) = %d; len(comment_lines) = %d\n" % (len(vcf_lines), len(ref_alleles), nc))
+    # if len(vcf_lines) - nc != len(ref_alleles):
+    #     sys.stderr.write("Error: nlines of ref_alleles is not equal to nrecords of vcf!\n")
+    #     return(-1)
     
     # fixref and output
     # TODO: add cmdline of this run to the output file
@@ -144,19 +153,34 @@ def __fix_file(in_fn, out_fn, ref_fn):
     for i in range(nc):
         ofp.write(vcf_lines[i])   
     nr = 0
+    fix_cnt = 0
+    matched_cnt = 0
     for line in vcf_lines[nc:]:
         if line[0] in ("\n", "#"):
             sys.stderr.write("Error: invalid vcf format, wrong comment line for No.%d record!\n" % (nr + 1,))
             return(-1)
-        if not ref_alleles[nr]:
-            sys.stderr.write("Warning: skip No.%d record for no real REF!\n" % (nr + 1,))
-            nr += 1
-            continue
-        ret, new_line = __fix_rec(nr + 1, ref_alleles[nr], line)
+        
+        _chr, _pos = line.split('\t')[:2]
+        _ref_allele = FASTA.fetch(_chr, int(_pos) - 1, int(_pos))
+        ret, new_line = __fix_rec(nr + 1, _ref_allele, line)
+        
+        # if not ref_alleles[nr]:
+        #     sys.stderr.write("Warning: skip No.%d record for no real REF!\n" % (nr + 1,))
+        #     nr += 1
+        #     continue
+        # ret, new_line = __fix_rec(nr + 1, ref_alleles[nr], line)
+
         if ret < 0: pass
-        elif ret == 1: ofp.write(new_line)
+        elif ret == 0 or ret == 1: ofp.write(new_line)
         else: pass
+        
         nr += 1
+        if ret == 1: fix_cnt += 1
+        if ret == 0: matched_cnt += 1
+        
+    sys.stderr.write("%d valid records in input VCF!\n" % (nr))
+    sys.stderr.write("%d records have been fixed REF!\n" % (fix_cnt))
+    sys.stderr.write("%d records don't need to fix REF!\n" % (matched_cnt))
 
     if out_fn:
         ofp.close()
