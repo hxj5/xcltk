@@ -4,7 +4,7 @@ History
 
 Release v0.1.11 (28/01/2021)
 ============================
-re-implement fixref with pysam:  
+| re-implement fixref with pysam:  
 * support genome fasta as ref (-r)
 * support gzip/bgzip input and output vcf
 * support multiple alt alleles
