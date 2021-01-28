@@ -224,13 +224,8 @@ eval_cmd "$cmd" "$aim"
 aim="xcltk fixref"
 fix_vname=${lift_vname/.vcf/.fixref.sort.vcf}
 fix_vpath=$out_dir/$fix_vname
-tmp_prefix=${lift_vpath%.vcf.gz}
-cmd="$bin_bcftools query -f '%CHROM:%POS-%POS\n' $lift_vpath > ${tmp_prefix}.region.lst && 
-  $bin_samtools faidx -r ${tmp_prefix}.region.lst $fa_impute | 
-  $bin_bgzip -c > ${tmp_prefix}.fa.gz && 
-  $bin_xcltk fixref -i $lift_vpath -r ${tmp_prefix}.fa.gz | 
-  $bin_bcftools sort -Oz > $fix_vpath && 
-  rm ${tmp_prefix}.region.lst"
+cmd="$bin_xcltk fixref -i $lift_vpath -r $fa_impute -v | 
+  $bin_bcftools sort -Oz > $fix_vpath"
 eval_cmd "$cmd" "$aim"
 
 aim="bcftools fixref checking"

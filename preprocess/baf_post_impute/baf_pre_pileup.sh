@@ -161,12 +161,8 @@ aim="xcltk fixref"
 fix_vname=${chr_vname/.vcf/.fixref.vcf}
 fix_vpath=$out_dir/$fix_vname
 tmp_prefix=${chr_vpath%.vcf.gz}
-cmd="$bin_bcftools query -f '%CHROM:%POS-%POS\n' $chr_vpath > ${tmp_prefix}.region.lst && 
-     $bin_samtools faidx -r ${tmp_prefix}.region.lst $fasta | 
-     $bin_bgzip -c > ${tmp_prefix}.fa.gz && 
-     $bin_xcltk fixref -i $chr_vpath -r ${tmp_prefix}.fa.gz | 
-     $bin_bgzip -c > $fix_vpath && 
-     rm ${tmp_prefix}.region.lst"
+cmd="$bin_xcltk fixref -i $chr_vpath -r $fasta -v | 
+     $bin_bgzip -c > $fix_vpath"
 eval_cmd "$cmd" "$aim"
 
 aim="bcftools fixref checking"
