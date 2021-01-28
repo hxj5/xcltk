@@ -2,6 +2,16 @@
 History
 =======
 
+Release v0.1.11 (28/01/2021)
+============================
+re-implement fixref with pysam:  
+* support genome fasta as ref (-r)
+* support gzip/bgzip input and output vcf
+* support multiple alt alleles
+* support multiple samples
+* indels would be filtered
+* support only ploidy = 2 for now
+
 Release v0.1.10 (09/01/2021)
 ============================
 * baf_post: support multiple BAMs
