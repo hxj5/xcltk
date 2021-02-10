@@ -143,7 +143,7 @@ phs_even_dir=$out_dir/phase-snp-even
 mkdir -p $phs_even_dir &> /dev/null
 size=50    # kb
 cmd="$bin_xcltk convert -B $size -H $hg -o $phs_even_dir/blocks.${size}kb.tsv && \\
-     $bin_xcltk phase_snp --sid $sid --snpAD $xcsp_dir/cellSNP.tag.AD.mtx \\
+     $bin_xcltk phase_snp --sid ${sid}.${size}kb --snpAD $xcsp_dir/cellSNP.tag.AD.mtx \\
        --snpDP $xcsp_dir/cellSNP.tag.DP.mtx --phase $gt_vpath \\
        --region $phs_even_dir/blocks.${size}kb.tsv --outdir $phs_even_dir"
 eval_cmd "$cmd" "$aim"
@@ -153,7 +153,7 @@ cp $out_dir/cellsnp-lite/cellSNP.samples.tsv $phs_even_dir
 aim="phase SNPs into haplotype blocks of features"
 phs_fet_dir=$out_dir/phase-snp-feature
 mkdir -p $phs_fet_dir &> /dev/null
-cmd="$bin_xcltk phase_snp --sid $sid --snpAD $xcsp_dir/cellSNP.tag.AD.mtx \\
+cmd="$bin_xcltk phase_snp --sid ${sid}.feature --snpAD $xcsp_dir/cellSNP.tag.AD.mtx \\
        --snpDP $xcsp_dir/cellSNP.tag.DP.mtx \\
        --phase $gt_vpath --region $blocks --outdir $phs_fet_dir"
 eval_cmd "$cmd" "$aim"
