@@ -2,6 +2,10 @@
 History
 =======
 
+Release v0.1.12 (26/02/2021)
+============================
+* baf_pre: add --umi and --duplicates options
+
 Release v0.1.11 (28/01/2021)
 ============================
 | re-implement fixref with pysam:  
