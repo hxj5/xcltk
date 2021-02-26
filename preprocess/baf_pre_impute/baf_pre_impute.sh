@@ -45,6 +45,8 @@ function usage() {
     echo "  -g, --hg INT        Version of fasta, 19 or 38"
     echo "  -C, --call STR      Germline SNP calling app, cellsnp-lite or"
     echo "                      freebayes [cellsnp-lite]"
+    echo "  -d, --duplicates    If use, duplicate reads will be used"
+    echo "  -u, --umi STR       If use, count UMIs instead of reads"
     echo "  -O, --outdir DIR    Path to output dir"
     echo "  -p, --ncores INT    Number of cores"
     echo "  -c, --config FILE   Path to config file. If not set, use the"
@@ -62,6 +64,9 @@ cmdline=`echo $0 $*`
 log_msg "Start ..."
 log_msg "Command Line: $cmdline"
 
+# default settings
+use_dup=0
+
 # parse args
 log_msg "Parse cmdline ..."
 if [ $# -lt 1 ]; then
@@ -69,7 +74,7 @@ if [ $# -lt 1 ]; then
     exit 1
 fi
 
-ARGS=`getopt -o N:s:L:f:g:C:O:p:c:h --long name:,bam:,bamList:,fasta:,hg:,call:,outdir:,ncores:,config:,help -n "" -- "$@"`
+ARGS=`getopt -o N:s:L:f:g:C:du:O:p:c:h --long name:,bam:,bamList:,fasta:,hg:,call:,duplicates,umi:,outdir:,ncores:,config:,help -n "" -- "$@"`
 if [ $? -ne 0 ]; then
     log_err "Error: failed to parse command line. Terminating..."
     exit 1
@@ -84,6 +89,8 @@ while true; do
         -f|--fasta) fasta=$2; shift 2;;
         -g|--hg) hg=$2; shift 2;;
         -C|--call) app_call=$2; shift 2;;
+        -d|--duplicates) use_dup=1; shift;;
+        -u|--umi) umi=$2; shift 2;;
         -O|--outdir) out_dir=$2; shift 2;;
         -p|--ncores) ncores=$2; shift 2;;
         -c|--config) cfg=$2; shift 2;;
@@ -132,7 +139,19 @@ else
 fi
 
 if [ -z "$ncores" ]; then 
-  ncores=1
+    ncores=1
+fi
+
+if [ $use_dup -eq 0 ]; then
+    excl_flag=1796
+    dup_opt=""
+else
+    excl_flag=772
+    dup_opt="--use-duplicate-reads"
+fi
+
+if [ -z "$umi" ]; then
+    umi=None
 fi
 
 ###### Core Part ######
@@ -142,12 +161,12 @@ raw_vpath=$out_dir/$raw_vname
 target_chroms="`seq 1 22` X Y"
 tgt_chroms=`echo $target_chroms | tr ' ' ',' | sed 's/,$//'`
 if [ "$app_call" == "freebayes" ]; then
-    cmd="$bin_freebayes -C 2 -F 0.1 -m 20 --min-coverage 20 -f $fasta $bam | 
+    cmd="$bin_freebayes -C 2 -F 0.1 -m 20 --min-coverage 20 -f $fasta $dup_opt $bam | 
          $bin_bgzip -c > $raw_vpath"
 else
     cmd="$bin_cellsnp $bam_opt -O $out_dir/cellsnp_pre -p $ncores --minMAF 0.1 \\
-         --minCOUNT 20 --minLEN 30 --minMAPQ 20 --exclFLAG 1796 --cellTAG None \\
-         --UMItag None --chrom $tgt_chroms --gzip --genotype"
+         --minCOUNT 20 --minLEN 30 --minMAPQ 20 --exclFLAG $excl_flag --cellTAG None \\
+         --UMItag $umi --chrom $tgt_chroms --gzip --genotype"
     raw_vpath=$out_dir/cellsnp_pre/cellSNP.cells.vcf.gz
 fi
 eval_cmd "$cmd" "$aim"
