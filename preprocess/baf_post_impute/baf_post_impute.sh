@@ -1,7 +1,11 @@
 #!/bin/bash
 #this script is aimed to build a pipeline for post-imputation.
 
-# TODO: add reference version into VCF header
+# TODO: 
+# - add reference version into VCF header
+# - use --minCOUNT 20 --minMAF 0.1 for pileup?
+# - NOTE, xcltk pileup --uniqCOUNT would affect the depths of SNVs located
+#   at boundaries of regions.
 
 ###### Global settings ######
 work_dir=`cd $(dirname $0); pwd`
