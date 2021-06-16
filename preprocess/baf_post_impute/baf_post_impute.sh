@@ -4,6 +4,13 @@
 # TODO: 
 # - add reference version into VCF header
 # - use --minCOUNT 20 --minMAF 0.1 for pileup?
+# - double check if there are homozygous SNVs in the pileup result.
+#   in mode 1, the output could contain Homozygous SNV even with --minMAF 0.3. 
+#   e.g., assuming one input SNV has REF/ALT - A/C, while the two real alleles 
+#   are C/G with AF 0.6/0.4, then this SNV would pass --minMAF 0.3 and 
+#   the genotype is 1/1 (as REF is A, ALT is C), while the real genotype should 
+#   be 1/2 (as two alt alleles C,G). (SNVs of this kind are not so many in 
+#   practice? - in a recent case, only 158 out of 133k SNVs)
 # - NOTE, xcltk pileup --uniqCOUNT would affect the depths of SNVs located
 #   at boundaries of regions.
 
