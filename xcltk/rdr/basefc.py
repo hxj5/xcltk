@@ -14,7 +14,7 @@ import multiprocessing
 from optparse import OptionParser, OptionGroup
 
 from .config import APP
-from ..config import VERSION
+from ..config import VERSION, DEBUG
 from ..utils.count import feature_count
 from ..utils.region import load_regions
 
@@ -27,6 +27,11 @@ COMMAND = "basefc"
 
 def show_progress(RV=None):
     global PROCESSED, TOTAL_REGION, START_TIME, FID
+
+    if DEBUG:
+        sys.stderr.write("[show_progress] processed = %d\n" % (PROCESSED + 1,))
+        sys.stderr.flush()
+
     if RV is not None:
         FID.writelines(RV)
     
@@ -155,12 +160,11 @@ def base_fc(argv):
     FID = open(out_dir + "/matrix.mtx", "w")
 
     if nproc > 1:
-        result = []
         pool = multiprocessing.Pool(processes=nproc)
         for ii in range(len(reg_list)):
-            result.append(pool.apply_async(feature_count, (sam_file, 
+            pool.apply_async(feature_count, (sam_file, 
                 barcodes, reg_list[ii], ii, cell_tag, UMI_tag, min_MAPQ, max_FLAG, min_LEN), 
-                callback=show_progress))
+                callback=show_progress)
         pool.close()
         pool.join()
     else:
