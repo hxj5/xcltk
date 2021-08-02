@@ -5,9 +5,11 @@
 
 ## Note, this is a very basic read counting for features
 
+import sys
 import numpy as np
 from .base import id_mapping, unique_list
 from .pileup import check_pysam_chrom
+from ..config import DEBUG
 
 global CACHE_CHROM
 global CACHE_SAMFILE
@@ -28,6 +30,9 @@ def fetch_reads(sam_file, region, cell_tag="CR", UMI_tag="UR", min_MAPQ=20,
         return np.array([]), np.array([])
 
     samFile, _chrom = check_pysam_chrom(sam_file, region.chrom)
+    if not _chrom:
+        print("Warning: chrom '%s' not in sam header" % region.chrom)
+        return np.array([]), np.array([])
     
     UMIs_list, cell_list = [], []
     for _read in samFile.fetch(_chrom, region.start - 1, region.end):
@@ -62,6 +67,10 @@ def feature_count(sam_file, barcodes, region, reg_index, cell_tag, UMI_tag,
     min_MAPQ, max_FLAG, min_LEN):
     """Fetch read count for a given feature.
     """
+    if DEBUG:
+        sys.stderr.write("[feature_count] index = %d, region = %s:%d-%d\n" % (reg_index, region.chrom, region.start, region.end))
+        sys.stderr.flush()
+
     cell_list_uniq, read_count = fetch_reads(sam_file, region, cell_tag, UMI_tag, 
         min_MAPQ, max_FLAG, min_LEN)
 
@@ -76,7 +85,16 @@ def feature_count(sam_file, barcodes, region, reg_index, cell_tag, UMI_tag,
         out_list = []
         for j in range(len(idx2)):
             out_list.append("%d\t%d\t%d" %(reg_index, idx2[j], read_count[idx1[j]]))
+        
+        if DEBUG:
+            sys.stderr.write("[feature_count] index = %d, len(hits) = %d\n" % (reg_index, len(idx2)))
+            sys.stderr.flush()
+
         return "\n".join(out_list) + "\n"
     else:
+        if DEBUG:
+            sys.stderr.write("[feature_count] index = %d, hits = None\n" % (reg_index, ))
+            sys.stderr.flush()
+
         return None
 
