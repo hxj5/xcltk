@@ -2,6 +2,10 @@
 History
 =======
 
+Release v0.1.13 (02/08/2021)
+============================
+* rdr: fix program suspension caused by unmatched chrom
+
 Release v0.1.12 (26/02/2021)
 ============================
 * baf_pre: add --umi and --duplicates options
