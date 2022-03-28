@@ -1,12 +1,5 @@
-# Aim: count spliced or un-spliced transcripts / reads in single cell data
-#      to prepare inputs for RNA velocity modelling.
-# Author: Xianjie Huang
 
 # Note: now it only supports 10x data.
-
-# TODO:
-#   1. Add --maxDEPTH
-#   2. Use pileup method besides fetch method
 
 import getopt
 import multiprocessing
@@ -15,15 +8,11 @@ import pickle
 import sys
 import time
 
-from .app import APP, VERSION
-from .config import Config, \
+from .config import APP, Config, \
                     CFG_DEBUG, \
                     CFG_CELL_TAG, CFG_UMI_TAG, CFG_UMI_TAG_BC, \
                     CFG_NPROC,     \
-                    CFG_MIN_COUNT,  \
-                    CFG_MIN_OVERLAP, CFG_MIN_UREAD, CFG_MIN_UFRAC, \
-                    CFG_MIN_JUMI, CFG_MIN_JCELL,  \
-                    CFG_DENOVO_JC_LEN, \
+                    CFG_MIN_COUNT, CFG_MIN_FRAC, \
                     CFG_INCL_FLAG, CFG_EXCL_FLAG_UMI, CFG_EXCL_FLAG_XUMI, \
                     CFG_MIN_LEN, CFG_MIN_MAPQ
 from .core import sp_count
@@ -40,7 +29,6 @@ def prepare_config(conf):
     """
     func = "prepare_config"
     conf.sam_fn_list = []
-    #<DEV>#
     if conf.sam_fn:
         sam_lst0 = conf.sam_fn.split(",")
         for fn in sam_lst0:
@@ -49,17 +37,9 @@ def prepare_config(conf):
             else:
                 sys.stderr.write("[E::%s] failed to open sam file '%s'.\n" % (func, fn))
                 return(-1)
-    #elif conf.sam_list_fn:
-    #    if os.path.isfile(conf.sam_list_fn):
-    #        with zopen(conf.sam_list_fn, "rt") as fp:
-    #            conf.sam_list = [pysam.AlignmentFile(x.strip(), "r") for x in fp]
-    #    else:
-    #        sys.stderr.write("[E::%s] failed to open sam list file '%s'.\n" % (func, conf.sam_list_fn))
-    #        return(-1)
     else:
         sys.stderr.write("[E::%s] sam file(s) needed!\n" % (func,))
         return(-1)
-    #</DEV>#
 
     if conf.barcode_fn:
         conf.sid_list = None
@@ -72,35 +52,21 @@ def prepare_config(conf):
         else:
             sys.stderr.write("[E::%s] failed to open barcode file '%s'.\n" % (func, conf.barcode_fn))
             return(-1)
-    else:
-        #<DEV>#        
+    else:       
         conf.barcodes = None
         sys.stderr.write("[E::%s] barcode file needed!\n" % (func,))
         return(-1)
-        #if conf.sid:
-        #    conf.sid_list = [x.strip() for x in conf.sid.split(",")]
-        #elif conf.sid_fn:
-        #    if os.path.isfile(conf.sid_fn):
-        #        with zopen(conf.sid_fn, "rt") as fp:
-        #            conf.sid_list = [x.strip() for x in fp]
-        #    else:
-        #        sys.stderr.write("[E::%s] failed to open sample list file '%s'.\n" % (func, conf.sid_fn))
-        #        return(-1)
-        #else:
-        #    conf.sid_list = ["Sample%d" % x for x in range(len(conf.sam_list))]
-        #</DEV>#
 
     if not conf.out_dir:
         sys.stderr.write("[E::%s] out dir needed!\n" % func)
         return(-1)
     if not os.path.isdir(conf.out_dir):
         os.mkdir(conf.out_dir)
-    conf.out_junction_fn = os.path.join(conf.out_dir, conf.out_prefix + "junction.tsv")
     conf.out_region_fn = os.path.join(conf.out_dir, conf.out_prefix + "region.tsv")
     conf.out_sample_fn = os.path.join(conf.out_dir, conf.out_prefix + "samples.tsv")
-    conf.out_spliced_fn = os.path.join(conf.out_dir, conf.out_prefix + "spliced.mtx")
-    conf.out_unspliced_fn = os.path.join(conf.out_dir, conf.out_prefix + "unspliced.mtx")
-    conf.out_ambiguous_fn = os.path.join(conf.out_dir, conf.out_prefix + "ambiguous.mtx")
+    conf.out_ad_fn = os.path.join(conf.out_dir, conf.out_prefix + "AD.mtx")
+    conf.out_dp_fn = os.path.join(conf.out_dir, conf.out_prefix + "DP.mtx")
+    conf.out_oth_fn = os.path.join(conf.out_dir, conf.out_prefix + "OTH.mtx")
 
     if conf.region_fn:
         if os.path.isfile(conf.region_fn): 
@@ -123,6 +89,13 @@ def prepare_config(conf):
         sys.stderr.write("[E::%s] region file needed!\n" % (func,))
         return(-1)
 
+    if conf.snp_fn:
+        if os.path.isfile(conf.snp_fn):
+            pass   # TODO
+    else:
+        sys.stderr.write("[E::%s] SNP file needed!\n" % (func,))
+        return(-1)
+
     if conf.cell_tag and conf.cell_tag.upper() == "NONE":
         conf.cell_tag = None
     if conf.cell_tag and conf.barcodes:
@@ -134,17 +107,8 @@ def prepare_config(conf):
         sys.stderr.write("[E::%s] should not specify cell_tag or barcodes alone.\n" % (func, ))
         return(-1)
     else:
-        #<DEV>#
         sys.stderr.write("[E::%s] should specify cell_tag and barcodes.\n" % (func, ))
-        return(-1)
-        #conf.cell_tag = conf.barcodes = None
-        #if not conf.sid_fn or not conf.sid_list:
-        #    sys.stderr.write("[E::%s] should specify either barcodes or sample IDs.\n" % (func, ))
-        #    return(-1)
-        #if len(conf.sid_list) != len(conf.sam_list):
-        #    sys.stderr.write("[E::%s] len(sam_list) != len(sid_list).\n" % (func, ))
-        #    return(-1)
-        #</DEV>#         
+        return(-1)        
 
     if conf.umi_tag:
         if conf.umi_tag.upper() == "AUTO":
@@ -154,11 +118,9 @@ def prepare_config(conf):
                 conf.umi_tag = CFG_UMI_TAG_BC
         elif conf.umi_tag.upper() == "NONE":
             conf.umi_tag = None
-    #<DEV>#
     if not conf.umi_tag:
         sys.stderr.write("[E::%s] umi tag needed!\n" % (func, ))
         return(-1)
-    #</DEV>#
 
     if conf.barcodes:
         with open(conf.out_sample_fn, "w") as fp:
@@ -173,36 +135,20 @@ def usage(fp = sys.stderr):
     s += "\n" 
     s += "Options:\n"
     s += "  -s, --sam STR          Indexed sam/bam/cram file.\n"
-    #<DEV/>#s += "  -s, --sam STR          Indexed sam/bam/cram file(s), comma separated multiple samples.\n"
-    #<DEV/>#s += "  -S, --samList FILE     A list file containing bam files, each per line.\n"
     s += "  -O, --outdir DIR       Output directory for sparse matrices.\n"
-    s += "  -R, --region FILE      A GTF/GFF3 file listing target regions.\n"
+    s += "  -R, --region FILE      A TSV file listing target regions.\n"
+    s += "  -P, --phasedSNP FILE   A VCF file listing phased SNPs.\n"
     s += "  -b, --barcode FILE     A plain file listing all effective cell barcode.\n"
-    #<DEV/>#s += "  -i, --sampleIDs STR    Comma separated sample ids.\n"
-    #<DEV/>#s += "  -I, --sampleLIST FILE  A list file containing sample IDs, each per line.\n"
     s += "  -V, --version          Print software version and exit.\n"
     s += "  -h, --help             Print this message and exit.\n"
     s += "  -D, --debug INT        Used by developer for debugging [%d]\n" % CFG_DEBUG
     s += "\n"
     s += "Optional arguments:\n"
     s += "  -p, --nproc INT        Number of processes [%d]\n" % CFG_NPROC
-    #<DEV/>#s += "  --cellTAG STR          Tag for cell barcodes, turn off with None [%s]\n" % CFG_CELL_TAG
     s += "  --cellTAG STR          Tag for cell barcodes [%s]\n" % CFG_CELL_TAG
-    #<DEV/>#s += "  --UMItag STR           Tag for UMI: TAG, Auto, None. For Auto mode, use %s if barcodes is inputted,\n"
-    #<DEV/>#s += "                         otherwise use None. None mode means no UMI but read counts [%s]\n" % (CFG_UMI_TAG_BC, CFG_UMI_TAG)
     s += "  --UMItag STR           Tag for UMI [%s]\n" % CFG_UMI_TAG
-    #s += "  --minCOUNT INT         Mininum aggragated count [%d]\n" % CFG_MIN_COUNT
-    #<DEV/>#s += "  --pairEND              If use, analysis in pair-end mode.\n"
-    s += "\n"
-    s += "Junction parameters:\n"
-    s += "  --minOVERLAP INT       Minimum overlapping bases with one region [%d]\n" % CFG_MIN_OVERLAP
-    s += "  --minUREAD INT         Minimum number of supporting reads within one UMI [%d]\n" % CFG_MIN_UREAD
-    s += "  --minUFRAC FLOAT       Minimum fraction of supporting reads within one UMI [%f]\n" % CFG_MIN_UFRAC
-    s += "  --minJUMI INT          Minimum number of supporting UMIs for one junction [%d]\n" % CFG_MIN_JUMI
-    s += "  --minJCELL INT         Minimum number of supporting cells for one junction [%d]\n" % CFG_MIN_JCELL
-    #<DEV/>#s += "  --inclDENOVO           If set, include denovo junctions for analysis.\n"
-    #<DEV/>#s += "  --denovoJCLen INT|FLOAT  Length (INT) or quantile (FLOAT) for selecting denovo junctions [%f]\n" % CFG_DENOVO_JC_LEN
-    #<DEV/># add option to specify the maximum fraction of UMI that cross one denovo junction. (avoid calling germline large indel).
+    s += "  --minCOUNT INT         Mininum aggragated count for SNP [%d]\n" % CFG_MIN_COUNT
+    s += "  --minFRAC FLOAT        Mininum minor allele fraction for SNP [%f]\n" % CFG_MIN_FRAC
     s += "\n"
     s += "Read filtering:\n"
     s += "  --inclFLAG INT    Required flags: skip reads with all mask bits unset [%d]\n" % CFG_INCL_FLAG
@@ -229,18 +175,15 @@ def main(argv):
     start_time = time.time()
 
     conf = Config()
-    opts, args = getopt.getopt(argv[1:], "-s:-S:-O:-R:-b:-i:-I:-V-h-D:-p:", [
+    opts, args = getopt.getopt(argv[1:], "-s:-S:-O:-R:-P:-b:-i:-I:-V-h-D:-p:", [
                      "sam=", "samList=", 
                      "outdir=", 
-                     "region=", "barcode=", 
+                     "region=", "phasedSNP=" "barcode=", 
                      "sampleIDs=", "sampleLIST=", 
                      "version", "help", "debug=",
                      "nproc=", 
                      "cellTAG=", "UMItag=", 
-                     "minCOUNT=", "pairEND",
-                     "minOVERLAP=", "minUREAD=", "minUFRAC=",
-                     "minJUMI=", "minJCELL=",
-                     "inclDENOVO", "denovoJCLen=",
+                     "minCOUNT=", "minFRAC=",
                      "inclFLAG=", "exclFLAG=", "minLEN=", "minMAPQ=", "countORPHAN"
                 ])
 
@@ -251,6 +194,7 @@ def main(argv):
         elif op in ("-S", "--samlist"): conf.sam_list_fn = val
         elif op in ("-O", "--outdir"): conf.out_dir = val
         elif op in ("-R", "--region"): conf.region_fn = val
+        elif op in ("-P", "--phasedSNP"): conf.snp_fn = val
         elif op in ("-b", "--barcode"): conf.barcode_fn = val
         elif op in ("-i", "--sampleids"): conf.sid = val
         elif op in ("-I", "--samplelist"): conf.sid_fn = val
@@ -262,15 +206,7 @@ def main(argv):
         elif op in ("--celltag"): conf.cell_tag = val
         elif op in ("--umitag"): conf.umi_tag = val
         elif op in ("--mincount"): conf.min_count = int(val)
-        elif op in ("--pairend"): conf.pair_end = True
-
-        elif op in ("--minoverlap"): conf.min_overlap = int(val)
-        elif op in ("--minuread"): conf.min_uread = int(val)
-        elif op in ("--minufrac"): conf.min_ufrac = float(val)
-        elif op in ("--minjumi"): conf.min_jumi = int(val)
-        elif op in ("--minjcell"): conf.min_jcell = int(val)
-        elif op in ("--incldenovo"): conf.incl_denovo = True
-        elif op in ("--denovojclen"): conf.denovo_jc_len = float(val)
+        elif op in ("--minfrac"): conf.min_frac = float(val)
 
         elif op in ("--inclflag"): conf.incl_flag = int(val)
         elif op in ("--exclflag"): conf.excl_flag = int(val)
@@ -294,13 +230,6 @@ def main(argv):
             raise ValueError("[%s] errcode %d" % (func, -2))
         sys.stderr.write("[D::%s] program configuration:\n" % func)
         conf.show(fp = sys.stderr, prefix = "\t")
-
-        # For multiprocessing, we can split the gene set in two ways to save memory:
-        # 1. implement a generator (e.g., with 'yield') to push one gene to Process pool every time;
-        #    and merge & sort all genes in the end.
-        # 2. read all genes from gtf/gff file -> split gene set -> save each sub-gene-list to disk
-        #    (e.g., in pickle format) -> read each sub-gene-list in one sub-Process.
-        # It seems strategy 2 is a better choice (easier to implement).
         
         m_reg = len(conf.reg_list)
         m_thread = conf.nproc if m_reg >= conf.nproc else m_reg
@@ -331,11 +260,10 @@ def main(argv):
             thdata = ThreadData(
                 idx = 0, conf = conf,
                 reg_obj = conf.reg_list, is_reg_pickle = False,
-                out_junction_fn = conf.out_junction_fn + ".0",
                 out_region_fn = conf.out_region_fn + ".0",
-                out_spliced_fn = conf.out_spliced_fn + ".0",
-                out_unspliced_fn = conf.out_unspliced_fn + ".0",
-                out_ambiguous_fn = conf.out_ambiguous_fn + ".0",
+                out_ad_fn = conf.out_ad_fn + ".0",
+                out_dp_fn = conf.out_dp_fn + ".0",
+                out_oth_fn = conf.out_oth_fn + ".0",
                 out_fn = None
             )
             thdata_list.append(thdata)
@@ -350,12 +278,11 @@ def main(argv):
                 thdata = ThreadData(
                     idx = i, conf = conf,
                     reg_obj = reg_fn_list[i], is_reg_pickle = True,
-                    out_junction_fn = conf.out_junction_fn + "." + str(i),
                     out_region_fn = conf.out_region_fn + "." + str(i),
-                    out_spliced_fn = conf.out_spliced_fn + "." + str(i),
-                    out_unspliced_fn = conf.out_unspliced_fn + "." + str(i),
-                    out_ambiguous_fn = conf.out_ambiguous_fn + "." + str(i),
-                    out_fn = None   
+                    out_ad_fn = conf.out_ad_fn + "." + str(i),
+                    out_dp_fn = conf.out_dp_fn + "." + str(i),
+                    out_oth_fn = conf.out_oth_fn + "." + str(i),
+                    out_fn = None
                 )
                 thdata_list.append(thdata)
                 if conf.debug > 0:
@@ -387,32 +314,26 @@ def main(argv):
                 raise ValueError("[%s] errcode %d" % (func, -5))
 
             thdata = thdata_list[0]
-            os.rename(thdata.out_junction_fn, conf.out_junction_fn)
             os.rename(thdata.out_region_fn, conf.out_region_fn)
 
-            if rewrite_mtx(thdata.out_spliced_fn, ZF_F_GZIP, 
-                           conf.out_spliced_fn, "wb", ZF_F_PLAIN, 
-                           m_reg, len(conf.barcodes), thdata.nr_sp,
+            if rewrite_mtx(thdata.out_ad_fn, ZF_F_GZIP, 
+                           conf.out_ad_fn, "wb", ZF_F_PLAIN, 
+                           m_reg, len(conf.barcodes), thdata.nr_ad,
                            remove = True) < 0:
                 raise ValueError("[%s] errcode %d" % (func, -7))
 
-            if rewrite_mtx(thdata.out_unspliced_fn, ZF_F_GZIP, 
-                           conf.out_unspliced_fn, "wb", ZF_F_PLAIN, 
-                           m_reg, len(conf.barcodes), thdata.nr_us,
+            if rewrite_mtx(thdata.out_dp_fn, ZF_F_GZIP, 
+                           conf.out_dp_fn, "wb", ZF_F_PLAIN, 
+                           m_reg, len(conf.barcodes), thdata.nr_dp,
                            remove = True) < 0:
                 raise ValueError("[%s] errcode %d" % (func, -9)) 
 
-            if rewrite_mtx(thdata.out_ambiguous_fn, ZF_F_GZIP, 
-                           conf.out_ambiguous_fn, "wb", ZF_F_PLAIN, 
-                           m_reg, len(conf.barcodes), thdata.nr_am,
+            if rewrite_mtx(thdata.out_oth_fn, ZF_F_GZIP, 
+                           conf.out_oth_fn, "wb", ZF_F_PLAIN, 
+                           m_reg, len(conf.barcodes), thdata.nr_oth,
                            remove = True) < 0:
                 raise ValueError("[%s] errcode %d" % (func, -11))
         else:
-            if merge_tsv([td.out_junction_fn for td in thdata_list], ZF_F_GZIP,
-                         conf.out_junction_fn, "wb", ZF_F_PLAIN,
-                         remove = True) < 0:
-                raise ValueError("[%s] errcode %d" % (func, -13))
-
             if merge_tsv([td.out_region_fn for td in thdata_list], ZF_F_GZIP, 
                          conf.out_region_fn, "wb", ZF_F_PLAIN, 
                          remove = True) < 0:
@@ -420,21 +341,21 @@ def main(argv):
 
             nr_reg_list = [td.nr_reg for td in thdata_list]
 
-            if merge_mtx([td.out_spliced_fn for td in thdata_list], ZF_F_GZIP, 
-                         conf.out_spliced_fn, "w", ZF_F_PLAIN,
-                         nr_reg_list, len(conf.barcodes), sum([td.nr_sp for td in thdata_list]),
+            if merge_mtx([td.out_ad_fn for td in thdata_list], ZF_F_GZIP, 
+                         conf.out_ad_fn, "w", ZF_F_PLAIN,
+                         nr_reg_list, len(conf.barcodes), sum([td.nr_ad for td in thdata_list]),
                          remove = True) < 0:
                 raise ValueError("[%s] errcode %d" % (func, -17))
 
-            if merge_mtx([td.out_unspliced_fn for td in thdata_list], ZF_F_GZIP, 
-                         conf.out_unspliced_fn, "w", ZF_F_PLAIN,
-                         nr_reg_list, len(conf.barcodes), sum([td.nr_us for td in thdata_list]),
+            if merge_mtx([td.out_dp_fn for td in thdata_list], ZF_F_GZIP, 
+                         conf.out_dp_fn, "w", ZF_F_PLAIN,
+                         nr_reg_list, len(conf.barcodes), sum([td.nr_dp for td in thdata_list]),
                          remove = True) < 0:
                 raise ValueError("[%s] errcode %d" % (func, -19))
 
-            if merge_mtx([td.out_ambiguous_fn for td in thdata_list], ZF_F_GZIP, 
-                         conf.out_ambiguous_fn, "w", ZF_F_PLAIN,
-                         nr_reg_list, len(conf.barcodes), sum([td.nr_am for td in thdata_list]),
+            if merge_mtx([td.out_oth_fn for td in thdata_list], ZF_F_GZIP, 
+                         conf.out_oth_fn, "w", ZF_F_PLAIN,
+                         nr_reg_list, len(conf.barcodes), sum([td.nr_oth for td in thdata_list]),
                          remove = True) < 0:
                 raise ValueError("[%s] errcode %d" % (func, -21))
 
