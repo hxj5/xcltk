@@ -8,7 +8,7 @@ import pickle
 import sys
 import time
 
-from .config import APP, Config, \
+from .config import APP, VERSION, Config, \
                     CFG_DEBUG, \
                     CFG_CELL_TAG, CFG_UMI_TAG, CFG_UMI_TAG_BC, \
                     CFG_NPROC,     \
@@ -16,9 +16,9 @@ from .config import APP, Config, \
                     CFG_INCL_FLAG, CFG_EXCL_FLAG_UMI, CFG_EXCL_FLAG_XUMI, \
                     CFG_MIN_LEN, CFG_MIN_MAPQ
 from .core import sp_count
-from .gff import gff_load
 from .thread import ThreadData
-from .utils import merge_mtx, merge_tsv, rewrite_mtx
+from .utils import load_region_from_txt, load_snp_from_vcf, \
+                   merge_mtx, merge_tsv, rewrite_mtx
 from .zfile import zopen, ZF_F_GZIP, ZF_F_PLAIN
 
 def prepare_config(conf):
@@ -70,12 +70,10 @@ def prepare_config(conf):
 
     if conf.region_fn:
         if os.path.isfile(conf.region_fn): 
-            ret, lst = gff_load(conf.region_fn, gene_tag = "gene",
-                tran_tag = "transcript,mRNA", exon_tag = "exon", verbose = False)
-            if ret < 0:
+            conf.reg_lst = load_region_from_txt(conf.region_fn, verbose = True)
+            if not conf.reg_list:
                 sys.stderr.write("[E::%s] failed to load region file.\n" % func)
                 return(-1)
-            conf.reg_list = lst.get_genes()
             if conf.barcodes is not None:
                 sys.stdout.write("[I::%s] count %d regions in %d single cells.\n" % (func, 
                     len(conf.reg_list), len(conf.barcodes)))
@@ -83,7 +81,7 @@ def prepare_config(conf):
                 sys.stdout.write("[I::%s] count %d regions in %d bam files.\n" % (func,
                     len(conf.reg_list), len(conf.sid_list)))
         else:
-            sys.stderr.write("[E::%s] failed to open region file '%s'.\n" % (func, conf.region_fn))
+            sys.stderr.write("[E::%s] region file does not exist '%s'.\n" % (func, conf.region_fn))
             return(-1)
     else:
         sys.stderr.write("[E::%s] region file needed!\n" % (func,))
@@ -91,7 +89,16 @@ def prepare_config(conf):
 
     if conf.snp_fn:
         if os.path.isfile(conf.snp_fn):
-            pass   # TODO
+            conf.snp_set = load_snp_from_vcf(conf.snp_fn, verbose = True)
+            if not conf.snp_set or conf.snp_set.get_n() <= 0:
+                sys.stderr.write("[E::%s] failed to load snp file.\n" % func)
+                return(-1)
+            else:
+                sys.stdout.write("[I::%s] %d SNPs loaded.\n" % (func,
+                    conf.snp_set.get_n()))           
+        else:
+            sys.stderr.write("[E::%s] snp file does not exist '%s'.\n" % (func, conf.snp_fn))
+            return(-1)      
     else:
         sys.stderr.write("[E::%s] SNP file needed!\n" % (func,))
         return(-1)
@@ -228,9 +235,25 @@ def main(argv):
 
         if prepare_config(conf) < 0:
             raise ValueError("[%s] errcode %d" % (func, -2))
-        sys.stderr.write("[D::%s] program configuration:\n" % func)
+        sys.stderr.write("[I::%s] program configuration:\n" % func)
         conf.show(fp = sys.stderr, prefix = "\t")
-        
+
+        # extract SNPs for each region
+        if conf.debug > 0:
+            sys.stderr.write("[D::%s] extract SNPs for each region.\n" % (func,))
+        reg_list = []
+        for reg in conf.reg_list:
+            snp_list = conf.snp_set.fetch(reg.chrom, reg.start, reg.end)
+            if snp_list and len(snp_list) > 0:
+                reg.snp_list = snp_list
+                reg_list.append(reg)
+            else:
+                if conf.debug > 0:
+                    sys.stderr.write("[D::%s] no SNP fetched for region '%s'.\n" % 
+                        (func, reg.name))
+        conf.reg_list = reg_list
+
+        # split region list and save to file       
         m_reg = len(conf.reg_list)
         m_thread = conf.nproc if m_reg >= conf.nproc else m_reg
 
@@ -249,10 +272,11 @@ def main(argv):
                     pickle.dump(conf.reg_list[k_reg:(k_reg + t_reg)], fp)
                 k_reg += t_reg
                 i_thread += 1
-            for gen in conf.reg_list:  # save memory
-                del gen
+            for reg in conf.reg_list:  # save memory
+                del reg
             conf.reg_list.clear()
             conf.reg_list = None
+            conf.snp_set = None
 
         thdata_list = []
         ret_sp = -1

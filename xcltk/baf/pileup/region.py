@@ -191,72 +191,50 @@ class RegionSet:
                 self.citem[chrom] = self.__sort_items(self.citem[chrom])
                 self.is_sorted[chrom] = True
 
-class Junction(Region):
-    """Splice Junction class for one gene
+class SNP(Region):
+    """Phased SNP
+    @param chrom    Chromosome name [str]
+    @param pos      1-based position [int]
+    @param ref      The ref base [str]
+    @param alt      The alt base [str]
+    @param ref_idx  The GT index for ref base [int]
+    @param alt_idx  The GT index for alt base [int]   
+    """
+    def __init__(self, chrom, pos, ref, alt, ref_idx, alt_idx):
+        super().__init__(chrom, pos, pos + 1)
+        self.pos = pos
+        self.ref = ref
+        self.alt = alt
+        self.ref_idx = ref_idx
+        self.alt_idx = alt_idx
+        self.gt = {ref:ref_idx, alt:alt_idx}
+
+    def get_id(self):
+        return "%s_%d" % (self.chrom, self.pos)
+
+    def get_gt_index(self, base):
+        return self.gt[base] if base in self.gt else -1
+    
+class SNPSet(RegionSet):
+    """A set of phased SNPs"""
+    def __init__(self, is_uniq = False):
+        super().__init__(is_uniq)
+
+    def add(self, snp):
+        return super().add(snp)
+
+class BlockRegion(Region):
+    """Block Region
     @param chrom    Chromosome name [str]
     @param start    1-based start pos, inclusive [int]
     @param end      1-based end pos, exclusive [int]
-    @param junc_id  ID of the junction; None to use default setting [str]
-    @param tran_id  ID of the transcript the junction belongs to [str]
-    @param gene_id  ID of the gene the junction belongs to [str]
-    @param is_anno  Is this junction annotated [bool]
-    @param exon5    A tuple of start and end pos of the 5'-adjacent exon; both pos
-                      are 1-based; 5'-inclusive; 3'-exclusive [int]
-    @param exon3    A tuple of start and end pos of the 3'-adjacent exon; both pos
-                      are 1-based; 5'-inclusive; 3'-exclusive [int]
-    #"""
-    def __init__(self, chrom, start, end, junc_id,
-                 tran_id, gene_id,
-                 is_anno,
-                 exon5 = None, exon3 = None):
-        super().__init__(chrom, start, end, junc_id)
-        self.tran_id = tran_id
-        self.gene_id = gene_id
-        self.is_anno = is_anno
-        self.exon5 = exon5      # exon5 and exon3 for #DEV# version.
-        self.exon3 = exon3
-
-        self.index = None     # NOTE that the index must start from 0. see mcount::MCount.
-
-    #TODO: could be extended to include transcript (id_map) info.
-    #def get_id(self):
-    #    pass
-    
-class JunctionSet(RegionSet):
-    """Splice Junction set for one gene"""
-    def __init__(self, is_uniq = False):
-        super().__init__(is_uniq)
-
-    def add(self, junction):
-        ret = super().add(junction)
-        if ret != 0:
-            return(ret)
-        else:
-            junction.index = self.n - 1
-            return(0)
-
-    def get_junctions(self, sort = True):
-        return self.get_regions(chrom = None, sort = sort)
-
-    def get_len_quantile(self, quantile, anno_only = True):
-        """Get length quantile of the regions
-        @param quantile   [float]
-        @param anno_only  Whether to use annotated regions only [bool]
-        @return The length quantile or None [float]
-        """
-        regions = self.get_junctions()
-        if anno_only:
-            reg_len = [reg.get_len() for reg in regions if reg.is_anno]
-        else:
-            reg_len = [reg.get_len() for reg in regions]
-        if not reg_len:
-            return None
-        return np.quantile(reg_len, quantile)
-
-class XonSet(RegionSet):
-    """The exon/intron level region set"""
-    def __init__(self, is_uniq = False):
-        super().__init__(is_uniq)
+    @param name     Name of the block [str]
+    @param snp_list A list of SNPs located within the block [list of SNP objects]
+    """
+    def __init__(self, chrom, start, end, name = None, snp_list = None):
+        super().__init__(chrom, start, end)
+        self.name = name
+        self.snp_list = snp_list
 
 def format_chrom(chrom):
     return chrom[3:] if chrom.lower().startswith("chr") else chrom
@@ -265,27 +243,4 @@ REG_EXON = 1
 REG_INTRON = 2
 
 if __name__ == "__main__":
-    import sys
-    if len(sys.argv) < 3:
-        sys.stdout.write("Usage: %s <gtf|gff> <chrom:start-end>\n" % sys.argv[0])
-        sys.exit(1)
-    in_fn = sys.argv[1]
-    region = sys.argv[2]
-    chrom = region.split(":")[0]
-    start = int(region.split(":")[1].split("-")[0])
-    end = int(region.split("-")[1]) + 1
-
-    from gff import gff_load
-    ret, gene_set = gff_load(in_fn)
-    if ret < 0:
-        sys.stderr.write("Error: gff_load failed.\n")
-        sys.exit(3)
-    genes = gene_set.get_genes()
-
-    rs = RegionSet()
-    for g in genes:
-        reg = Region(g.chrom, g.start, g.end + 1, g.gene_id)
-        rs.add(reg)
-    hits = rs.fetch(chrom, start, end + 1)
-    for h in hits:
-        sys.stdout.write("%s,%d,%d,%s\n" % (h.chrom, h.start, h.end, h.rid))
+    pass

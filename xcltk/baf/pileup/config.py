@@ -31,7 +31,7 @@ class Config:
         self.barcodes = None     # list of barcode strings.
         self.sid_list = None     # list of sample ID strings.
         self.reg_list = None     # list of gene/block objects.
-        self.snp_list = None     # list of SNPs.
+        self.snp_set = None      # set of SNPs.
 
         self.out_prefix = APP + "."
         self.out_region_fn = None
@@ -78,8 +78,8 @@ class Config:
                 self.sid_list is not None else -1)
         s += "%snumber_of_regions = %d\n" % (prefix, len(self.reg_list) if \
                 self.reg_list is not None else -1)
-        s += "%snumber_of_snps = %d\n" % (prefix, len(self.snp_list) if \
-                self.snp_list is not None else -1)
+        s += "%snumber_of_snps = %d\n" % (prefix, self.snp_set.get_n() if \
+                self.snp_set is not None else -1)
         s += "%s\n" % prefix
 
         s += "%soutput_region_file = %s\n" % (prefix, self.out_region_fn)
@@ -98,6 +98,7 @@ class Config:
         return self.umi_tag is not None
 
 APP = "pileup"
+VERSION = "0.0.1"
 
 CFG_DEBUG = 0
 CFG_CELL_TAG = "CB"

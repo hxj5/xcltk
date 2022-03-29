@@ -125,44 +125,4 @@ ZF_BUFSIZE = 1048576   # 1M
 
 # TODO: update the debugging codes below
 if __name__ == "__main__":
-    import sys
-    if len(sys.argv) < 4:
-        sys.stdout.write("Usage: %s <in> <out> <maxline>\n" % sys.argv[0])
-        sys.exit(1)
-
-    import os
-
-    in_fn = sys.argv[1]
-    out_fn = sys.argv[2]
-    max_line = int(sys.argv[3])
-
-    in_type = [ZF_F_PLAIN]
-    if in_fn.endswith(".gz") or in_fn.endswith(".gzip"):
-        in_type = [ZF_F_GZIP, ZF_F_BGZIP]
-    in_type += [ZF_F_AUTO]
-    out_type = [ZF_F_PLAIN]
-    if out_fn.endswith(".gz") or out_fn.endswith(".gzip"):
-        out_type = [ZF_F_GZIP, ZF_F_BGZIP]
-    out_type += [ZF_F_AUTO]
-
-    out_dir = os.path.dirname(out_fn)
-    out_base_fn = os.path.basename(out_fn)
-    for itype in in_type:
-        sys.stdout.write("in_type = %d\n" % itype)
-        for otype in out_type:
-            new_out_fn = "%s/tmp_in%d_out%d_%s" % (
-                    out_dir, itype, otype, out_base_fn)
-            sys.stdout.write("out_type = %d\n" % otype)
-            sys.stdout.write("out_filename = %s\n" % new_out_fn)
-
-            with zopen(in_fn, "rb", itype) as in_zfile:
-                with zopen(new_out_fn, "wb", otype) as out_zfile:
-                    nline = 0
-                    for line in in_zfile:
-                        nline += 1
-                        if max_line > 0 and nline > max_line:
-                            break
-                        out_zfile.write(line)
-            sys.stdout.write("\n")
-
-    sys.stdout.write("All Done!\n")
+    pass     
