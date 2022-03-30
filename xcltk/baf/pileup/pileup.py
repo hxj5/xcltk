@@ -182,11 +182,10 @@ def main(argv):
     start_time = time.time()
 
     conf = Config()
-    opts, args = getopt.getopt(argv[1:], "-s:-S:-O:-R:-P:-b:-i:-I:-V-h-D:-p:", [
-                     "sam=", "samList=", 
+    opts, args = getopt.getopt(argv[1:], "-s:-O:-R:-P:-b:-V-h-D:-p:", [
+                     "sam=", 
                      "outdir=", 
-                     "region=", "phasedSNP=" "barcode=", 
-                     "sampleIDs=", "sampleLIST=", 
+                     "region=", "phasedSNP=" "barcode=",
                      "version", "help", "debug=",
                      "nproc=", 
                      "cellTAG=", "UMItag=", 
@@ -198,13 +197,10 @@ def main(argv):
         if len(op) > 2:
             op = op.lower()
         if op in   ("-s", "--sam"): conf.sam_fn = val
-        elif op in ("-S", "--samlist"): conf.sam_list_fn = val
         elif op in ("-O", "--outdir"): conf.out_dir = val
         elif op in ("-R", "--region"): conf.region_fn = val
         elif op in ("-P", "--phasedSNP"): conf.snp_fn = val
         elif op in ("-b", "--barcode"): conf.barcode_fn = val
-        elif op in ("-i", "--sampleids"): conf.sid = val
-        elif op in ("-I", "--samplelist"): conf.sid_fn = val
         elif op in ("-V", "--version"): sys.stderr.write(VERSION + "\n"); sys.exit(1)
         elif op in ("-h", "--help"): usage(sys.stderr); sys.exit(1)
         elif op in ("-D", "--debug"): conf.debug = int(val)

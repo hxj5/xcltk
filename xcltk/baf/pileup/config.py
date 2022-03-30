@@ -5,13 +5,10 @@ import sys
 class Config:
     def __init__(self):
         self.sam_fn = None
-        self.sam_list_fn = None
         self.out_dir = None
         self.region_fn = None
         self.snp_fn = None
         self.barcode_fn = None
-        self.sid = None
-        self.sid_fn = None
         self.debug = CFG_DEBUG
 
         self.cell_tag = CFG_CELL_TAG
@@ -27,9 +24,7 @@ class Config:
         self.no_orphan = CFG_NO_ORPHAN
 
         self.sam_list = None     # list of pysam::AlignmentFile objects.
-        self.sam_fn_list = None  # list of sam filenames.
         self.barcodes = None     # list of barcode strings.
-        self.sid_list = None     # list of sample ID strings.
         self.reg_list = None     # list of gene/block objects.
         self.snp_set = None      # set of SNPs.
 
@@ -46,13 +41,10 @@ class Config:
 
         s =  "%s\n" % prefix
         s += "%ssam_file = %s\n" % (prefix, self.sam_fn)
-        s += "%ssam_list_file = %s\n" % (prefix, self.sam_list_fn)
         s += "%sout_dir = %s\n" % (prefix, self.out_dir)
         s += "%sregion_file = %s\n" % (prefix, self.region_fn)
         s += "%ssnp_file = %s\n" % (prefix, self.snp_fn)
         s += "%sbarcode_file = %s\n" % (prefix, self.barcode_fn)
-        s += "%ssample_id (str) = %s\n" % (prefix, self.sid)
-        s += "%ssample_id_list_file = %s\n" % (prefix, self.sid_fn)
         s += "%sdebug = %d\n" % (prefix, self.debug)
         s += "%s\n" % prefix
 
@@ -70,12 +62,8 @@ class Config:
         s += "%sno_orphan = %s\n" % (prefix, self.no_orphan)
         s += "%s\n" % prefix
 
-        s += "%snumber_of_sams = %d\n" % (prefix, len(self.sam_fn_list) if \
-                self.sam_fn_list is not None else -1)
         s += "%snumber_of_barcodes = %d\n" % (prefix, len(self.barcodes) if \
                 self.barcodes is not None else -1)
-        s += "%snumber_of_sample_IDs = %d\n" % (prefix, len(self.sid_list) if \
-                self.sid_list is not None else -1)
         s += "%snumber_of_regions = %d\n" % (prefix, len(self.reg_list) if \
                 self.reg_list is not None else -1)
         s += "%snumber_of_snps = %d\n" % (prefix, self.snp_set.get_n() if \
@@ -90,12 +78,6 @@ class Config:
         s += "%s\n" % prefix
 
         fp.write(s)
-
-    def use_barcode(self):
-        return self.cell_tag and self.barcodes
-
-    def use_umi(self):
-        return self.umi_tag is not None
 
 APP = "pileup"
 VERSION = "0.0.1"
