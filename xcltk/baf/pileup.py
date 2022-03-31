@@ -121,6 +121,12 @@ def prepare_config(conf):
         with open(conf.out_sample_fn, "w") as fp:
             fp.write("".join([b + "\n" for b in conf.barcodes]))
 
+    if conf.excl_flag < 0:
+        if conf.use_umi():
+            conf.excl_flag = CFG_EXCL_FLAG_UMI
+        else:
+            conf.excl_flag = CFG_EXCL_FLAG_XUMI
+
     return(0)
 
 def usage(fp = sys.stderr):

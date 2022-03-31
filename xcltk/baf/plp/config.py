@@ -21,7 +21,7 @@ class Config:
         self.min_mapq = CFG_MIN_MAPQ
         self.min_len = CFG_MIN_LEN
         self.incl_flag = CFG_INCL_FLAG
-        self.excl_flag = CFG_EXCL_FLAG_UMI
+        self.excl_flag = -1
         self.no_orphan = CFG_NO_ORPHAN
 
         self.sam = None          # a pysam::AlignmentFile object.
