@@ -37,7 +37,7 @@ def sp_region(reg, conf):
         snp_cnt = sum(mcnt.tcount)
         if snp_cnt < conf.min_count:
             continue
-        if snp_cnt <= 0 or snp_alt_cnt / float(snp_cnt) < conf.min_frac:
+        if snp_cnt <= 0 or snp_alt_cnt / float(snp_cnt) < conf.min_maf:
             continue
         for smp, scnt in mcnt.cell_cnt.items():
             for umi, ucnt in scnt.umi_cnt.items():
@@ -76,7 +76,7 @@ def sp_count(thdata):
 
     reg_list = None
     if thdata.is_reg_pickle:
-        with open(thdata.reg_obj, "rt") as fp:
+        with open(thdata.reg_obj, "rb") as fp:
             reg_list = pickle.load(fp)
         os.remove(thdata.reg_obj)
     else:

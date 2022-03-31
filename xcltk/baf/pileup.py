@@ -13,7 +13,7 @@ from .plp.config import Config, \
     CFG_DEBUG, \
     CFG_CELL_TAG, CFG_UMI_TAG, CFG_UMI_TAG_BC, \
     CFG_NPROC,     \
-    CFG_MIN_COUNT, CFG_MIN_FRAC, \
+    CFG_MIN_COUNT, CFG_MIN_MAF, \
     CFG_INCL_FLAG, CFG_EXCL_FLAG_UMI, CFG_EXCL_FLAG_XUMI, \
     CFG_MIN_LEN, CFG_MIN_MAPQ
 from .plp.core import sp_count
@@ -65,7 +65,7 @@ def prepare_config(conf):
 
     if conf.region_fn:
         if os.path.isfile(conf.region_fn): 
-            conf.reg_lst = load_region_from_txt(conf.region_fn, verbose = True)
+            conf.reg_list = load_region_from_txt(conf.region_fn, verbose = True)
             if not conf.reg_list:
                 sys.stderr.write("[E::%s] failed to load region file.\n" % func)
                 return(-1)
@@ -142,7 +142,7 @@ def usage(fp = sys.stderr):
     s += "  --cellTAG STR          Tag for cell barcodes [%s]\n" % CFG_CELL_TAG
     s += "  --UMItag STR           Tag for UMI [%s]\n" % CFG_UMI_TAG
     s += "  --minCOUNT INT         Mininum aggragated count for SNP [%d]\n" % CFG_MIN_COUNT
-    s += "  --minFRAC FLOAT        Mininum minor allele fraction for SNP [%f]\n" % CFG_MIN_FRAC
+    s += "  --minMAF FLOAT         Mininum minor allele fraction for SNP [%f]\n" % CFG_MIN_MAF
     s += "\n"
     s += "Read filtering:\n"
     s += "  --inclFLAG INT    Required flags: skip reads with all mask bits unset [%d]\n" % CFG_INCL_FLAG
@@ -173,14 +173,14 @@ def pileup(argv):
     start_time = time.time()
 
     conf = Config()
-    opts, args = getopt.getopt(argv[1:], "-s:-O:-R:-P:-b:-h-D:-p:", [
+    opts, args = getopt.getopt(argv[2:], "-s:-O:-R:-P:-b:-h-D:-p:", [
                      "sam=", 
                      "outdir=", 
                      "region=", "phasedSNP=" "barcode=",
                      "help", "debug=",
                      "nproc=", 
                      "cellTAG=", "UMItag=", 
-                     "minCOUNT=", "minFRAC=",
+                     "minCOUNT=", "minMAF=",
                      "inclFLAG=", "exclFLAG=", "minLEN=", "minMAPQ=", "countORPHAN"
                 ])
 
@@ -199,7 +199,7 @@ def pileup(argv):
         elif op in ("--celltag"): conf.cell_tag = val
         elif op in ("--umitag"): conf.umi_tag = val
         elif op in ("--mincount"): conf.min_count = int(val)
-        elif op in ("--minfrac"): conf.min_frac = float(val)
+        elif op in ("--minmaf"): conf.min_maf = float(val)
 
         elif op in ("--inclflag"): conf.incl_flag = int(val)
         elif op in ("--exclflag"): conf.excl_flag = int(val)
@@ -237,6 +237,8 @@ def pileup(argv):
                     sys.stderr.write("[D::%s] no SNP fetched for region '%s'.\n" % 
                         (func, reg.name))
         conf.reg_list = reg_list
+        sys.stdout.write("[I::%s] %d regions extracted with SNPs.\n" % 
+            (func, len(conf.reg_list)))
 
         # split region list and save to file       
         m_reg = len(conf.reg_list)

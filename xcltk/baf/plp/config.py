@@ -1,6 +1,7 @@
 # Global Configure
 
 import sys
+from ..config import APP
 
 class Config:
     def __init__(self):
@@ -15,7 +16,7 @@ class Config:
         self.umi_tag = CFG_UMI_TAG
         self.nproc = CFG_NPROC
         self.min_count = CFG_MIN_COUNT
-        self.min_frac = CFG_MIN_FRAC
+        self.min_maf = CFG_MIN_MAF
 
         self.min_mapq = CFG_MIN_MAPQ
         self.min_len = CFG_MIN_LEN
@@ -52,7 +53,7 @@ class Config:
         s += "%sumi_tag = %s\n" % (prefix, self.umi_tag)
         s += "%snumber_of_processes = %d\n" % (prefix, self.nproc)
         s += "%smin_count = %d\n" % (prefix, self.min_count)
-        s += "%smin_frac = %f\n" % (prefix, self.min_frac)
+        s += "%smin_maf = %f\n" % (prefix, self.min_maf)
         s += "%s\n" % prefix
 
         s += "%smin_mapq = %d\n" % (prefix, self.min_mapq)
@@ -85,7 +86,7 @@ CFG_UMI_TAG = "UB"
 CFG_UMI_TAG_BC = "UB"    # the default umi tag for 10x data.
 CFG_NPROC = 1
 CFG_MIN_COUNT = 1 
-CFG_MIN_FRAC = 0
+CFG_MIN_MAF = 0
 
 CFG_MIN_MAPQ = 20
 CFG_MIN_LEN = 30

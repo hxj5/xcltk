@@ -51,12 +51,13 @@ class SCount:
         self.umi_cnt = {}
 
     def push_read(self, read):
+        conf = self.conf
         umi = read.get_tag(conf.umi_tag)
         if umi in self.umi_cnt:
             return(0)
         else:
             ucnt = UCount()
-            ucnt.prepare(self, self.conf)
+            ucnt.prepare(self, conf)
             self.umi_cnt[umi] = ucnt
             ret = ucnt.push_read(read)
             if ret < 0:
@@ -116,6 +117,7 @@ class MCount:
         @param read  A pysam::AlignedSegment object.
         @return      0 if success, -1 error, -2 read filtered [int]
         """
+        conf = self.conf
         cb = read.get_tag(conf.cell_tag)
         scnt = None
         if cb in self.cell_cnt:
