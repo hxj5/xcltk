@@ -8,7 +8,7 @@
 import sys
 import numpy as np
 from .base import id_mapping, unique_list
-from .pileup import check_pysam_chrom
+from .sam import check_pysam_chrom
 from ..config import DEBUG
 
 global CACHE_CHROM

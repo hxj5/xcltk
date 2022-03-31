@@ -79,9 +79,6 @@ class Config:
 
         fp.write(s)
 
-APP = "pileup"
-VERSION = "0.0.1"
-
 CFG_DEBUG = 0
 CFG_CELL_TAG = "CB"
 CFG_UMI_TAG = "UB"

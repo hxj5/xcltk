@@ -33,7 +33,7 @@ class UCount:
             self.allele = bases[idx].upper()
         return(0)
 
-    def stat(self);
+    def stat(self):
         return(0)
 
 class SCount:

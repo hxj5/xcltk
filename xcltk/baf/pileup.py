@@ -8,18 +8,19 @@ import pickle
 import sys
 import time
 
-from .config import APP, VERSION, Config, \
-                    CFG_DEBUG, \
-                    CFG_CELL_TAG, CFG_UMI_TAG, CFG_UMI_TAG_BC, \
-                    CFG_NPROC,     \
-                    CFG_MIN_COUNT, CFG_MIN_FRAC, \
-                    CFG_INCL_FLAG, CFG_EXCL_FLAG_UMI, CFG_EXCL_FLAG_XUMI, \
-                    CFG_MIN_LEN, CFG_MIN_MAPQ
-from .core import sp_count
-from .thread import ThreadData
-from .utils import load_region_from_txt, load_snp_from_vcf, \
-                   merge_mtx, merge_tsv, rewrite_mtx
-from .zfile import zopen, ZF_F_GZIP, ZF_F_PLAIN
+from .config import APP
+from .plp.config import Config, \
+    CFG_DEBUG, \
+    CFG_CELL_TAG, CFG_UMI_TAG, CFG_UMI_TAG_BC, \
+    CFG_NPROC,     \
+    CFG_MIN_COUNT, CFG_MIN_FRAC, \
+    CFG_INCL_FLAG, CFG_EXCL_FLAG_UMI, CFG_EXCL_FLAG_XUMI, \
+    CFG_MIN_LEN, CFG_MIN_MAPQ
+from .plp.core import sp_count
+from .plp.thread import ThreadData
+from .plp.utils import load_region_from_txt, load_snp_from_vcf, \
+    merge_mtx, merge_tsv, rewrite_mtx
+from .plp.zfile import zopen, ZF_F_GZIP, ZF_F_PLAIN
 
 def prepare_config(conf):
     """Prepare configures for downstream analysis
@@ -124,8 +125,7 @@ def prepare_config(conf):
 
 def usage(fp = sys.stderr):
     s =  "\n" 
-    s += "Version: %s\n" % VERSION
-    s += "Usage:   %s <options>\n" % APP  
+    s += "Usage: %s %s <options>\n" % (APP, COMMAND)  
     s += "\n" 
     s += "Options:\n"
     s += "  -s, --sam STR          Indexed sam/bam/cram file.\n"
@@ -134,7 +134,6 @@ def usage(fp = sys.stderr):
     s += "                         chrom, start, end (both 1-based and inclusive), name.\n"
     s += "  -P, --phasedSNP FILE   A VCF file listing phased SNPs (i.e., containing phased GT).\n"
     s += "  -b, --barcode FILE     A plain file listing all effective cell barcode.\n"
-    s += "  -V, --version          Print software version and exit.\n"
     s += "  -h, --help             Print this message and exit.\n"
     s += "  -D, --debug INT        Used by developer for debugging [%d]\n" % CFG_DEBUG
     s += "\n"
@@ -159,7 +158,7 @@ def usage(fp = sys.stderr):
 def show_progress(rv = None):
     return(rv)
 
-def main(argv):
+def pileup(argv):
     """Core part
     @param argv   A list of cmdline parameters [list]
     @return       0 if success, -1 otherwise [int]
@@ -167,14 +166,18 @@ def main(argv):
     func = "main"
     ret = -1
 
+    if len(argv) <= 2:
+        usage(sys.stderr)
+        sys.exit(1)
+
     start_time = time.time()
 
     conf = Config()
-    opts, args = getopt.getopt(argv[1:], "-s:-O:-R:-P:-b:-V-h-D:-p:", [
+    opts, args = getopt.getopt(argv[1:], "-s:-O:-R:-P:-b:-h-D:-p:", [
                      "sam=", 
                      "outdir=", 
                      "region=", "phasedSNP=" "barcode=",
-                     "version", "help", "debug=",
+                     "help", "debug=",
                      "nproc=", 
                      "cellTAG=", "UMItag=", 
                      "minCOUNT=", "minFRAC=",
@@ -189,7 +192,6 @@ def main(argv):
         elif op in ("-R", "--region"): conf.region_fn = val
         elif op in ("-P", "--phasedSNP"): conf.snp_fn = val
         elif op in ("-b", "--barcode"): conf.barcode_fn = val
-        elif op in ("-V", "--version"): sys.stderr.write(VERSION + "\n"); sys.exit(1)
         elif op in ("-h", "--help"): usage(sys.stderr); sys.exit(1)
         elif op in ("-D", "--debug"): conf.debug = int(val)
 
@@ -215,7 +217,6 @@ def main(argv):
 
         cmdline = " ".join(argv)
         sys.stdout.write("[I::%s] CMD: %s\n" % (func, cmdline))
-        sys.stdout.write("[I::%s] VERSION: %s %s\n" % (func, APP, VERSION))
 
         if prepare_config(conf) < 0:
             raise ValueError("[%s] errcode %d" % (func, -2))
@@ -380,7 +381,6 @@ def main(argv):
 
     finally:
         sys.stdout.write("[I::%s] CMD: %s\n" % (func, cmdline))
-        sys.stdout.write("[I::%s] VERSION: %s %s\n" % (func, APP, VERSION))
 
         end_time = time.time()
         time_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(end_time))
@@ -390,11 +390,9 @@ def main(argv):
     return(ret)
 
 def run():
-    if len(sys.argv) < 2:
-        usage(sys.stderr)
-        sys.exit(1)
+    pileup(sys.argv)
 
-    main(sys.argv)
+COMMAND = "pileup"
 
 if __name__ == "__main__":
     run()
