@@ -7,7 +7,7 @@ class UCount:
     """Counting Unit
     @param scnt   A SCount object that the UCount object belongs to.
     @param conf   A config::Config object.
-    @param allele The allele for the query SNP in this  [str]
+    @param allele The allele for the query SNP in this UMI [str]
     """
     def __init__(self):
         self.scnt = None
@@ -51,9 +51,6 @@ class SCount:
         self.umi_cnt = {}
 
     def push_read(self, read):
-        conf = self.conf
-        ucnt = None
-
         umi = read.get_tag(conf.umi_tag)
         if umi in self.umi_cnt:
             return(0)
@@ -72,7 +69,6 @@ class SCount:
         self.umi_cnt.clear()
 
     def stat(self):
-        conf = self.conf
         for ucnt in self.umi_cnt.values():
             if ucnt.stat() < 0:
                 return(-1)
@@ -109,7 +105,6 @@ class MCount:
         self.is_reset = False
 
     def add_snp(self, snp):
-        conf = self.conf
         if not self.is_reset:
             self.reset()
         self.snp = snp
@@ -117,11 +112,10 @@ class MCount:
         return(0)
 
     def push_read(self, read):
-        """Push one read into this counting machine
+        """Push one read into this counting machine.
         @param read  A pysam::AlignedSegment object.
         @return      0 if success, -1 error, -2 read filtered [int]
         """
-        conf = self.conf
         cb = read.get_tag(conf.cell_tag)
         scnt = None
         if cb in self.cell_cnt:
@@ -144,14 +138,10 @@ class MCount:
         self.is_reset = True
 
     def stat(self):
-        func = "MCount::stat"
-        conf = self.conf
-
-        for i, smp in enumerate(self.samples):
+        for smp in self.samples:
             scnt = self.cell_cnt[smp]
             if scnt.stat() < 0:
                 return(-1)
             for j in range(len(self.tcount)):
-            self.tcount[j] += scnt.tcount[j]
-
+                self.tcount[j] += scnt.tcount[j]
         return(0)

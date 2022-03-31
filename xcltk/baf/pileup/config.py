@@ -23,7 +23,7 @@ class Config:
         self.excl_flag = CFG_EXCL_FLAG_UMI
         self.no_orphan = CFG_NO_ORPHAN
 
-        self.sam_list = None     # list of pysam::AlignmentFile objects.
+        self.sam = None          # a pysam::AlignmentFile object.
         self.barcodes = None     # list of barcode strings.
         self.reg_list = None     # list of gene/block objects.
         self.snp_set = None      # set of SNPs.

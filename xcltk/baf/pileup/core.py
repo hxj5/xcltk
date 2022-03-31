@@ -6,142 +6,122 @@ import pickle
 import pysam
 import sys
 
-from .mcount import MCount, MCNT_F_SPLICED, MCNT_F_UNSPLICED, MCNT_F_AMBIGUOUS
+from .mcount import MCount
 from .sam import check_read, sam_fetch
-from .utils import load_jcset_from_gff, load_jcset_from_sam
 from .zfile import zopen, ZF_F_GZIP
 
-def sp_gene(thdata, mcnt, conf, gene_idx, fp_jc, fp_reg, fp_sp, fp_us, fp_am):
-    gene = mcnt.gene
-    for sam in conf.sam_list:
-        itr = sam_fetch(sam, gene.chrom, gene.start, gene.end)
-        if not itr:     # TODO: still need to output gene info to file.
-            return(-3)
+def sp_region(reg, conf):
+    reg_ref_umi = {smp:set() for smp in conf.barcodes}
+    reg_alt_umi = {smp:set() for smp in conf.barcodes}
+    reg_oth_umi = {smp:set() for smp in conf.barcodes}
+    mcnt = MCount(conf.barcodes, conf)
+
+    for snp in reg.snp_list:
+        itr = sam_fetch(conf.sam, snp.chrom, snp.pos, snp.pos)
+        if not itr:    
+            continue
+        if mcnt.add_snp(snp) < 0:   # mcnt reset() inside.
+            return((-3, None, None, None))
         for read in itr:
             if check_read(read, conf) < 0:
                 continue
             ret = mcnt.push_read(read)
             if ret < 0:
                 if ret == -1:
-                    return(-5)
+                    return((-5, None, None, None))
                 continue
+        if mcnt.stat() < 0:
+            return((-7, None, None, None))
+        snp_ref_cnt = mcnt.tcount[mcnt.base_idx[snp.ref]]
+        snp_alt_cnt = mcnt.tcount[mcnt.base_idx[snp.alt]]
+        snp_cnt = sum(mcnt.tcount)
+        if snp_cnt < conf.min_count:
+            continue
+        if snp_cnt <= 0 or snp_alt_cnt / float(snp_cnt) < conf.min_frac:
+            continue
+        for smp, scnt in mcnt.cell_cnt.items():
+            for umi, ucnt in scnt.umi_cnt.items():
+                if not ucnt.allele:
+                    continue
+                ale_idx = snp.get_region_allele_index(ucnt.allele)
+                if ale_idx == 0:        # ref allele of the region.
+                    reg_ref_umi[smp].add(umi)
+                elif ale_idx == 1:      # alt allele of the region.
+                    reg_alt_umi[smp].add(umi)
+                else:
+                    reg_oth_umi[smp].add(umi)
 
-    if mcnt.stat() < 0:
-        return(-7)
-
-    if mcnt.jdata is not None and mcnt.jdata.size > 0:
-        s = ""
-        jc_list = mcnt.intv.get_junctions(sort = True)
-        for jc in jc_list:
-            n_jumi, n_jcell, is_valid = mcnt.jdata[jc.index, :]
-            s += "\t".join([jc.chrom, str(jc.start), str(jc.end), 
-                            jc.tran_id, jc.gene_id, 
-                            str(n_jumi), str(n_jcell), str(is_valid)]) + "\n"
-        fp_jc.write(s)
-
-    gene = mcnt.gene
-    nu_sp, nu_us, nu_am = [mcnt.tcount[x] for x in 
-        (MCNT_F_SPLICED, MCNT_F_UNSPLICED, MCNT_F_AMBIGUOUS)]
-    s = "\t".join([gene.chrom, str(gene.start), str(gene.end), 
-                   gene.gene_id, gene.gene_name, 
-                   str(nu_sp), str(nu_us), str(nu_am)]) + "\n"
-    fp_reg.write(s)
-
-    str_sp, str_us, str_am = "", "", ""
-    for i, smp in enumerate(conf.barcodes):
-        scnt = mcnt.cell_cnt[smp]
-        nu_sp, nu_us, nu_am = [scnt.tcount[x] for x in 
-            (MCNT_F_SPLICED, MCNT_F_UNSPLICED, MCNT_F_AMBIGUOUS)]
-        if nu_sp > 0:
-            str_sp += "%d\t%d\t%d\n" % (gene_idx, i + 1, nu_sp)
-            thdata.nr_sp += 1
-        if nu_us > 0:
-            str_us += "%d\t%d\t%d\n" % (gene_idx, i + 1, nu_us)
-            thdata.nr_us += 1
-        if nu_am > 0:
-            str_am += "%d\t%d\t%d\n" % (gene_idx, i + 1, nu_am)
-            thdata.nr_am += 1
-    fp_sp.write(str_sp)
-    fp_us.write(str_us)
-    fp_am.write(str_am)
+    reg_ref_cnt = {smp:0 for smp in conf.barcodes}
+    reg_alt_cnt = {smp:0 for smp in conf.barcodes}
+    reg_oth_cnt = {smp:0 for smp in conf.barcodes}
+    for smp in conf.barcodes:
+        reg_ref_cnt[smp] = len(reg_ref_umi[smp])
+        reg_alt_cnt[smp] = len(reg_alt_umi[smp])
+        dp_umi = reg_ref_umi[smp].union(reg_alt_umi[smp])
+        reg_oth_umi[smp] = reg_oth_umi[smp].difference(dp_umi)
+        reg_oth_cnt[smp] = len(reg_oth_umi[smp])
     
-    return(0)
+    return((0, reg_ref_cnt, reg_alt_cnt, reg_oth_cnt))
 
 # TODO: use clever IPC (Inter-process communication) instead of naive `raise Error`.
 # NOTE: 
-# 1. in current version, the gene idx is based on all genes (no gene filtering 
-#    such as --minCOUNT)
-# 2. bgzf errors when using pysam.AlignmentFile.fetch in parallel (with multiprocessing)
+# 1. bgzf errors when using pysam.AlignmentFile.fetch in parallel (with multiprocessing)
 #    https://github.com/pysam-developers/pysam/issues/397
 def sp_count(thdata):
     func = "sp_count"
     conf = thdata.conf
     thdata.ret = -1
 
-    conf.sam_list = []
-    for sam_fn in conf.sam_fn_list:
-        sam = pysam.AlignmentFile(sam_fn, "r")    # auto detect file format
-        conf.sam_list.append(sam)
+    conf.sam = pysam.AlignmentFile(conf.sam_fn, "r")    # auto detect file format
 
     reg_list = None
     if thdata.is_reg_pickle:
-        with open(thdata.reg_obj, "rb") as fp:
+        with open(thdata.reg_obj, "rt") as fp:
             reg_list = pickle.load(fp)
         os.remove(thdata.reg_obj)
     else:
         reg_list = thdata.reg_obj
     thdata.nr_reg = len(reg_list)
 
-    fp_jc = zopen(thdata.out_junction_fn, "wt", ZF_F_GZIP, is_bytes = False)
     fp_reg = zopen(thdata.out_region_fn, "wt", ZF_F_GZIP, is_bytes = False)
-    fp_sp = zopen(thdata.out_spliced_fn, "wt", ZF_F_GZIP, is_bytes = False)
-    fp_us = zopen(thdata.out_unspliced_fn, "wt", ZF_F_GZIP, is_bytes = False)
-    fp_am = zopen(thdata.out_ambiguous_fn, "wt", ZF_F_GZIP, is_bytes = False)
+    fp_ad = zopen(thdata.out_ad_fn, "wt", ZF_F_GZIP, is_bytes = False)
+    fp_dp = zopen(thdata.out_dp_fn, "wt", ZF_F_GZIP, is_bytes = False)
+    fp_oth = zopen(thdata.out_oth_fn, "wt", ZF_F_GZIP, is_bytes = False)
 
-    mcnt = MCount(conf.barcodes, conf)
     m_reg = float(len(reg_list))
     n_reg = 0
     l_reg = 0
-    min_jc = None
-    for gene_idx, gene in enumerate(reg_list):
+    k_reg = 1
+    for reg_idx, reg in enumerate(reg_list):
         if conf.debug > 0:
-            sys.stderr.write("[D::%s][Thread-%d] processing gene '%s' ...\n" %
-                              (func, thdata.idx, gene.gene_id))
+            sys.stderr.write("[D::%s][Thread-%d] processing region '%s' ...\n" %
+                              (func, thdata.idx, reg.name))
 
-        rs = load_jcset_from_gff(gene)
-        if rs is None:
-            raise ValueError("[%s] errcode %d" % (func, -3))
-        if conf.debug > 0:
-            sys.stderr.write("[D::%s][Thread-%d] gene %s: %d junctions extracted\n" %
-                              (func, thdata.idx, gene.gene_id, rs.get_n()))
-            if conf.debug > 1:
-                junctions = rs.get_junctions(sort = True)
-                for jc in junctions:
-                    sys.stderr.write("\t%s\t%s\t%s\t%s\t%s\n" % 
-                        (jc.index, jc.chrom, jc.start, jc.end, jc.tran_id))
-
-        if conf.incl_denovo:  # CHECK ME! how STAR detect and represent junctions.
-            if conf.denovo_jc_len >= 1:
-                min_jc = conf.denovo_jc_len
-            elif conf.denovo_jc_len > 0:
-                min_jc = rs.get_len_quantile(conf.denovo_jc_len)
-            else:    # <= 0 means no filtering for length of denovo junctions.
-                min_jc = conf.denovo_jc_len
-            for sam in conf.sam_list:
-                rs1 = load_jcset_from_sam(sam, gene.chrom, gene.start, gene.end, conf, min_jc)
-                if rs1 is None:
-                    raise ValueError("[%s] errcode %d" % (func, -5))
-                rs.merge(rs1)
-            if conf.debug > 0:
-                sys.stderr.write("[D::%s][Thread-%d] gene %s: %d junctions including denovo ones\n" %
-                                  (func, thdata.idx, gene.gene_id, rs.get_n()))
-
-        if mcnt.add_gene(gene, rs) < 0:
-            raise ValueError("[%s] errcode %d" % (func, -7))
-            
-        if sp_gene(thdata, mcnt, conf, gene_idx + 1, fp_jc, fp_reg, fp_sp, fp_us, fp_am) < 0:
+        ret, reg_ref_cnt, reg_alt_cnt, reg_oth_cnt = sp_region(reg, conf)
+        if ret < 0:
             raise ValueError("[%s] errcode %d" % (func, -9))
-        mcnt.reset()
+
+        str_reg, str_ad, str_dp, str_oth = "", "", "", ""
+        for i, smp in enumerate(conf.barcodes):
+            nu_ad, nu_oth = reg_alt_cnt[smp], reg_oth_cnt[smp]
+            nu_dp = reg_ref_cnt[smp] + nu_ad
+            if nu_dp + nu_oth <= 0:
+                continue
+            if nu_ad > 0:
+                str_ad += "%d\t%d\t%d\n" % (k_reg, i + 1, nu_ad)
+                thdata.nr_ad += 1
+            if nu_dp > 0:
+                str_dp += "%d\t%d\t%d\n" % (k_reg, i + 1, nu_dp)
+                thdata.nr_dp += 1
+            if nu_oth > 0:
+                str_oth += "%d\t%d\t%d\n" % (k_reg, i + 1, nu_oth)
+                thdata.nr_oth += 1
+        if str_dp or str_oth:
+            fp_ad.write(str_ad)
+            fp_dp.write(str_dp)
+            fp_oth.write(str_oth)
+            fp_reg.write("%s\t%d\t%d\t%s\n" % (reg.chrom, reg.start, reg.end - 1, reg.name))
+            k_reg += 1
 
         n_reg += 1
         frac_reg = n_reg / m_reg
@@ -150,11 +130,11 @@ def sp_count(thdata):
                 (func, thdata.idx, math.floor(frac_reg * 100)))
             l_reg = frac_reg
 
-    fp_jc.close()
     fp_reg.close()
-    fp_sp.close()
-    fp_us.close()
-    fp_am.close()
+    fp_ad.close()
+    fp_dp.close()
+    fp_oth.close()
+    conf.sam.close()
 
     thdata.conf = None    # sam object cannot be pickled.
     thdata.ret = 0

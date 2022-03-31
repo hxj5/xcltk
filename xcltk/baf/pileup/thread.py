@@ -55,10 +55,10 @@ class ThreadData:
 
         s += "%sout_fn = %s\n" % (prefix, self.out_fn)
         
-        s += "%snum_record_region_fn = %d\n" % (prefix, self.nr_reg)
-        s += "%snum_record_ad_fn = %d\n" % (prefix, self.nr_ad)
-        s += "%snum_record_dp_fn = %d\n" % (prefix, self.nr_dp)
-        s += "%snum_record_oth_fn = %d\n" % (prefix, self.nr_oth)
+        s += "%snum_record_region = %d\n" % (prefix, self.nr_reg)
+        s += "%snum_record_ad = %d\n" % (prefix, self.nr_ad)
+        s += "%snum_record_dp = %d\n" % (prefix, self.nr_dp)
+        s += "%snum_record_oth = %d\n" % (prefix, self.nr_oth)
 
         s += "%sreturn code = %d\n" % (prefix, self.ret)
         s += "%s\n" % prefix

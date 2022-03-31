@@ -197,8 +197,8 @@ class SNP(Region):
     @param pos      1-based position [int]
     @param ref      The ref base [str]
     @param alt      The alt base [str]
-    @param ref_idx  The GT index for ref base [int]
-    @param alt_idx  The GT index for alt base [int]   
+    @param ref_idx  The GT index for ref base, 0 or 1 [int]
+    @param alt_idx  The GT index for alt base, 1 or 0 [int]   
     """
     def __init__(self, chrom, pos, ref, alt, ref_idx, alt_idx):
         super().__init__(chrom, pos, pos + 1)
@@ -212,7 +212,7 @@ class SNP(Region):
     def get_id(self):
         return "%s_%d" % (self.chrom, self.pos)
 
-    def get_gt_index(self, base):
+    def get_region_allele_index(self, base):
         return self.gt[base] if base in self.gt else -1
     
 class SNPSet(RegionSet):

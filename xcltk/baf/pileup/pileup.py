@@ -28,21 +28,15 @@ def prepare_config(conf):
     @note        This function should be call after cmdline is parsed.
     """
     func = "prepare_config"
-    conf.sam_fn_list = []
     if conf.sam_fn:
-        sam_lst0 = conf.sam_fn.split(",")
-        for fn in sam_lst0:
-            if os.path.isfile(fn):
-                conf.sam_fn_list.append(fn)
-            else:
-                sys.stderr.write("[E::%s] failed to open sam file '%s'.\n" % (func, fn))
-                return(-1)
+        if not os.path.isfile(conf.sam_fn):
+            sys.stderr.write("[E::%s] sam file does not exist '%s'.\n" % (func, conf.sam_fn))
+            return(-1)
     else:
         sys.stderr.write("[E::%s] sam file(s) needed!\n" % (func,))
         return(-1)
 
     if conf.barcode_fn:
-        conf.sid_list = None
         if os.path.isfile(conf.barcode_fn):
             with zopen(conf.barcode_fn, "rt") as fp:
                 conf.barcodes = sorted([x.strip() for x in fp])
@@ -50,7 +44,7 @@ def prepare_config(conf):
                 sys.stderr.write("[E::%s] duplicate barcodes!\n" % (func, ))
                 return(-1)
         else:
-            sys.stderr.write("[E::%s] failed to open barcode file '%s'.\n" % (func, conf.barcode_fn))
+            sys.stderr.write("[E::%s] barcode file does not exist '%s'.\n" % (func, conf.barcode_fn))
             return(-1)
     else:       
         conf.barcodes = None
@@ -74,12 +68,8 @@ def prepare_config(conf):
             if not conf.reg_list:
                 sys.stderr.write("[E::%s] failed to load region file.\n" % func)
                 return(-1)
-            if conf.barcodes is not None:
-                sys.stdout.write("[I::%s] count %d regions in %d single cells.\n" % (func, 
-                    len(conf.reg_list), len(conf.barcodes)))
-            else:
-                sys.stdout.write("[I::%s] count %d regions in %d bam files.\n" % (func,
-                    len(conf.reg_list), len(conf.sid_list)))
+            sys.stdout.write("[I::%s] count %d regions in %d single cells.\n" % (func, 
+                len(conf.reg_list), len(conf.barcodes)))
         else:
             sys.stderr.write("[E::%s] region file does not exist '%s'.\n" % (func, conf.region_fn))
             return(-1)
@@ -106,10 +96,7 @@ def prepare_config(conf):
     if conf.cell_tag and conf.cell_tag.upper() == "NONE":
         conf.cell_tag = None
     if conf.cell_tag and conf.barcodes:
-        if conf.sid_fn or conf.sid_list:
-            sys.stderr.write("[E::%s] should not specify barcodes and sample IDs at the same time.\n" % (func, ))
-            return(-1)
-        conf.sid_list = None      
+        pass       
     elif (not conf.cell_tag) ^ (not conf.barcodes):
         sys.stderr.write("[E::%s] should not specify cell_tag or barcodes alone.\n" % (func, ))
         return(-1)
@@ -143,8 +130,9 @@ def usage(fp = sys.stderr):
     s += "Options:\n"
     s += "  -s, --sam STR          Indexed sam/bam/cram file.\n"
     s += "  -O, --outdir DIR       Output directory for sparse matrices.\n"
-    s += "  -R, --region FILE      A TSV file listing target regions.\n"
-    s += "  -P, --phasedSNP FILE   A VCF file listing phased SNPs.\n"
+    s += "  -R, --region FILE      A TSV file listing target regions. The first 4 columns shoud be:\n"
+    s += "                         chrom, start, end (both 1-based and inclusive), name.\n"
+    s += "  -P, --phasedSNP FILE   A VCF file listing phased SNPs (i.e., containing phased GT).\n"
     s += "  -b, --barcode FILE     A plain file listing all effective cell barcode.\n"
     s += "  -V, --version          Print software version and exit.\n"
     s += "  -h, --help             Print this message and exit.\n"
@@ -272,6 +260,7 @@ def main(argv):
                 del reg
             conf.reg_list.clear()
             conf.reg_list = None
+            conf.snp_set.destroy()
             conf.snp_set = None
 
         thdata_list = []
