@@ -113,7 +113,7 @@ def prepare_config(conf):
                 conf.umi_tag = CFG_UMI_TAG_BC
         elif conf.umi_tag.upper() == "NONE":
             conf.umi_tag = None
-    if not conf.umi_tag:
+    else:
         sys.stderr.write("[E::%s] umi tag needed!\n" % (func, ))
         return(-1)
 
@@ -140,7 +140,7 @@ def usage(fp = sys.stderr):
     s += "Optional arguments:\n"
     s += "  -p, --nproc INT        Number of processes [%d]\n" % CFG_NPROC
     s += "  --cellTAG STR          Tag for cell barcodes [%s]\n" % CFG_CELL_TAG
-    s += "  --UMItag STR           Tag for UMI [%s]\n" % CFG_UMI_TAG
+    s += "  --UMItag STR           Tag for UMI, set to None when reads only [%s]\n" % CFG_UMI_TAG
     s += "  --minCOUNT INT         Mininum aggragated count for SNP [%d]\n" % CFG_MIN_COUNT
     s += "  --minMAF FLOAT         Mininum minor allele fraction for SNP [%f]\n" % CFG_MIN_MAF
     s += "\n"

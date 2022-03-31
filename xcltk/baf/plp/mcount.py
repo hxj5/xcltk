@@ -52,7 +52,13 @@ class SCount:
 
     def push_read(self, read):
         conf = self.conf
-        umi = read.get_tag(conf.umi_tag)
+        umi = None
+        if conf.use_umi():
+            umi = read.get_tag(conf.umi_tag)
+        else:
+            umi = read.query_name
+        if not umi:
+            return(0)
         if umi in self.umi_cnt:
             return(0)
         else:

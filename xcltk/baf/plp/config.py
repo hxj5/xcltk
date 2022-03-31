@@ -80,6 +80,9 @@ class Config:
 
         fp.write(s)
 
+    def use_umi(self):
+        return self.umi_tag is not None
+
 CFG_DEBUG = 0
 CFG_CELL_TAG = "CB"
 CFG_UMI_TAG = "UB"
