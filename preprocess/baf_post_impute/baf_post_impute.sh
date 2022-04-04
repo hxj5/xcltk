@@ -49,7 +49,7 @@ function usage() {
     echo "  -g, --hg INT         Version of fasta, 19 or 38"
     echo "  -P, --phase STR      Phase type: phase|impute"
     echo "  -v, --vcf FILE       Path to phased vcf"
-    echo "  -B, --blocks FILE    Region of feature blocks in bed|tsv|gff"
+    echo "  -B, --blocks FILE    Region of feature blocks in TSV format"
     echo "  -p, --ncores INT     Number of cores"
     echo "  -O, --outdir DIR     Path to output dir"
     echo "  -c, --config FILE    Path to config file. If not set, use the"
@@ -142,37 +142,10 @@ eval_cmd "$cmd" "$aim"
 preplp_vpath=`ls $out_dir/*.uniq.sort.vcf.gz`
 
 aim="run pileup"
-cmd="$bin_pileup -S $seq_type $bam_opt $umi_opt -v $preplp_vpath \\
+cmd="$bin_pileup -S $seq_type $bam_opt $umi_opt -R $blocks -v $preplp_vpath \\
        -p $ncores -O $out_dir -c $cfg"
 eval_cmd "$cmd" "$aim"
-
-xcsp_dir=$out_dir/xcltk-pileup
-gt_vpath=`ls $out_dir/*.gt.vcf.gz`
-
-aim="phase SNPs into haplotype blocks of even size"
-phs_even_dir=$out_dir/phase-snp-even
-mkdir -p $phs_even_dir &> /dev/null
-size=50    # kb
-cmd="$bin_xcltk convert -B $size -H $hg -o $phs_even_dir/blocks.${size}kb.tsv && \\
-     $bin_xcltk phase_snp --sid ${sid}.${size}kb --snpAD $xcsp_dir/cellSNP.tag.AD.mtx \\
-       --snpDP $xcsp_dir/cellSNP.tag.DP.mtx --phase $gt_vpath \\
-       --region $phs_even_dir/blocks.${size}kb.tsv --outdir $phs_even_dir"
-eval_cmd "$cmd" "$aim"
-
-cp $out_dir/cellsnp-lite/cellSNP.samples.tsv $phs_even_dir
-
-aim="phase SNPs into haplotype blocks of features"
-phs_fet_dir=$out_dir/phase-snp-feature
-mkdir -p $phs_fet_dir &> /dev/null
-cmd="$bin_xcltk phase_snp --sid ${sid}.feature --snpAD $xcsp_dir/cellSNP.tag.AD.mtx \\
-       --snpDP $xcsp_dir/cellSNP.tag.DP.mtx \\
-       --phase $gt_vpath --region $blocks --outdir $phs_fet_dir"
-eval_cmd "$cmd" "$aim"
-
-cp $out_dir/cellsnp-lite/cellSNP.samples.tsv $phs_fet_dir
-cp $blocks $phs_fet_dir
 
 ###### END ######
 log_msg "All Done!"
 log_msg "End"
-

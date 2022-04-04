@@ -29,7 +29,9 @@ function usage() {
     echo "  -s, --bam FILE       Path to bam file for droplet-based dataset"
     echo "  -L, --bamlist File   Path to bam list file for well-based dataset"
     echo "  -u, --umi STR        UMI tag if available"
+    echo "  -B, --blocks FILE    Region of feature blocks in TSV format"
     echo "  -v, --vcf FILE       Path to phased vcf"
+    echo "  -g, --hg INT         Version of fasta, 19 or 38"
     echo "  -p, --ncores INT     Number of cores"
     echo "  -O, --outdir DIR     Path to output dir"
     echo "  -c, --config FILE    Path to config file. If not set, use the"
@@ -54,7 +56,7 @@ if [ $# -lt 1 ]; then
     exit 1
 fi
 
-ARGS=`getopt -o S:s:b:L:u:v:p:O:c:h --long seq:,bam:,barcode:,bamlist:,umi:,vcf:,ncores:,outdir:,config:,help -n "" -- "$@"`
+ARGS=`getopt -o S:s:b:L:u:B:v:g:p:O:c:h --long seq:,bam:,barcode:,bamlist:,umi:,blocks:,vcf:,hg:,ncores:,outdir:,config:,help -n "" -- "$@"`
 if [ $? -ne 0 ]; then
     echo "Error: failed to parse command line args. Terminating..." >&2
     exit 1
@@ -68,7 +70,9 @@ while true; do
         -b|--barcode) barcode=$2; shift 2;;
         -L|--bamlist) bam_list=$2; shift 2;;
         -u|--umi) umi=$2; shift 2;;
+        -B|--blocks) blocks_fet=$2; shift 2;;
         -v|--vcf) vcf=$2; shift 2;;
+        -g|--hg) hg=$2; shift 2;;
         -p|--ncores) ncores=$2; shift 2;;
         -O|--outdir) out_dir=$2; shift 2;;
         -c|--config) cfg=$2; shift 2;;
@@ -105,10 +109,8 @@ fi
 if [ -z "$umi" ]; then 
     umi=None
     excl_flag=1796
-    max_flag=255
 else
     excl_flag=772
-    max_flag=4096
 fi
 
 csp_in_vpath=$vcf
@@ -123,55 +125,71 @@ if [ "$seq_type" == "dna" ] || [ "$seq_type" == "atac" ]; then
       --cellTAG $cell_tag --genotype --gzip"
 elif [ "$seq_type" == "rna" ]; then
     cmd="$bin_cellsnp $bam_opt -O $csp_dir -R $csp_in_vpath --minCOUNT 1 --minMAF 0 \\
-      --minLEN 30 --minMAPQ 20 --inclFLAG 0 --exclFLAG $excl_flag --UMItag $umi -p $ncores      \\
+      --minLEN 30 --minMAPQ 20 --inclFLAG 0 --exclFLAG $excl_flag --UMItag $umi -p $ncores  \\
       --cellTAG $cell_tag --genotype --gzip"
 else  # unknown
     log_msg "Warning: unknown seq type $seq_type, use the dna pileup method"
     cmd="$bin_cellsnp $bam_opt -O $csp_dir -R $csp_in_vpath --minCOUNT 1 --minMAF 0  \\
-      --minLEN 30 --minMAPQ 20 --inclFLAG 0 --exclFLAG $excl_flag --UMItag $umi -p $ncores           \\
+      --minLEN 30 --minMAPQ 20 --inclFLAG 0 --exclFLAG $excl_flag --UMItag $umi -p $ncores   \\
       --cellTAG $cell_tag --genotype --gzip"
 fi
 eval_cmd "$cmd" "$aim"
 
 csp_vpath=$csp_dir/cellSNP.base.vcf.gz
 
-aim="xcltk pileup"
-xcsp_dir=$out_dir/xcltk-pileup
-if [ "$seq_type" == "dna" ] || [ "$seq_type" == "atac" ]; then
-    cmd="$bin_xcltk pileup $bam_opt -O $xcsp_dir -R $csp_vpath --minCOUNT 1 --minMAF 0 \\
-      --minLEN 30 --minMAPQ 20 --maxFLAG $max_flag --UMItag $umi -p $ncores --uniqCOUNT \\
-      --cellTAG $cell_tag" 
-elif [ "$seq_type" == "rna" ]; then
-    cmd="$bin_xcltk pileup $bam_opt -O $xcsp_dir -R $csp_vpath --minCOUNT 1 --minMAF 0 \\
-      --minLEN 30 --minMAPQ 20 --maxFLAG $max_flag --UMItag $umi -p $ncores --uniqCOUNT \\
-      --cellTAG $cell_tag" 
-else  # unknown
-    log_msg "Warning: unknown seq type $seq_type, use the dna pileup method"
-    cmd="$bin_xcltk pileup $bam_opt -O $xcsp_dir -R $csp_vpath --minCOUNT 1 --minMAF 0  \\
-      --minLEN 30 --minMAPQ 20 --maxFLAG $max_flag --UMItag $umi -p $ncores --uniqCOUNT \\
-      --cellTAG $cell_tag"
-fi
-eval_cmd "$cmd" "$aim"
-
-xcsp_vpath=$xcsp_dir/cellSNP.base.vcf.gz
-
 aim="merge pileup vcf and phase GT vcf"
 gt_vname=${csp_in_vname/.vcf/.gt.vcf}
 gt_vpath=$out_dir/$gt_vname
 cmd="zcat $csp_in_vpath | sed 's/^chr//' | $bin_bgzip -c > ${csp_in_vpath}.tmp &&
-     zcat $xcsp_vpath | sed 's/^chr//' | $bin_bgzip -c > ${xcsp_vpath}.tmp &&
-     $bin_bcftools view -Oz -T ${xcsp_vpath}.tmp ${csp_in_vpath}.tmp > $gt_vpath &&
-     rm ${csp_in_vpath}.tmp && rm ${xcsp_vpath}.tmp"
+     zcat $csp_vpath | sed 's/^chr//' | $bin_bgzip -c > ${csp_vpath}.tmp &&
+     $bin_bcftools view -Oz -T ${csp_vpath}.tmp ${csp_in_vpath}.tmp > $gt_vpath &&
+     rm ${csp_in_vpath}.tmp && rm ${csp_vpath}.tmp"
 eval_cmd "$cmd" "$aim"
 
-#aim="extract phased GT"
-#gt_tsv=$out_dir/${csp_in_vname%.vcf.gz}.gt.tsv.gz
-#cmd="$bin_bcftools query -f '%CHROM\t%POS[\t%GT]\n' $gt_vpath | 
-#     awk '{split(\$3, a, \"|\"); printf(\"%s\t%s\t%s\t%s\n\", \$1, \$2, a[1], a[2]); }' | 
-#     $bin_bgzip -c > $gt_tsv"
-#eval_cmd "$cmd" "$aim"
+aim="create file containing blocks of even size"
+phs_even_dir=$out_dir/phase-snp-even
+mkdir -p $phs_even_dir &> /dev/null
+size=50    # kb
+blocks_even=$phs_even_dir/blocks.${size}kb.tsv
+cmd="$bin_xcltk convert -B $size -H $hg -o $blocks_even"
+eval_cmd "$cmd" "$aim"
+
+aim="phase SNPs into haplotype blocks of even size"
+if [ "$seq_type" == "dna" ] || [ "$seq_type" == "atac" ]; then
+    cmd="$bin_xcltk pileup $bam_opt -O $phs_even_dir -R $blocks_even -P $gt_vpath --minCOUNT 1 --minMAF 0 \\
+      --minLEN 30 --minMAPQ 20 --inclFLAG 0 --exclFLAG $excl_flag --UMItag $umi -p $ncores \\
+      --cellTAG $cell_tag"
+elif [ "$seq_type" == "rna" ]; then
+    cmd="$bin_xcltk pileup $bam_opt -O $phs_even_dir -R $blocks_even -P $gt_vpath --minCOUNT 1 --minMAF 0 \\
+      --minLEN 30 --minMAPQ 20 --inclFLAG 0 --exclFLAG $excl_flag --UMItag $umi -p $ncores \\
+      --cellTAG $cell_tag"
+else  # unknown
+    log_msg "Warning: unknown seq type $seq_type, use the dna pileup method"
+    cmd="$bin_xcltk pileup $bam_opt -O $phs_even_dir -R $blocks_even -P $gt_vpath --minCOUNT 1 --minMAF 0 \\
+      --minLEN 30 --minMAPQ 20 --inclFLAG 0 --exclFLAG $excl_flag --UMItag $umi -p $ncores \\
+      --cellTAG $cell_tag"
+fi
+eval_cmd "$cmd" "$aim"
+
+aim="phase SNPs into haplotype blocks of features"
+phs_fet_dir=$out_dir/phase-snp-feature
+mkdir -p $phs_fet_dir &> /dev/null
+if [ "$seq_type" == "dna" ] || [ "$seq_type" == "atac" ]; then
+    cmd="$bin_xcltk pileup $bam_opt -O $phs_fet_dir -R $blocks_fet -P $gt_vpath --minCOUNT 1 --minMAF 0 \\
+      --minLEN 30 --minMAPQ 20 --inclFLAG 0 --exclFLAG $excl_flag --UMItag $umi -p $ncores \\
+      --cellTAG $cell_tag"
+elif [ "$seq_type" == "rna" ]; then
+    cmd="$bin_xcltk pileup $bam_opt -O $phs_fet_dir -R $blocks_fet -P $gt_vpath --minCOUNT 1 --minMAF 0 \\
+      --minLEN 30 --minMAPQ 20 --inclFLAG 0 --exclFLAG $excl_flag --UMItag $umi -p $ncores \\
+      --cellTAG $cell_tag"
+else  # unknown
+    log_msg "Warning: unknown seq type $seq_type, use the dna pileup method"
+    cmd="$bin_xcltk pileup $bam_opt -O $phs_fet_dir -R $blocks_fet -P $gt_vpath --minCOUNT 1 --minMAF 0 \\
+      --minLEN 30 --minMAPQ 20 --inclFLAG 0 --exclFLAG $excl_flag --UMItag $umi -p $ncores \\
+      --cellTAG $cell_tag"
+fi
+eval_cmd "$cmd" "$aim"
 
 ###### END ######
 log_msg "All Done!"
 log_msg "End"
-
