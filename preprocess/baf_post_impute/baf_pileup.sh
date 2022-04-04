@@ -151,7 +151,9 @@ phs_even_dir=$out_dir/phase-snp-even
 mkdir -p $phs_even_dir &> /dev/null
 size=50    # kb
 blocks_even=$phs_even_dir/blocks.${size}kb.tsv
-cmd="$bin_xcltk convert -B $size -H $hg -o $blocks_even"
+cmd="$bin_xcltk convert -B $size -H $hg -o ${blocks_even}.tmp && 
+     cat ${blocks_even}.tmp | awk '{printf(\"%s\t%s:%s-%s\", \$0, \$1, \$2, \$3)}' > ${blocks_even} &&
+     rm ${blocks_even}.tmp"
 eval_cmd "$cmd" "$aim"
 
 aim="phase SNPs into haplotype blocks of even size"

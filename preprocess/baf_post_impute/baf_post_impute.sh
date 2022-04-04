@@ -142,8 +142,8 @@ eval_cmd "$cmd" "$aim"
 preplp_vpath=`ls $out_dir/*.uniq.sort.vcf.gz`
 
 aim="run pileup"
-cmd="$bin_pileup -S $seq_type $bam_opt $umi_opt -R $blocks -v $preplp_vpath \\
-       -p $ncores -O $out_dir -c $cfg"
+cmd="$bin_pileup -S $seq_type $bam_opt $umi_opt -B $blocks -v $preplp_vpath \\
+       -g $hg -p $ncores -O $out_dir -c $cfg"
 eval_cmd "$cmd" "$aim"
 
 ###### END ######
