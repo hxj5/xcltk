@@ -17,6 +17,7 @@ class Config:
         self.nproc = CFG_NPROC
         self.min_count = CFG_MIN_COUNT
         self.min_maf = CFG_MIN_MAF
+        self.output_all_reg = CFG_OUTPUT_ALL_REG
 
         self.min_mapq = CFG_MIN_MAPQ
         self.min_len = CFG_MIN_LEN
@@ -54,6 +55,7 @@ class Config:
         s += "%snumber_of_processes = %d\n" % (prefix, self.nproc)
         s += "%smin_count = %d\n" % (prefix, self.min_count)
         s += "%smin_maf = %f\n" % (prefix, self.min_maf)
+        s += "%soutput_all_reg = %s\n" % (prefix, self.output_all_reg)
         s += "%s\n" % prefix
 
         s += "%smin_mapq = %d\n" % (prefix, self.min_mapq)
@@ -90,6 +92,7 @@ CFG_UMI_TAG_BC = "UB"    # the default umi tag for 10x data.
 CFG_NPROC = 1
 CFG_MIN_COUNT = 1 
 CFG_MIN_MAF = 0
+CFG_OUTPUT_ALL_REG = False
 
 CFG_MIN_MAPQ = 20
 CFG_MIN_LEN = 30

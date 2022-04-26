@@ -98,32 +98,39 @@ def sp_count(thdata):
             sys.stderr.write("[D::%s][Thread-%d] processing region '%s' ...\n" %
                               (func, thdata.idx, reg.name))
 
-        ret, reg_ref_cnt, reg_alt_cnt, reg_oth_cnt, reg_dp_cnt = sp_region(reg, conf)
-        if ret < 0:
-            raise ValueError("[%s] errcode %d" % (func, -9))
+        if reg.snp_list:
+            ret, reg_ref_cnt, reg_alt_cnt, reg_oth_cnt, reg_dp_cnt = sp_region(reg, conf)
+            if ret < 0:
+                raise ValueError("[%s] errcode %d" % (func, -9))
 
-        str_reg, str_ad, str_dp, str_oth = "", "", "", ""
-        for i, smp in enumerate(conf.barcodes):
-            nu_ad, nu_dp, nu_oth = reg_alt_cnt[smp], reg_dp_cnt[smp], reg_oth_cnt[smp]
-            if nu_dp != reg_ref_cnt[smp] + nu_ad:
-                sys.stderr.write("[W::%s][Thread-%d] region '%s', sample '%s':\n" % 
-                                  (func, thdata.idx, reg.name, smp))
-                sys.stderr.write("\tduplicate UMIs in REF and ALT alleles!\n")
-            if nu_dp + nu_oth <= 0:
-                continue
-            if nu_ad > 0:
-                str_ad += "%d\t%d\t%d\n" % (k_reg, i + 1, nu_ad)
-                thdata.nr_ad += 1
-            if nu_dp > 0:
-                str_dp += "%d\t%d\t%d\n" % (k_reg, i + 1, nu_dp)
-                thdata.nr_dp += 1
-            if nu_oth > 0:
-                str_oth += "%d\t%d\t%d\n" % (k_reg, i + 1, nu_oth)
-                thdata.nr_oth += 1
-        if str_dp or str_oth:
-            fp_ad.write(str_ad)
-            fp_dp.write(str_dp)
-            fp_oth.write(str_oth)
+            str_reg, str_ad, str_dp, str_oth = "", "", "", ""
+            for i, smp in enumerate(conf.barcodes):
+                nu_ad, nu_dp, nu_oth = reg_alt_cnt[smp], reg_dp_cnt[smp], reg_oth_cnt[smp]
+                if nu_dp != reg_ref_cnt[smp] + nu_ad:
+                    sys.stderr.write("[W::%s][Thread-%d] region '%s', sample '%s':\n" % 
+                                    (func, thdata.idx, reg.name, smp))
+                    sys.stderr.write("\tduplicate UMIs in REF and ALT alleles!\n")
+                if nu_dp + nu_oth <= 0:
+                    continue
+                if nu_ad > 0:
+                    str_ad += "%d\t%d\t%d\n" % (k_reg, i + 1, nu_ad)
+                    thdata.nr_ad += 1
+                if nu_dp > 0:
+                    str_dp += "%d\t%d\t%d\n" % (k_reg, i + 1, nu_dp)
+                    thdata.nr_dp += 1
+                if nu_oth > 0:
+                    str_oth += "%d\t%d\t%d\n" % (k_reg, i + 1, nu_oth)
+                    thdata.nr_oth += 1
+            if str_dp or str_oth:
+                fp_ad.write(str_ad)
+                fp_dp.write(str_dp)
+                fp_oth.write(str_oth)
+                fp_reg.write("%s\t%d\t%d\t%s\n" % (reg.chrom, reg.start, reg.end - 1, reg.name))
+                k_reg += 1
+            elif conf.output_all_reg:
+                fp_reg.write("%s\t%d\t%d\t%s\n" % (reg.chrom, reg.start, reg.end - 1, reg.name))
+                k_reg += 1
+        elif conf.output_all_reg:
             fp_reg.write("%s\t%d\t%d\t%s\n" % (reg.chrom, reg.start, reg.end - 1, reg.name))
             k_reg += 1
 

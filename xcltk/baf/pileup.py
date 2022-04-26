@@ -149,6 +149,7 @@ def usage(fp = sys.stderr):
     s += "  --UMItag STR           Tag for UMI, set to None when reads only [%s]\n" % CFG_UMI_TAG
     s += "  --minCOUNT INT         Mininum aggragated count for SNP [%d]\n" % CFG_MIN_COUNT
     s += "  --minMAF FLOAT         Mininum minor allele fraction for SNP [%f]\n" % CFG_MIN_MAF
+    s += "  --outputAllReg         If set, output all inputted regions.\n"
     s += "\n"
     s += "Read filtering:\n"
     s += "  --inclFLAG INT    Required flags: skip reads with all mask bits unset [%d]\n" % CFG_INCL_FLAG
@@ -186,7 +187,7 @@ def pileup(argv):
                      "help", "debug=",
                      "nproc=", 
                      "cellTAG=", "UMItag=", 
-                     "minCOUNT=", "minMAF=",
+                     "minCOUNT=", "minMAF=", "outputAllReg=",
                      "inclFLAG=", "exclFLAG=", "minLEN=", "minMAPQ=", "countORPHAN"
                 ])
 
@@ -206,6 +207,7 @@ def pileup(argv):
         elif op in ("--umitag"): conf.umi_tag = val
         elif op in ("--mincount"): conf.min_count = int(val)
         elif op in ("--minmaf"): conf.min_maf = float(val)
+        elif op in ("--outputAllReg"): conf.output_all_reg = True
 
         elif op in ("--inclflag"): conf.incl_flag = int(val)
         elif op in ("--exclflag"): conf.excl_flag = int(val)
@@ -242,9 +244,11 @@ def pileup(argv):
                 if conf.debug > 0:
                     sys.stderr.write("[D::%s] no SNP fetched for region '%s'.\n" % 
                         (func, reg.name))
-        conf.reg_list = reg_list
         sys.stdout.write("[I::%s] %d regions extracted with SNPs.\n" % 
-            (func, len(conf.reg_list)))
+            (func, len(reg_list)))
+
+        if not conf.output_all_reg:
+            conf.reg_list = reg_list
 
         # split region list and save to file       
         m_reg = len(conf.reg_list)
