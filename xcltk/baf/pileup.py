@@ -197,7 +197,7 @@ def pileup(argv):
         if op in   ("-s", "--sam"): conf.sam_fn = val
         elif op in ("-O", "--outdir"): conf.out_dir = val
         elif op in ("-R", "--region"): conf.region_fn = val
-        elif op in ("-P", "--phasedSNP"): conf.snp_fn = val
+        elif op in ("-P", "--phasedsnp"): conf.snp_fn = val
         elif op in ("-b", "--barcode"): conf.barcode_fn = val
         elif op in ("-h", "--help"): usage(sys.stderr); sys.exit(1)
         elif op in ("-D", "--debug"): conf.debug = int(val)
@@ -207,7 +207,7 @@ def pileup(argv):
         elif op in ("--umitag"): conf.umi_tag = val
         elif op in ("--mincount"): conf.min_count = int(val)
         elif op in ("--minmaf"): conf.min_maf = float(val)
-        elif op in ("--outputAllReg"): conf.output_all_reg = True
+        elif op in ("--outputallreg"): conf.output_all_reg = True
 
         elif op in ("--inclflag"): conf.incl_flag = int(val)
         elif op in ("--exclflag"): conf.excl_flag = int(val)
