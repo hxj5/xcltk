@@ -105,14 +105,25 @@ def sp_count(thdata):
 
             str_reg, str_ad, str_dp, str_oth = "", "", "", ""
             for i, smp in enumerate(conf.barcodes):
-                nu_ad, nu_oth = reg_alt_cnt[smp], reg_oth_cnt[smp]
-                nu_dp = reg_ref_cnt[smp] + nu_ad      # CHECK ME! may include UMIs with incorrect phased SNPs
-                if nu_dp != reg_dp_cnt[smp]:
-                    msg = "[W::%s][Thread-%d] region '%s', sample '%s':\n" % 
-                             (func, thdata.idx, reg.name, smp)
-                    msg += "\tduplicate UMIs: REF, ALT, DP_uniq (%d, %d, %d)!\n" %
-                             (reg_ref_cnt[smp], nu_ad, reg_dp_cnt[smp])
-                    sys.stderr.write(msg)
+                nu_ad, nu_dp, nu_oth = -1, -1, -1
+                if reg_ref_cnt[smp] + reg_alt_cnt[smp] != reg_dp_cnt[smp]:
+                    if conf.debug > 0:
+                        msg = "[D::%s][Thread-%d] region '%s', sample '%s':\n" % (
+                                func, thdata.idx, reg.name, smp)
+                        msg += "\tduplicate UMIs: REF, ALT, DP_uniq (%d, %d, %d)!\n" % (
+                                reg_ref_cnt[smp], reg_alt_cnt[smp], reg_dp_cnt[smp])
+                        sys.stderr.write(msg)
+                    if conf.no_dup_hap:
+                        nu_share = reg_ref_cnt[smp] + reg_alt_cnt[smp] - reg_dp_cnt[smp]
+                        nu_ad = reg_alt_cnt[smp] - nu_share
+                        nu_dp = reg_dp_cnt[smp] - nu_share
+                    else:
+                        nu_ad = reg_alt_cnt[smp]
+                        nu_dp = reg_ref_cnt[smp] + reg_alt_cnt[smp]
+                else:
+                    nu_ad, nu_dp = reg_alt_cnt[smp], reg_dp_cnt[smp]
+                nu_oth = reg_oth_cnt[smp]
+
                 if nu_dp + nu_oth <= 0:
                     continue
                 if nu_ad > 0:
@@ -124,6 +135,7 @@ def sp_count(thdata):
                 if nu_oth > 0:
                     str_oth += "%d\t%d\t%d\n" % (k_reg, i + 1, nu_oth)
                     thdata.nr_oth += 1
+
             if str_dp or str_oth:
                 fp_ad.write(str_ad)
                 fp_dp.write(str_dp)

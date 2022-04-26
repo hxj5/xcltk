@@ -150,6 +150,7 @@ def usage(fp = sys.stderr):
     s += "  --minCOUNT INT         Mininum aggragated count for SNP [%d]\n" % CFG_MIN_COUNT
     s += "  --minMAF FLOAT         Mininum minor allele fraction for SNP [%f]\n" % CFG_MIN_MAF
     s += "  --outputAllReg         If set, output all inputted regions.\n"
+    s += "  --countDupHap          If set, UMIs aligned to both haplotypes will be counted\n"
     s += "\n"
     s += "Read filtering:\n"
     s += "  --inclFLAG INT    Required flags: skip reads with all mask bits unset [%d]\n" % CFG_INCL_FLAG
@@ -187,7 +188,7 @@ def pileup(argv):
                      "help", "debug=",
                      "nproc=", 
                      "cellTAG=", "UMItag=", 
-                     "minCOUNT=", "minMAF=", "outputAllReg=",
+                     "minCOUNT=", "minMAF=", "outputAllReg", "countDupHap",
                      "inclFLAG=", "exclFLAG=", "minLEN=", "minMAPQ=", "countORPHAN"
                 ])
 
@@ -208,6 +209,7 @@ def pileup(argv):
         elif op in ("--mincount"): conf.min_count = int(val)
         elif op in ("--minmaf"): conf.min_maf = float(val)
         elif op in ("--outputallreg"): conf.output_all_reg = True
+        elif op in ("--countduphap"): conf.no_dup_hap = False
 
         elif op in ("--inclflag"): conf.incl_flag = int(val)
         elif op in ("--exclflag"): conf.excl_flag = int(val)
