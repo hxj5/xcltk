@@ -21,17 +21,17 @@ def sp_region(reg, conf):
         if not itr:    
             continue
         if mcnt.add_snp(snp) < 0:   # mcnt reset() inside.
-            return((-3, None, None, None))
+            return((-3, None, None, None, None))
         for read in itr:
             if check_read(read, conf) < 0:
                 continue
             ret = mcnt.push_read(read)
             if ret < 0:
                 if ret == -1:
-                    return((-5, None, None, None))
+                    return((-5, None, None, None, None))
                 continue
         if mcnt.stat() < 0:
-            return((-7, None, None, None))
+            return((-7, None, None, None, None))
         snp_ref_cnt = mcnt.tcount[mcnt.base_idx[snp.ref]]
         snp_alt_cnt = mcnt.tcount[mcnt.base_idx[snp.alt]]
         snp_cnt = sum(mcnt.tcount)
@@ -54,14 +54,16 @@ def sp_region(reg, conf):
     reg_ref_cnt = {smp:0 for smp in conf.barcodes}
     reg_alt_cnt = {smp:0 for smp in conf.barcodes}
     reg_oth_cnt = {smp:0 for smp in conf.barcodes}
+    reg_dp_cnt =  {smp:0 for smp in conf.barcodes}
     for smp in conf.barcodes:
         reg_ref_cnt[smp] = len(reg_ref_umi[smp])
         reg_alt_cnt[smp] = len(reg_alt_umi[smp])
-        dp_umi = reg_ref_umi[smp].union(reg_alt_umi[smp])
+        dp_umi = reg_ref_umi[smp].union(reg_alt_umi[smp]) # CHECK ME! theoretically no shared UMIs
         reg_oth_umi[smp] = reg_oth_umi[smp].difference(dp_umi)
         reg_oth_cnt[smp] = len(reg_oth_umi[smp])
+        reg_dp_cnt[smp]  = len(dp_umi)
     
-    return((0, reg_ref_cnt, reg_alt_cnt, reg_oth_cnt))
+    return((0, reg_ref_cnt, reg_alt_cnt, reg_oth_cnt, reg_dp_cnt))
 
 # TODO: use clever IPC (Inter-process communication) instead of naive `raise Error`.
 # NOTE: 
@@ -81,7 +83,6 @@ def sp_count(thdata):
         os.remove(thdata.reg_obj)
     else:
         reg_list = thdata.reg_obj
-    thdata.nr_reg = len(reg_list)
 
     fp_reg = zopen(thdata.out_region_fn, "wt", ZF_F_GZIP, is_bytes = False)
     fp_ad = zopen(thdata.out_ad_fn, "wt", ZF_F_GZIP, is_bytes = False)
@@ -97,14 +98,17 @@ def sp_count(thdata):
             sys.stderr.write("[D::%s][Thread-%d] processing region '%s' ...\n" %
                               (func, thdata.idx, reg.name))
 
-        ret, reg_ref_cnt, reg_alt_cnt, reg_oth_cnt = sp_region(reg, conf)
+        ret, reg_ref_cnt, reg_alt_cnt, reg_oth_cnt, reg_dp_cnt = sp_region(reg, conf)
         if ret < 0:
             raise ValueError("[%s] errcode %d" % (func, -9))
 
         str_reg, str_ad, str_dp, str_oth = "", "", "", ""
         for i, smp in enumerate(conf.barcodes):
-            nu_ad, nu_oth = reg_alt_cnt[smp], reg_oth_cnt[smp]
-            nu_dp = reg_ref_cnt[smp] + nu_ad
+            nu_ad, nu_dp, nu_oth = reg_alt_cnt[smp], reg_dp_cnt[smp], reg_oth_cnt[smp]
+            if nu_dp != reg_ref_cnt[smp] + nu_ad:
+                sys.stderr.write("[W::%s][Thread-%d] region '%s', sample '%s':\n" % 
+                                  (func, thdata.idx, reg.name, smp))
+                sys.stderr.write("\tduplicate UMIs in REF and ALT alleles!\n")
             if nu_dp + nu_oth <= 0:
                 continue
             if nu_ad > 0:
@@ -129,6 +133,8 @@ def sp_count(thdata):
             sys.stdout.write("[I::%s][Thread-%d] %d%% genes processed\n" % 
                 (func, thdata.idx, math.floor(frac_reg * 100)))
             l_reg = frac_reg
+
+    thdata.nr_reg = k_reg - 1
 
     fp_reg.close()
     fp_ad.close()

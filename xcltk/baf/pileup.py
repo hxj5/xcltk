@@ -336,19 +336,19 @@ def pileup(argv):
 
             if rewrite_mtx(thdata.out_ad_fn, ZF_F_GZIP, 
                            conf.out_ad_fn, "wb", ZF_F_PLAIN, 
-                           m_reg, len(conf.barcodes), thdata.nr_ad,
+                           thdata.nr_reg, len(conf.barcodes), thdata.nr_ad,
                            remove = True) < 0:
                 raise ValueError("[%s] errcode %d" % (func, -7))
 
             if rewrite_mtx(thdata.out_dp_fn, ZF_F_GZIP, 
                            conf.out_dp_fn, "wb", ZF_F_PLAIN, 
-                           m_reg, len(conf.barcodes), thdata.nr_dp,
+                           thdata.nr_reg, len(conf.barcodes), thdata.nr_dp,
                            remove = True) < 0:
                 raise ValueError("[%s] errcode %d" % (func, -9)) 
 
             if rewrite_mtx(thdata.out_oth_fn, ZF_F_GZIP, 
                            conf.out_oth_fn, "wb", ZF_F_PLAIN, 
-                           m_reg, len(conf.barcodes), thdata.nr_oth,
+                           thdata.nr_reg, len(conf.barcodes), thdata.nr_oth,
                            remove = True) < 0:
                 raise ValueError("[%s] errcode %d" % (func, -11))
         else:
