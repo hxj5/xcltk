@@ -105,11 +105,14 @@ def sp_count(thdata):
 
             str_reg, str_ad, str_dp, str_oth = "", "", "", ""
             for i, smp in enumerate(conf.barcodes):
-                nu_ad, nu_dp, nu_oth = reg_alt_cnt[smp], reg_dp_cnt[smp], reg_oth_cnt[smp]
-                if nu_dp != reg_ref_cnt[smp] + nu_ad:
-                    sys.stderr.write("[W::%s][Thread-%d] region '%s', sample '%s':\n" % 
-                                    (func, thdata.idx, reg.name, smp))
-                    sys.stderr.write("\tduplicate UMIs in REF and ALT alleles!\n")
+                nu_ad, nu_oth = reg_alt_cnt[smp], reg_oth_cnt[smp]
+                nu_dp = reg_ref_cnt[smp] + nu_ad      # CHECK ME! may include UMIs with incorrect phased SNPs
+                if nu_dp != reg_dp_cnt[smp]:
+                    msg = "[W::%s][Thread-%d] region '%s', sample '%s':\n" % 
+                             (func, thdata.idx, reg.name, smp)
+                    msg += "\tduplicate UMIs: REF, ALT, DP_uniq (%d, %d, %d)!\n" %
+                             (reg_ref_cnt[smp], nu_ad, reg_dp_cnt[smp])
+                    sys.stderr.write(msg)
                 if nu_dp + nu_oth <= 0:
                     continue
                 if nu_ad > 0:
