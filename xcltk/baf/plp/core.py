@@ -32,12 +32,13 @@ def sp_region(reg, conf):
                 continue
         if mcnt.stat() < 0:
             return((-7, None, None, None, None))
-        snp_ref_cnt = mcnt.tcount[mcnt.base_idx[snp.ref]]
-        snp_alt_cnt = mcnt.tcount[mcnt.base_idx[snp.alt]]
         snp_cnt = sum(mcnt.tcount)
         if snp_cnt < conf.min_count:
             continue
-        if snp_cnt <= 0 or snp_alt_cnt / float(snp_cnt) < conf.min_maf:
+        snp_ref_cnt = mcnt.tcount[mcnt.base_idx[snp.ref]]
+        snp_alt_cnt = mcnt.tcount[mcnt.base_idx[snp.alt]]
+        snp_minor_cnt = min(snp_ref_cnt, snp_alt_cnt)
+        if snp_minor_cnt < snp_cnt * conf.min_maf:
             continue
         for smp, scnt in mcnt.cell_cnt.items():
             for umi, ucnt in scnt.umi_cnt.items():
