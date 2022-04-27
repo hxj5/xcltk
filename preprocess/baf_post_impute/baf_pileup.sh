@@ -95,6 +95,9 @@ if [ -n "$bam" ] && [ -n "$bam_list" ]; then
     exit 1
 fi
 
+min_count=10
+min_maf=0.1
+
 cell_tag=CB
 if [ -n "$bam" ]; then            # droplet-based dataset
     bam_opt="-s $bam -b $barcode"
@@ -120,16 +123,16 @@ csp_in_vname=`basename $vcf`
 aim="cellsnp-lite pileup"
 csp_dir=$out_dir/cellsnp-lite
 if [ "$seq_type" == "dna" ] || [ "$seq_type" == "atac" ]; then
-    cmd="$bin_cellsnp $bam_opt -O $csp_dir -R $csp_in_vpath --minCOUNT 1 --minMAF 0 \\
+    cmd="$bin_cellsnp $bam_opt -O $csp_dir -R $csp_in_vpath --minCOUNT $min_count --minMAF $min_maf \\
       --minLEN 30 --minMAPQ 20 --inclFLAG 0 --exclFLAG $excl_flag --UMItag $umi -p $ncores  \\
       --cellTAG $cell_tag --genotype --gzip"
 elif [ "$seq_type" == "rna" ]; then
-    cmd="$bin_cellsnp $bam_opt -O $csp_dir -R $csp_in_vpath --minCOUNT 1 --minMAF 0 \\
+    cmd="$bin_cellsnp $bam_opt -O $csp_dir -R $csp_in_vpath --minCOUNT $min_count --minMAF $min_maf \\
       --minLEN 30 --minMAPQ 20 --inclFLAG 0 --exclFLAG $excl_flag --UMItag $umi -p $ncores  \\
       --cellTAG $cell_tag --genotype --gzip"
 else  # unknown
     log_msg "Warning: unknown seq type $seq_type, use the dna pileup method"
-    cmd="$bin_cellsnp $bam_opt -O $csp_dir -R $csp_in_vpath --minCOUNT 1 --minMAF 0  \\
+    cmd="$bin_cellsnp $bam_opt -O $csp_dir -R $csp_in_vpath --minCOUNT $min_count --minMAF $min_maf  \\
       --minLEN 30 --minMAPQ 20 --inclFLAG 0 --exclFLAG $excl_flag --UMItag $umi -p $ncores   \\
       --cellTAG $cell_tag --genotype --gzip"
 fi
@@ -158,16 +161,16 @@ eval_cmd "$cmd" "$aim"
 
 aim="phase SNPs into haplotype blocks of even size"
 if [ "$seq_type" == "dna" ] || [ "$seq_type" == "atac" ]; then
-    cmd="$bin_xcltk pileup $bam_opt -O $phs_even_dir -R $blocks_even -P $gt_vpath --minCOUNT 1 --minMAF 0 \\
+    cmd="$bin_xcltk pileup $bam_opt -O $phs_even_dir -R $blocks_even -P $gt_vpath --minCOUNT $min_count --minMAF $min_maf \\
       --minLEN 30 --minMAPQ 20 --inclFLAG 0 --exclFLAG $excl_flag --UMItag $umi -p $ncores \\
       --cellTAG $cell_tag"
 elif [ "$seq_type" == "rna" ]; then
-    cmd="$bin_xcltk pileup $bam_opt -O $phs_even_dir -R $blocks_even -P $gt_vpath --minCOUNT 1 --minMAF 0 \\
+    cmd="$bin_xcltk pileup $bam_opt -O $phs_even_dir -R $blocks_even -P $gt_vpath --minCOUNT $min_count --minMAF $min_maf \\
       --minLEN 30 --minMAPQ 20 --inclFLAG 0 --exclFLAG $excl_flag --UMItag $umi -p $ncores \\
       --cellTAG $cell_tag"
 else  # unknown
     log_msg "Warning: unknown seq type $seq_type, use the dna pileup method"
-    cmd="$bin_xcltk pileup $bam_opt -O $phs_even_dir -R $blocks_even -P $gt_vpath --minCOUNT 1 --minMAF 0 \\
+    cmd="$bin_xcltk pileup $bam_opt -O $phs_even_dir -R $blocks_even -P $gt_vpath --minCOUNT $min_count --minMAF $min_maf \\
       --minLEN 30 --minMAPQ 20 --inclFLAG 0 --exclFLAG $excl_flag --UMItag $umi -p $ncores \\
       --cellTAG $cell_tag"
 fi
@@ -177,16 +180,16 @@ aim="phase SNPs into haplotype blocks of features"
 phs_fet_dir=$out_dir/phase-snp-feature
 mkdir -p $phs_fet_dir &> /dev/null
 if [ "$seq_type" == "dna" ] || [ "$seq_type" == "atac" ]; then
-    cmd="$bin_xcltk pileup $bam_opt -O $phs_fet_dir -R $blocks_fet -P $gt_vpath --minCOUNT 1 --minMAF 0 \\
+    cmd="$bin_xcltk pileup $bam_opt -O $phs_fet_dir -R $blocks_fet -P $gt_vpath --minCOUNT $min_count --minMAF $min_maf \\
       --minLEN 30 --minMAPQ 20 --inclFLAG 0 --exclFLAG $excl_flag --UMItag $umi -p $ncores \\
       --cellTAG $cell_tag"
 elif [ "$seq_type" == "rna" ]; then
-    cmd="$bin_xcltk pileup $bam_opt -O $phs_fet_dir -R $blocks_fet -P $gt_vpath --minCOUNT 1 --minMAF 0 \\
+    cmd="$bin_xcltk pileup $bam_opt -O $phs_fet_dir -R $blocks_fet -P $gt_vpath --minCOUNT $min_count --minMAF $min_maf \\
       --minLEN 30 --minMAPQ 20 --inclFLAG 0 --exclFLAG $excl_flag --UMItag $umi -p $ncores \\
       --cellTAG $cell_tag"
 else  # unknown
     log_msg "Warning: unknown seq type $seq_type, use the dna pileup method"
-    cmd="$bin_xcltk pileup $bam_opt -O $phs_fet_dir -R $blocks_fet -P $gt_vpath --minCOUNT 1 --minMAF 0 \\
+    cmd="$bin_xcltk pileup $bam_opt -O $phs_fet_dir -R $blocks_fet -P $gt_vpath --minCOUNT $min_count --minMAF $min_maf \\
       --minLEN 30 --minMAPQ 20 --inclFLAG 0 --exclFLAG $excl_flag --UMItag $umi -p $ncores \\
       --cellTAG $cell_tag"
 fi
