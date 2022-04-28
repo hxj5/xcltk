@@ -95,8 +95,8 @@ if [ -n "$bam" ] && [ -n "$bam_list" ]; then
     exit 1
 fi
 
-min_count=10
-min_maf=0.1
+min_count=1
+min_maf=0
 
 cell_tag=CB
 if [ -n "$bam" ]; then            # droplet-based dataset
