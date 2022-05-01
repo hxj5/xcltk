@@ -33,14 +33,13 @@ You can check the full parameters with `xcltk -h`.
 
 ```
 Program: xcltk (Toolkit for XClone)
-Version: 0.1.13
+Version: 0.1.14
 
 Usage:   xcltk <command> [options]
 
 Commands:
   -- BAF calculation
      fixref           Fix REF, ALT and GT
-     phase_snp        Aggregate SNPs into haplotype blocks
      pileup           Pileup, support unique counting
 
   -- RDR calculation
