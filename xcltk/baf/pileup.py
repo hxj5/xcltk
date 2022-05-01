@@ -1,299 +1,412 @@
-# Copied from cellSNP, https://github.com/single-cell-genetics/cellSNP/blob/purePython/cellSNP/cellSNP.py
-# pileup SNPs across the genome with pysam's fetch or pileup reads
-# Author: Yuanhua Huang
-# Date: 21-12-2018
-# Modified by: Xianjie Huang
 
-# pileup --uniq 
-#   - uniquely pileup each SNP: if one read covers more than one SNPs, then this 
-#     read would only be counted once for the SNP with the smallest pos. Then the
-#     double counting problem is solved this way.
-#   - now it only supports mode 1a and mode 1b (pileup SNPs) while not support mode
-#     2 (pileup chromosomes)
+# Note: now it only supports 10x data.
 
-import os
-import sys
-import gzip
-import time
-import pysam
-import subprocess
-import numpy as np
+import getopt
 import multiprocessing
-from optparse import OptionParser, OptionGroup
+import os
+import pickle
+import sys
+import time
 
 from .config import APP
-from ..config import VERSION
-from ..utils.pileup import fetch_positions
-from ..utils.pileup_regions import pileup_regions
-from ..utils.vcf import load_VCF, merge_vcf, VCF_to_sparseMat
+from .plp.config import Config, \
+    CFG_DEBUG, \
+    CFG_CELL_TAG, CFG_UMI_TAG, CFG_UMI_TAG_BC, \
+    CFG_NPROC,     \
+    CFG_MIN_COUNT, CFG_MIN_MAF, \
+    CFG_INCL_FLAG, CFG_EXCL_FLAG_UMI, CFG_EXCL_FLAG_XUMI, \
+    CFG_MIN_LEN, CFG_MIN_MAPQ
+from .plp.core import sp_count
+from .plp.thread import ThreadData
+from .plp.utils import load_region_from_txt, load_snp_from_vcf, \
+    merge_mtx, merge_tsv, rewrite_mtx
+from .plp.zfile import zopen, ZF_F_GZIP, ZF_F_PLAIN
+
+def prepare_config(conf):
+    """Prepare configures for downstream analysis
+    @param conf  A Config object.
+    @return      0 if success, -1 otherwise.
+    @note        This function should be call after cmdline is parsed.
+    """
+    func = "prepare_config"
+    if conf.sam_fn:
+        if not os.path.isfile(conf.sam_fn):
+            sys.stderr.write("[E::%s] sam file does not exist '%s'.\n" % (func, conf.sam_fn))
+            return(-1)
+    else:
+        sys.stderr.write("[E::%s] sam file(s) needed!\n" % (func,))
+        return(-1)
+
+    if conf.barcode_fn:
+        if os.path.isfile(conf.barcode_fn):
+            with zopen(conf.barcode_fn, "rt") as fp:
+                conf.barcodes = sorted([x.strip() for x in fp])
+            if len(set(conf.barcodes)) != len(conf.barcodes):
+                sys.stderr.write("[E::%s] duplicate barcodes!\n" % (func, ))
+                return(-1)
+        else:
+            sys.stderr.write("[E::%s] barcode file does not exist '%s'.\n" % (func, conf.barcode_fn))
+            return(-1)
+    else:       
+        conf.barcodes = None
+        sys.stderr.write("[E::%s] barcode file needed!\n" % (func,))
+        return(-1)
+
+    if not conf.out_dir:
+        sys.stderr.write("[E::%s] out dir needed!\n" % func)
+        return(-1)
+    if not os.path.isdir(conf.out_dir):
+        os.mkdir(conf.out_dir)
+    conf.out_region_fn = os.path.join(conf.out_dir, conf.out_prefix + "region.tsv")
+    conf.out_sample_fn = os.path.join(conf.out_dir, conf.out_prefix + "samples.tsv")
+    conf.out_ad_fn = os.path.join(conf.out_dir, conf.out_prefix + "AD.mtx")
+    conf.out_dp_fn = os.path.join(conf.out_dir, conf.out_prefix + "DP.mtx")
+    conf.out_oth_fn = os.path.join(conf.out_dir, conf.out_prefix + "OTH.mtx")
+
+    if conf.region_fn:
+        if os.path.isfile(conf.region_fn): 
+            conf.reg_list = load_region_from_txt(conf.region_fn, verbose = True)
+            if not conf.reg_list:
+                sys.stderr.write("[E::%s] failed to load region file.\n" % func)
+                return(-1)
+            sys.stdout.write("[I::%s] count %d regions in %d single cells.\n" % (func, 
+                len(conf.reg_list), len(conf.barcodes)))
+        else:
+            sys.stderr.write("[E::%s] region file does not exist '%s'.\n" % (func, conf.region_fn))
+            return(-1)
+    else:
+        sys.stderr.write("[E::%s] region file needed!\n" % (func,))
+        return(-1)
+
+    if conf.snp_fn:
+        if os.path.isfile(conf.snp_fn):
+            conf.snp_set = load_snp_from_vcf(conf.snp_fn, verbose = True)
+            if not conf.snp_set or conf.snp_set.get_n() <= 0:
+                sys.stderr.write("[E::%s] failed to load snp file.\n" % func)
+                return(-1)
+            else:
+                sys.stdout.write("[I::%s] %d SNPs loaded.\n" % (func,
+                    conf.snp_set.get_n()))           
+        else:
+            sys.stderr.write("[E::%s] snp file does not exist '%s'.\n" % (func, conf.snp_fn))
+            return(-1)      
+    else:
+        sys.stderr.write("[E::%s] SNP file needed!\n" % (func,))
+        return(-1)
+
+    if conf.cell_tag and conf.cell_tag.upper() == "NONE":
+        conf.cell_tag = None
+    if conf.cell_tag and conf.barcodes:
+        pass       
+    elif (not conf.cell_tag) ^ (not conf.barcodes):
+        sys.stderr.write("[E::%s] should not specify cell_tag or barcodes alone.\n" % (func, ))
+        return(-1)
+    else:
+        sys.stderr.write("[E::%s] should specify cell_tag and barcodes.\n" % (func, ))
+        return(-1)        
+
+    if conf.umi_tag:
+        if conf.umi_tag.upper() == "AUTO":
+            if conf.barcodes is None:
+                conf.umi_tag = None
+            else:
+                conf.umi_tag = CFG_UMI_TAG_BC
+        elif conf.umi_tag.upper() == "NONE":
+            conf.umi_tag = None
+    else:
+        sys.stderr.write("[E::%s] umi tag needed!\n" % (func, ))
+        return(-1)
+
+    if conf.barcodes:
+        with open(conf.out_sample_fn, "w") as fp:
+            fp.write("".join([b + "\n" for b in conf.barcodes]))
+
+    if conf.excl_flag < 0:
+        if conf.use_umi():
+            conf.excl_flag = CFG_EXCL_FLAG_UMI
+        else:
+            conf.excl_flag = CFG_EXCL_FLAG_XUMI
+
+    return(0)
+
+def usage(fp = sys.stderr):
+    s =  "\n" 
+    s += "Usage: %s %s <options>\n" % (APP, COMMAND)  
+    s += "\n" 
+    s += "Options:\n"
+    s += "  -s, --sam STR          Indexed sam/bam/cram file.\n"
+    s += "  -O, --outdir DIR       Output directory for sparse matrices.\n"
+    s += "  -R, --region FILE      A TSV file listing target regions. The first 4 columns shoud be:\n"
+    s += "                         chrom, start, end (both 1-based and inclusive), name.\n"
+    s += "  -P, --phasedSNP FILE   A VCF file listing phased SNPs (i.e., containing phased GT).\n"
+    s += "  -b, --barcode FILE     A plain file listing all effective cell barcode.\n"
+    s += "  -h, --help             Print this message and exit.\n"
+    s += "  -D, --debug INT        Used by developer for debugging [%d]\n" % CFG_DEBUG
+    s += "\n"
+    s += "Optional arguments:\n"
+    s += "  -p, --nproc INT        Number of processes [%d]\n" % CFG_NPROC
+    s += "  --cellTAG STR          Tag for cell barcodes [%s]\n" % CFG_CELL_TAG
+    s += "  --UMItag STR           Tag for UMI, set to None when reads only [%s]\n" % CFG_UMI_TAG
+    s += "  --minCOUNT INT         Mininum aggragated count for SNP [%d]\n" % CFG_MIN_COUNT
+    s += "  --minMAF FLOAT         Mininum minor allele fraction for SNP [%f]\n" % CFG_MIN_MAF
+    s += "  --outputAllReg         If set, output all inputted regions.\n"
+    s += "  --countDupHap          If set, UMIs aligned to both haplotypes will be counted\n"
+    s += "\n"
+    s += "Read filtering:\n"
+    s += "  --inclFLAG INT    Required flags: skip reads with all mask bits unset [%d]\n" % CFG_INCL_FLAG
+    s += "  --exclFLAG INT    Filter flags: skip reads with any mask bits set [%d\n" % CFG_EXCL_FLAG_UMI
+    s += "                    (when use UMI) or %d (otherwise)]\n" % CFG_EXCL_FLAG_XUMI
+    s += "  --minLEN INT      Minimum mapped length for read filtering [%d]\n" % CFG_MIN_LEN
+    s += "  --minMAPQ INT     Minimum MAPQ for read filtering [%d]\n" % CFG_MIN_MAPQ
+    s += "  --countORPHAN     If use, do not skip anomalous read pairs.\n"
+    s += "\n"
+
+    fp.write(s)
+
+def show_progress(rv = None):
+    return(rv)
+
+def pileup(argv):
+    """Core part
+    @param argv   A list of cmdline parameters [list]
+    @return       0 if success, -1 otherwise [int]
+    """
+    func = "main"
+    ret = -1
+
+    if len(argv) <= 2:
+        usage(sys.stderr)
+        sys.exit(1)
+
+    start_time = time.time()
+
+    conf = Config()
+    opts, args = getopt.getopt(argv[2:], "-s:-O:-R:-P:-b:-h-D:-p:", [
+                     "sam=", 
+                     "outdir=", 
+                     "region=", "phasedSNP=" "barcode=",
+                     "help", "debug=",
+                     "nproc=", 
+                     "cellTAG=", "UMItag=", 
+                     "minCOUNT=", "minMAF=", "outputAllReg", "countDupHap",
+                     "inclFLAG=", "exclFLAG=", "minLEN=", "minMAPQ=", "countORPHAN"
+                ])
+
+    for op, val in opts:
+        if len(op) > 2:
+            op = op.lower()
+        if op in   ("-s", "--sam"): conf.sam_fn = val
+        elif op in ("-O", "--outdir"): conf.out_dir = val
+        elif op in ("-R", "--region"): conf.region_fn = val
+        elif op in ("-P", "--phasedsnp"): conf.snp_fn = val
+        elif op in ("-b", "--barcode"): conf.barcode_fn = val
+        elif op in ("-h", "--help"): usage(sys.stderr); sys.exit(1)
+        elif op in ("-D", "--debug"): conf.debug = int(val)
+
+        elif op in ("-p", "--proc"): conf.nproc = int(val)
+        elif op in ("--celltag"): conf.cell_tag = val
+        elif op in ("--umitag"): conf.umi_tag = val
+        elif op in ("--mincount"): conf.min_count = int(val)
+        elif op in ("--minmaf"): conf.min_maf = float(val)
+        elif op in ("--outputallreg"): conf.output_all_reg = True
+        elif op in ("--countduphap"): conf.no_dup_hap = False
+
+        elif op in ("--inclflag"): conf.incl_flag = int(val)
+        elif op in ("--exclflag"): conf.excl_flag = int(val)
+        elif op in ("--minlen"): conf.min_len = int(val)
+        elif op in ("--minmapq"): conf.min_mapq = float(val)
+        elif op in ("--countorphan"): conf.no_orphan = False
+
+        else:
+            sys.stderr.write("[E::%s] invalid option: '%s'.\n" % (func, op))
+            return(-1)
+
+    try:
+        time_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(start_time))
+        sys.stdout.write("[I::%s] start time: %s.\n" % (func, time_str))
+
+        cmdline = " ".join(argv)
+        sys.stdout.write("[I::%s] CMD: %s\n" % (func, cmdline))
+
+        if prepare_config(conf) < 0:
+            raise ValueError("[%s] errcode %d" % (func, -2))
+        sys.stderr.write("[I::%s] program configuration:\n" % func)
+        conf.show(fp = sys.stderr, prefix = "\t")
+
+        # extract SNPs for each region
+        if conf.debug > 0:
+            sys.stderr.write("[D::%s] extract SNPs for each region.\n" % (func,))
+        reg_list = []
+        for reg in conf.reg_list:
+            snp_list = conf.snp_set.fetch(reg.chrom, reg.start, reg.end)
+            if snp_list and len(snp_list) > 0:
+                reg.snp_list = snp_list
+                reg_list.append(reg)
+            else:
+                if conf.debug > 0:
+                    sys.stderr.write("[D::%s] no SNP fetched for region '%s'.\n" % 
+                        (func, reg.name))
+        sys.stdout.write("[I::%s] %d regions extracted with SNPs.\n" % 
+            (func, len(reg_list)))
+
+        if not conf.output_all_reg:
+            conf.reg_list = reg_list
+
+        # split region list and save to file       
+        m_reg = len(conf.reg_list)
+        m_thread = conf.nproc if m_reg >= conf.nproc else m_reg
+
+        reg_fn_list = []
+        if m_thread > 1:
+            n_reg = m_reg // m_thread
+            r_reg = m_reg - n_reg * m_thread
+            k_reg = 0
+            i_thread = 0
+            while k_reg <= m_reg - 1:
+                t_reg = n_reg + 1 if i_thread < r_reg else n_reg
+                reg_fn = conf.out_prefix + "region.pickle." + str(i_thread)
+                reg_fn = os.path.join(conf.out_dir, reg_fn)
+                reg_fn_list.append(reg_fn)
+                with open(reg_fn, "wb") as fp:
+                    pickle.dump(conf.reg_list[k_reg:(k_reg + t_reg)], fp)
+                k_reg += t_reg
+                i_thread += 1
+            for reg in conf.reg_list:  # save memory
+                del reg
+            conf.reg_list.clear()
+            conf.reg_list = None
+            conf.snp_set.destroy()
+            conf.snp_set = None
+
+        thdata_list = []
+        ret_sp = -1
+        if m_thread <= 1:
+            thdata = ThreadData(
+                idx = 0, conf = conf,
+                reg_obj = conf.reg_list, is_reg_pickle = False,
+                out_region_fn = conf.out_region_fn + ".0",
+                out_ad_fn = conf.out_ad_fn + ".0",
+                out_dp_fn = conf.out_dp_fn + ".0",
+                out_oth_fn = conf.out_oth_fn + ".0",
+                out_fn = None
+            )
+            thdata_list.append(thdata)
+            if conf.debug > 0:
+                sys.stderr.write("[D::%s] data of thread-%d before sp_count:\n" % (func, 0))
+                thdata.show(fp = sys.stderr, prefix = "\t")
+            ret_sp, thdata = sp_count(thdata)
+        else:
+            pool = multiprocessing.Pool(processes = m_thread)
+            mp_result = []
+            for i in range(m_thread):
+                thdata = ThreadData(
+                    idx = i, conf = conf,
+                    reg_obj = reg_fn_list[i], is_reg_pickle = True,
+                    out_region_fn = conf.out_region_fn + "." + str(i),
+                    out_ad_fn = conf.out_ad_fn + "." + str(i),
+                    out_dp_fn = conf.out_dp_fn + "." + str(i),
+                    out_oth_fn = conf.out_oth_fn + "." + str(i),
+                    out_fn = None
+                )
+                thdata_list.append(thdata)
+                if conf.debug > 0:
+                    sys.stderr.write("[D::%s] data of thread-%d before sp_count:\n" % (func, i))
+                    thdata.show(fp = sys.stderr, prefix = "\t")
+                mp_result.append(pool.apply_async(
+                        func = sp_count, 
+                        args = (thdata, ), 
+                        callback = show_progress))   # TODO: error_callback?
+            pool.close()
+            pool.join()
+            mp_result = [res.get() for res in mp_result]
+            retcode_list = [item[0] for item in mp_result]
+            thdata_list = [item[1] for item in mp_result]
+            if conf.debug > 0:
+                sys.stderr.write("[D::%s] returned values of multi-processing:\n" % func)
+                sys.stderr.write("\t%s\n" % str(retcode_list))
+
+        # check running status of each sub-process
+        for thdata in thdata_list:         
+            if conf.debug > 0:
+                sys.stderr.write("[D::%s] data of thread-%d after sp_count:\n" % (func, thdata.idx))
+                thdata.show(fp = sys.stderr, prefix = "\t")
+            if thdata.ret < 0:
+                raise ValueError("[%s] errcode %d" % (func, -3))
+
+        if m_thread <= 1:
+            if ret_sp < 0:
+                raise ValueError("[%s] errcode %d" % (func, -5))
+
+            thdata = thdata_list[0]
+            os.rename(thdata.out_region_fn, conf.out_region_fn)
+
+            if rewrite_mtx(thdata.out_ad_fn, ZF_F_GZIP, 
+                           conf.out_ad_fn, "wb", ZF_F_PLAIN, 
+                           thdata.nr_reg, len(conf.barcodes), thdata.nr_ad,
+                           remove = True) < 0:
+                raise ValueError("[%s] errcode %d" % (func, -7))
+
+            if rewrite_mtx(thdata.out_dp_fn, ZF_F_GZIP, 
+                           conf.out_dp_fn, "wb", ZF_F_PLAIN, 
+                           thdata.nr_reg, len(conf.barcodes), thdata.nr_dp,
+                           remove = True) < 0:
+                raise ValueError("[%s] errcode %d" % (func, -9)) 
+
+            if rewrite_mtx(thdata.out_oth_fn, ZF_F_GZIP, 
+                           conf.out_oth_fn, "wb", ZF_F_PLAIN, 
+                           thdata.nr_reg, len(conf.barcodes), thdata.nr_oth,
+                           remove = True) < 0:
+                raise ValueError("[%s] errcode %d" % (func, -11))
+        else:
+            if merge_tsv([td.out_region_fn for td in thdata_list], ZF_F_GZIP, 
+                         conf.out_region_fn, "wb", ZF_F_PLAIN, 
+                         remove = True) < 0:
+                raise ValueError("[%s] errcode %d" % (func, -15))
+
+            nr_reg_list = [td.nr_reg for td in thdata_list]
+
+            if merge_mtx([td.out_ad_fn for td in thdata_list], ZF_F_GZIP, 
+                         conf.out_ad_fn, "w", ZF_F_PLAIN,
+                         nr_reg_list, len(conf.barcodes), sum([td.nr_ad for td in thdata_list]),
+                         remove = True) < 0:
+                raise ValueError("[%s] errcode %d" % (func, -17))
+
+            if merge_mtx([td.out_dp_fn for td in thdata_list], ZF_F_GZIP, 
+                         conf.out_dp_fn, "w", ZF_F_PLAIN,
+                         nr_reg_list, len(conf.barcodes), sum([td.nr_dp for td in thdata_list]),
+                         remove = True) < 0:
+                raise ValueError("[%s] errcode %d" % (func, -19))
+
+            if merge_mtx([td.out_oth_fn for td in thdata_list], ZF_F_GZIP, 
+                         conf.out_oth_fn, "w", ZF_F_PLAIN,
+                         nr_reg_list, len(conf.barcodes), sum([td.nr_oth for td in thdata_list]),
+                         remove = True) < 0:
+                raise ValueError("[%s] errcode %d" % (func, -21))
+
+    except ValueError as e:
+        sys.stderr.write("[E::%s] '%s'\n" % (func, str(e)))
+        sys.stdout.write("[E::%s] Running program failed.\n" % func)
+        sys.stdout.write("[E::%s] Quiting ...\n" % func)
+        ret = -1
+
+    else:
+        sys.stdout.write("[I::%s] All Done!\n" % func)
+        ret = 0
+
+    finally:
+        sys.stdout.write("[I::%s] CMD: %s\n" % (func, cmdline))
+
+        end_time = time.time()
+        time_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(end_time))
+        sys.stdout.write("[I::%s] end time: %s\n" % (func, time_str))
+        sys.stdout.write("[I::%s] time spent: %.2fs\n" % (func, end_time - start_time))
+
+    return(ret)
+
+def run():
+    pileup(sys.argv)
 
 COMMAND = "pileup"
 
-DEF_FLAG_WITH_UMI = 4096       # default value of max_FLAG when using UMIs, i.e., UMI_tag is not None
-DEF_FLAG_WITHOUT_UMI = 255     # default value of max_FLAG when not using UMIs, i.e., UMI_tag is None
-
-START_TIME = time.time()
-
-def show_progress(RV=None):
-    return RV
-
-def pileup(argv):
-    # import warnings
-    # warnings.filterwarnings('error')
-
-    # parse command line options
-    if len(argv) < 3:
-        print("Welcome to %s %s v%s!\n" %(APP, COMMAND, VERSION))
-        print("use -h or --help for help on argument.")
-        sys.exit(1)
-
-    parser = OptionParser(usage = "Usage: %s %s [options]" % (APP, COMMAND))
-    parser.add_option("--samFile", "-s", dest="sam_file", default=None,
-        help=("Indexed sam/bam file(s), comma separated multiple samples. "
-              "Mode 1&2: one sam/bam file with single cell barcode; "
-              "Mode 3: one or multiple bulk sam/bam files, no barcodes needed, "
-              "but sample ids and regionsVCF."))
-    parser.add_option("--samFileList", "-S", dest="sam_file_list", default=None,
-        help=("A list file containing bam files, each per line, for Mode 3."))
-    parser.add_option("--outDir", "-O", dest="sparse_dir", default=None,
-        help=("Output directory for VCF and sparse matrices: AD, DP, OTH."))
-    parser.add_option("--outVCF", "-o", dest="out_file", default=None,
-        help=("Output full path with file name for VCF file. Only use if not "
-              "given outDir. [optional]"))
-    
-    parser.add_option("--regionsVCF", "-R", dest="region_file", default=None,
-        help=("A sorted vcf file listing all candidate SNPs, for fetch each variants. "
-              "If None, pileup the genome. Needed for bulk samples."))
-    parser.add_option("--barcodeFile", "-b", dest="barcode_file", default=None,
-        help=("A plain file listing all effective cell barcode."))
-    parser.add_option("--sampleIDs", "-I", dest="sample_ids", default=None,
-        help=("Comma separated sample ids. Only use it when you input multiple "
-              "bulk sam files."))
-    
-    group1 = OptionGroup(parser, "Optional arguments")
-    group1.add_option("--nproc", "-p", type="int", dest="nproc", default=1,
-        help="Number of subprocesses [default: %default]")
-    group1.add_option("--chrom", dest="chrom_all", default=None, 
-        help="The chromosomes to use, comma separated [default: 1 to 22]")
-    group1.add_option("--cellTAG", dest="cell_tag", default="CB", 
-        help="Tag for cell barcodes, turn off with None [default: %default]")
-    group1.add_option("--UMItag", dest="UMI_tag", default="Auto", 
-        help="Tag for UMI: UR, Auto, None. For Auto mode, use UR if barcodes "
-        "is inputted, otherwise use None. None mode means no UMI but read "
-        "counts [default: %default]")
-    group1.add_option("--minCOUNT", type="int", dest="min_COUNT", default=20, 
-        help="Minimum aggragated count [default: %default]")
-    group1.add_option("--minMAF", type="float", dest="min_MAF", default=0.0, 
-        help="Minimum minor allele frequency [default: %default]")
-
-    group1.add_option("--doubletGL", dest="doubletGL", action="store_true", 
-        default=False, 
-        help="If use, keep doublet GT likelihood, i.e., GT=0.5 and GT=1.5")
-    group1.add_option("--saveHDF5", dest="save_HDF5", action="store_true", 
-        default=False, help="If use, save an output file in HDF5 format.")
-    group1.add_option("--uniqCOUNT", dest="uniq_count", action="store_true", 
-        default=False, help="If use, read covering more than one SNPs would be counted only once.")
-    
-    group2 = OptionGroup(parser, "Read filtering")
-    group2.add_option("--minLEN", type="int", dest="min_LEN", default=30, 
-        help="Minimum mapped length for read filtering [default: %default]")
-    group2.add_option("--minMAPQ", type="int", dest="min_MAPQ", default=20, 
-        help="Minimum MAPQ for read filtering [default: %default]")
-    group2.add_option("--maxFLAG", type="int", dest="max_FLAG", default=None, 
-        help="Maximum FLAG for read filtering [default: %d (when use UMI) or %d (otherwise)]" % (DEF_FLAG_WITH_UMI, DEF_FLAG_WITHOUT_UMI))
-    
-    parser.add_option_group(group1)
-    parser.add_option_group(group2)
-
-    # check options and args
-    (options, args) = parser.parse_args(args = argv[2:])
-    if options.sam_file is None and options.sam_file_list is None:
-        print("Error: need samFile for sam file.")
-        sys.exit(1)
-    elif options.sam_file is not None:
-        sam_file_list = options.sam_file.split(",")
-    else:
-        fid = open(options.sam_file_list, "r")
-        sam_file_list = [x.rstrip() for x in fid.readlines()]
-        fid.close()
-    for sam_file in sam_file_list:
-        if os.path.isfile(sam_file) == False:
-            print("Error: No such file\n    -- %s" %sam_file)
-            sys.exit(1)
-        
-    if options.barcode_file is None:
-        barcodes = None
-        if options.sample_ids is None:
-            sample_ids = ["Sample_%d" %x for x in range(len(sam_file_list))]
-        elif os.path.isfile(options.sample_ids):
-            fid = open(options.sample_ids, "r")
-            sample_ids = [x.rstrip() for x in fid.readlines()]
-            fid.close()
-        else:
-            sample_ids = options.sample_ids.split(",")
-        if len(sample_ids) != len(sam_file_list):
-            print('[cellSNP] Error: %d sample ids, %d sam files, not equal.' 
-                  %(len(sample_ids), len(sam_file_list)))
-            sys.exit(1)
-    elif os.path.isfile(options.barcode_file) == False:
-        print("Error: No such file\n    -- %s" %options.barcode_file)
-        sys.exit(1)
-    else:
-        sample_ids = None
-        # fid = open(options.barcode_file, "r")
-        # barcodes = [x.rstrip() for x in fid.readlines()] #.split("-")[0]
-        # fid.close()
-        barcodes = list(np.genfromtxt(options.barcode_file, 
-                                      dtype="str", delimiter="\t"))
-        barcodes = sorted(barcodes)
-        
-    if options.sparse_dir is not None:
-        if not os.path.exists(options.sparse_dir):
-            os.mkdir(options.sparse_dir)
-        out_file = options.sparse_dir + "/cellSNP.cells.vcf.gz"
-    elif options.out_file is None:
-        print("Error: need outFile for output file path and name.")
-        sys.exit(1)
-    elif os.path.dirname(options.out_file) == "":
-        out_file = "./" + options.out_file
-    else:
-        out_file = options.out_file
-    if os.path.isdir(os.path.dirname(out_file)) == False:
-        print("Error: No such directory for file\n -- %s" %out_file)
-        sys.exit(1)        
-      
-    if options.region_file is None or options.region_file == "None":
-        region_file = None
-        if options.chrom_all is None:
-            chrom_all = [str(x) for x in range(1, 23)]
-        else:
-            chrom_all = options.chrom_all.split(",")
-        if barcodes is not None:
-            print("[cellSNP] mode 2: pileup %d whole chromosomes in %d single "
-                "cells." %(len(chrom_all), len(barcodes)))
-        else:
-            print("[cellSNP] mode 2: pileup %d whole chromosomes in one "
-                "bulk sample." %(len(chrom_all)))
-    elif os.path.isfile(options.region_file) == False:
-        print("Error: No such file\n    -- %s" %options.region_file)
-        sys.exit(1)
-    else:
-        if barcodes is not None:
-            print("[cellSNP] mode 1: fetch given SNPs in %d single cells."
-                  %(len(barcodes)))
-        else:
-            print("[cellSNP] mode 3: fetch given SNPs in %d bulk samples." 
-                  %(len(sam_file_list)))
-        print("[cellSNP] loading the VCF file for given SNPs ...")
-        region_file = options.region_file
-        vcf_RV = load_VCF(region_file, biallelic_only=True, 
-                          load_sample=False)['FixedINFO']
-        pos_list = vcf_RV["POS"]
-        REF_list = vcf_RV["REF"]
-        ALT_list = vcf_RV["ALT"]
-        chrom_list = vcf_RV["CHROM"]
-        print("[cellSNP] fetching %d candidate variants ..." %len(pos_list))
-    
-    if options.cell_tag.upper() == "NONE" or barcodes is None:
-        cell_tag = None
-    else:
-        cell_tag = options.cell_tag
-    if options.UMI_tag.upper() == "AUTO":
-        if barcodes is None:
-            UMI_tag = None
-        else:
-            UMI_tag = "UR"
-    elif options.UMI_tag.upper() == "NONE":
-        UMI_tag = None
-    else:
-        UMI_tag = options.UMI_tag
-    
-    nproc = options.nproc
-    min_MAF = options.min_MAF
-    min_LEN = options.min_LEN
-    min_MAPQ = options.min_MAPQ
-    min_COUNT = options.min_COUNT
-    doubletGL = options.doubletGL
-    max_FLAG = options.max_FLAG
-    uniq_count = options.uniq_count
-    if options.max_FLAG is None:
-        max_FLAG = DEF_FLAG_WITHOUT_UMI if UMI_tag is None else DEF_FLAG_WITH_UMI
-
-    result, out_files = [], []
-    if region_file is None:
-        # pileup in each chrom
-        if nproc > 1:
-            pool = multiprocessing.Pool(processes=nproc)
-            for _chrom in chrom_all:
-                chr_out_file = out_file + ".temp_%s_" %(_chrom)
-                out_files.append(chr_out_file)
-                result.append(pool.apply_async(pileup_regions, (sam_file_list[0], 
-                    barcodes, chr_out_file, _chrom, cell_tag, UMI_tag, 
-                    min_COUNT, min_MAF, min_MAPQ, max_FLAG, min_LEN, doubletGL, 
-                    True), 
-                    callback=show_progress))
-            pool.close()
-            pool.join()
-        else:
-            for _chrom in chrom_all:
-                chr_out_file = out_file + ".temp_%s_" %(_chrom)
-                out_files.append(chr_out_file)
-                pileup_regions(sam_file_list[0], barcodes, chr_out_file, _chrom, 
-                               cell_tag, UMI_tag, min_COUNT, min_MAF, min_MAPQ, 
-                               max_FLAG, min_LEN, doubletGL, True)
-                show_progress(1)
-        result = [res.get() if nproc > 1 else res for res in result]
-        print("")
-        print("[cellSNP] Whole genome pileupped, now merging all variants ...")
-    else:
-        # fetch each position
-        if (nproc == 1):
-            out_file_tmp = out_file + ".temp_0_"
-            out_files.append(out_file_tmp)
-            result = fetch_positions(sam_file_list,                 
-                chrom_list, pos_list, REF_list, ALT_list, barcodes, sample_ids, 
-                out_file_tmp, cell_tag, UMI_tag, min_COUNT, min_MAF, 
-                min_MAPQ, max_FLAG, min_LEN, doubletGL, True, uniq_count) 
-            show_progress(1)
-        else:
-            LEN_div = int(len(chrom_list) / nproc)
-            pool = multiprocessing.Pool(processes=nproc)
-            for ii in range(nproc):
-                out_file_tmp = out_file + ".temp_%d_" %(ii)
-                out_files.append(out_file_tmp)
-
-                if ii == nproc - 1:
-                    _pos = pos_list[LEN_div * ii : len(pos_list)]
-                    _chrom = chrom_list[LEN_div * ii : len(chrom_list)]
-                    _REF_list = REF_list[LEN_div * ii : len(REF_list)]
-                    _ALT_list = ALT_list[LEN_div * ii : len(ALT_list)]
-                else:
-                    _pos = pos_list[LEN_div * ii : LEN_div * (ii+1)]
-                    _chrom = chrom_list[LEN_div * ii : LEN_div * (ii+1)]
-                    _REF_list = REF_list[LEN_div * ii : LEN_div * (ii+1)]
-                    _ALT_list = ALT_list[LEN_div * ii : LEN_div * (ii+1)]
-
-                result.append(pool.apply_async(fetch_positions, (sam_file_list,                 
-                    _chrom, _pos, _REF_list, _ALT_list, barcodes, sample_ids, 
-                    out_file_tmp, cell_tag, UMI_tag, min_COUNT, min_MAF, 
-                    min_MAPQ, max_FLAG, min_LEN, doubletGL, True, uniq_count), 
-                    callback=show_progress))
-
-            pool.close()
-            pool.join()
-            result = [res.get() for res in result]
-            print("")
-        print("[cellSNP] fetched %d variants, now merging temp files ... " 
-              %(len(pos_list)))
-    
-    merge_vcf(out_file, out_files, options.save_HDF5)
-
-    if options.sparse_dir is not None:
-        VCF_to_sparseMat(out_file, tags=["AD", "DP", "OTH"], 
-            out_dir=options.sparse_dir)
-    
-    run_time = time.time() - START_TIME
-    print("[cellSNP] All done: %d min %.1f sec" %(int(run_time / 60), 
-                                                  run_time % 60))
 if __name__ == "__main__":
-    pileup(sys.argv)
+    run()
