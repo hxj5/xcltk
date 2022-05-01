@@ -1,5 +1,5 @@
 # setup.py
-# Author: Xianjie Huang (hxj5@hku.hk)
+# Author: Xianjie Huang (xianjie5@connect.hku.hk)
 
 from setuptools import setup, find_packages
 from codecs import open
@@ -15,7 +15,7 @@ exec(open("./xcltk/config.py").read())
 with open(path.join(here, "README.md"), encoding='utf-8') as f:
     long_description = f.read()
 
-reqs = ['numpy>=1.9.0', 'pysam>=0.15.2', 'intervaltree']
+reqs = ['numpy>=1.9.0', 'pysam>=0.15.2', 'intervaltree', 'scipy', 'h5py']
 
 setup(
     name = "xcltk",
@@ -34,7 +34,7 @@ setup(
 
     # Author details
     author = 'Xianjie Huang',
-    author_email = 'hxj5@hku.hk',
+    author_email = 'xianjie5@connect.hku.hk',
 
     # Choose your license
     license='Apache-2.0',

@@ -2,6 +2,16 @@
 History
 =======
 
+Release v0.1.14 (01/05/2022)
+============================
+| update baf haploblock pileup:
+* re-implement the module
+* fix the double counting issue of UMIs or reads when aggregating phased SNPs
+  (some UMIs or reads could cover more than one SNPs)
+* fix the issue that some UMIs are aligned to both haplotype alleles
+  (--countDupHap)
+* add an option to output all regions (--outputAllReg)
+
 Release v0.1.13 (02/08/2021)
 ============================
 * rdr: fix program suspension caused by unmatched chrom
