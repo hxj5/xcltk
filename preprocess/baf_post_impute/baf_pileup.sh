@@ -163,16 +163,16 @@ aim="phase SNPs into haplotype blocks of even size"
 if [ "$seq_type" == "dna" ] || [ "$seq_type" == "atac" ]; then
     cmd="$bin_xcltk pileup $bam_opt -O $phs_even_dir -R $blocks_even -P $gt_vpath --minCOUNT $min_count --minMAF $min_maf \\
       --minLEN 30 --minMAPQ 20 --inclFLAG 0 --exclFLAG $excl_flag --UMItag $umi -p $ncores \\
-      --cellTAG $cell_tag"
+      --cellTAG $cell_tag --outputAllReg"
 elif [ "$seq_type" == "rna" ]; then
     cmd="$bin_xcltk pileup $bam_opt -O $phs_even_dir -R $blocks_even -P $gt_vpath --minCOUNT $min_count --minMAF $min_maf \\
       --minLEN 30 --minMAPQ 20 --inclFLAG 0 --exclFLAG $excl_flag --UMItag $umi -p $ncores \\
-      --cellTAG $cell_tag"
+      --cellTAG $cell_tag --outputAllReg"
 else  # unknown
     log_msg "Warning: unknown seq type $seq_type, use the dna pileup method"
     cmd="$bin_xcltk pileup $bam_opt -O $phs_even_dir -R $blocks_even -P $gt_vpath --minCOUNT $min_count --minMAF $min_maf \\
       --minLEN 30 --minMAPQ 20 --inclFLAG 0 --exclFLAG $excl_flag --UMItag $umi -p $ncores \\
-      --cellTAG $cell_tag"
+      --cellTAG $cell_tag --outputAllReg"
 fi
 eval_cmd "$cmd" "$aim"
 
@@ -182,16 +182,16 @@ mkdir -p $phs_fet_dir &> /dev/null
 if [ "$seq_type" == "dna" ] || [ "$seq_type" == "atac" ]; then
     cmd="$bin_xcltk pileup $bam_opt -O $phs_fet_dir -R $blocks_fet -P $gt_vpath --minCOUNT $min_count --minMAF $min_maf \\
       --minLEN 30 --minMAPQ 20 --inclFLAG 0 --exclFLAG $excl_flag --UMItag $umi -p $ncores \\
-      --cellTAG $cell_tag"
+      --cellTAG $cell_tag --outputAllReg"
 elif [ "$seq_type" == "rna" ]; then
     cmd="$bin_xcltk pileup $bam_opt -O $phs_fet_dir -R $blocks_fet -P $gt_vpath --minCOUNT $min_count --minMAF $min_maf \\
       --minLEN 30 --minMAPQ 20 --inclFLAG 0 --exclFLAG $excl_flag --UMItag $umi -p $ncores \\
-      --cellTAG $cell_tag"
+      --cellTAG $cell_tag --outputAllReg"
 else  # unknown
     log_msg "Warning: unknown seq type $seq_type, use the dna pileup method"
     cmd="$bin_xcltk pileup $bam_opt -O $phs_fet_dir -R $blocks_fet -P $gt_vpath --minCOUNT $min_count --minMAF $min_maf \\
       --minLEN 30 --minMAPQ 20 --inclFLAG 0 --exclFLAG $excl_flag --UMItag $umi -p $ncores \\
-      --cellTAG $cell_tag"
+      --cellTAG $cell_tag --outputAllReg"
 fi
 eval_cmd "$cmd" "$aim"
 
