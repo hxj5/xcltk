@@ -11,10 +11,6 @@ from .base import id_mapping, unique_list
 from .sam import check_pysam_chrom
 from ..config import DEBUG
 
-global CACHE_CHROM
-global CACHE_SAMFILE
-CACHE_CHROM = None
-CACHE_SAMFILE = None
 
 def fetch_reads(sam_file, region, cell_tag="CR", UMI_tag="UR", min_MAPQ=20, 
                 max_FLAG=255, min_LEN=30):

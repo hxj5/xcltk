@@ -2,6 +2,8 @@
 # SAM file utils 
 # Author: Xianjie Huang
 
+import pysam
+
 # Operations of CIGAR, copied from pysam (https://pysam.readthedocs.io/en/latest/api.html#pysam.AlignedSegment.cigartuples)
 # Do not change these values unless you know what you are doing.
 BAM_CMATCH = 0
@@ -14,6 +16,11 @@ BAM_CPAD = 6
 BAM_CEQUAL = 7
 BAM_CDIFF = 8
 BAM_CBACK = 9
+
+
+# for pysam
+CACHE_CHROM = None
+CACHE_SAMFILE = None
 
 def check_pysam_chrom(samFile, chrom=None):
     """Chech if samFile is a file name or pysam object, and if chrom format. 
