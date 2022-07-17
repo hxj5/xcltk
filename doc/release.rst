@@ -2,6 +2,12 @@
 History
 =======
 
+Release v0.1.15 (17/07/2022)
+============================
+* baf_pre_impute: keep het SNPs only after calling germline SNPs
+* baf_post_impute: output all regions when running xcltk pileup
+* rdr: fix a bug that pysam was not imported.
+
 Release v0.1.14 (01/05/2022)
 ============================
 | update baf haploblock pileup:
