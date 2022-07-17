@@ -33,7 +33,7 @@ You can check the full parameters with `xcltk -h`.
 
 ```
 Program: xcltk (Toolkit for XClone)
-Version: 0.1.14
+Version: 0.1.15
 
 Usage:   xcltk <command> [options]
 
