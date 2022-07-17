@@ -44,6 +44,7 @@ function usage() {
     echo "  -b, --barcode FILE   Path to barcode file, one barcode per line"
     echo "  -s, --bam FILE       Path to bam file for droplet-based dataset"
     echo "  -L, --bamlist File   Path to bam list file for well-based dataset"
+    echo "  -C, --celltag STR    Cell tag [CB]"
     echo "  -u, --umi STR        UMI tag if available"
     echo "  -f, --fasta FILE     Path to fasta file"
     echo "  -g, --hg INT         Version of fasta, 19 or 38"
@@ -74,7 +75,7 @@ if [ $# -lt 1 ]; then
     exit 1
 fi
 
-ARGS=`getopt -o N:S:P:s:L:u:f:g:b:v:B:p:O:c:h --long name:,seq:,phase:,bam:,bamlist:,umi:,fasta:,hg:,barcode:,vcf:,blocks:,ncores:,outdir:,config:,help -n "" -- "$@"`
+ARGS=`getopt -o N:S:P:s:L:C:u:f:g:b:v:B:p:O:c:h --long name:,seq:,phase:,bam:,bamlist:,celltag:,umi:,fasta:,hg:,barcode:,vcf:,blocks:,ncores:,outdir:,config:,help -n "" -- "$@"`
 if [ $? -ne 0 ]; then
     echo "Error: failed to parse command line args. Terminating..." >&2
     exit 1
@@ -88,6 +89,7 @@ while true; do
         -P|--phase) phase_type=$2; shift 2;;
         -s|--bam) bam=$2; shift 2;;
         -L|--bamlist) bam_list=$2; shift 2;;
+        -C|--celltag) cell_tag=$2; shift 2;;
         -u|--umi) umi=$2; shift 2;;
         -f|--fasta) fasta=$2; shift 2;;
         -g|--hg) hg=$2; shift 2;;
@@ -125,6 +127,10 @@ else
     exit 1
 fi
 
+if [ -z "$cell_tag" ]; then
+    cell_tag=CB
+fi
+
 if [ -z "$umi" ]; then
     umi_opt=""
 else
@@ -142,7 +148,7 @@ eval_cmd "$cmd" "$aim"
 preplp_vpath=`ls $out_dir/*.uniq.sort.vcf.gz`
 
 aim="run pileup"
-cmd="$bin_pileup -S $seq_type $bam_opt $umi_opt -B $blocks -v $preplp_vpath \\
+cmd="$bin_pileup -S $seq_type $bam_opt -C $cell_tag $umi_opt -B $blocks -v $preplp_vpath \\
        -g $hg -p $ncores -O $out_dir -c $cfg"
 eval_cmd "$cmd" "$aim"
 

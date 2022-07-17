@@ -28,6 +28,7 @@ function usage() {
     echo "  -b, --barcode FILE   Path to barcode file, one barcode per line"
     echo "  -s, --bam FILE       Path to bam file for droplet-based dataset"
     echo "  -L, --bamlist File   Path to bam list file for well-based dataset"
+    echo "  -C, --celltag STR    Cell tag [CB]"
     echo "  -u, --umi STR        UMI tag if available"
     echo "  -B, --blocks FILE    Region of feature blocks in TSV format"
     echo "  -v, --vcf FILE       Path to phased vcf"
@@ -56,7 +57,7 @@ if [ $# -lt 1 ]; then
     exit 1
 fi
 
-ARGS=`getopt -o S:s:b:L:u:B:v:g:p:O:c:h --long seq:,bam:,barcode:,bamlist:,umi:,blocks:,vcf:,hg:,ncores:,outdir:,config:,help -n "" -- "$@"`
+ARGS=`getopt -o S:s:b:L:C:u:B:v:g:p:O:c:h --long seq:,bam:,barcode:,bamlist:,celltag:,umi:,blocks:,vcf:,hg:,ncores:,outdir:,config:,help -n "" -- "$@"`
 if [ $? -ne 0 ]; then
     echo "Error: failed to parse command line args. Terminating..." >&2
     exit 1
@@ -69,6 +70,7 @@ while true; do
         -s|--bam) bam=$2; shift 2;;
         -b|--barcode) barcode=$2; shift 2;;
         -L|--bamlist) bam_list=$2; shift 2;;
+        -C|--celltag) cell_tag=$2; shift 2;;
         -u|--umi) umi=$2; shift 2;;
         -B|--blocks) blocks_fet=$2; shift 2;;
         -v|--vcf) vcf=$2; shift 2;;
@@ -98,7 +100,6 @@ fi
 min_count=1
 min_maf=0
 
-cell_tag=CB
 if [ -n "$bam" ]; then            # droplet-based dataset
     bam_opt="-s $bam -b $barcode"
 elif [ -n "$bam_list" ]; then     # well-based dataset
@@ -107,6 +108,10 @@ elif [ -n "$bam_list" ]; then     # well-based dataset
 else
     log_err "Error: either --bam or --bamlist should be specified!"
     exit 1
+fi
+
+if [ -z "$cell_tag" ]; then
+    cell_tag=CB
 fi
 
 if [ -z "$umi" ]; then 
