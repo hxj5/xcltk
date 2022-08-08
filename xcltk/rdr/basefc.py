@@ -144,8 +144,8 @@ def base_fc(argv):
 
     # save cell barcodes and regions
     fid = open(out_dir + "/features.tsv", "w")
-    for _reg_id in reg_ids:
-        fid.writelines(_reg_id + "\n")
+    for reg, _reg_id in zip(reg_list, reg_ids):
+        fid.writelines("%s\t%d\t%d\t%s\n" % (reg.chrom, reg.start, reg.end, _reg_id))
     fid.close()
     print("[%s] Count reads for %d features in %d cells with %d cores." 
           % (COMMAND, len(reg_ids), len(barcodes), nproc))
