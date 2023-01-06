@@ -15,7 +15,8 @@ exec(open("./xcltk/config.py").read())
 with open(path.join(here, "README.md"), encoding='utf-8') as f:
     long_description = f.read()
 
-reqs = ['numpy>=1.9.0', 'pysam>=0.15.2', 'intervaltree', 'scipy', 'h5py']
+reqs = ['numpy>=1.9.0', 'pysam>=0.15.2', 'intervaltree', 'scipy', 'h5py',
+        'pandas', 'anndata']
 
 setup(
     name = "xcltk",

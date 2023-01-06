@@ -4,7 +4,7 @@
 
 import anndata as ad
 import getopt
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import multiprocessing
 import numpy as np
 import os
@@ -591,11 +591,11 @@ def main_rpc(argv):
     start_time = time.time()
 
     conf = Config(app = "rpc.py")
-    if len(argv) <= 1:
+    if len(argv) <= 2:
         usage(conf, sys.stderr)
         sys.exit(1)
 
-    opts, args = getopt.getopt(argv[1:], 
+    opts, args = getopt.getopt(argv[2:], 
         "-b:-p:-A:-D:-O:-P:-R:-S:-h-v", 
         [
             "barcode=", "nproc=", 

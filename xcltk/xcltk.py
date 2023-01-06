@@ -9,6 +9,7 @@ import sys
 from .config import PROGRAM, VERSION
 from .baf.fixref import fixref as baf_fix_ref
 from .baf.pileup import pileup as baf_pileup
+from .baf.rpc import main_rpc as baf_rpc
 from .rdr.basefc import base_fc as rdr_base_fc
 from .region.convert import convert as reg_convert
 
@@ -22,6 +23,7 @@ def __usage(fp = sys.stderr):
            "Commands:\n"                                  \
            "  -- BAF calculation\n"                                        \
            "     fixref           Fix REF, ALT and GT\n"                    \
+           "     rpc              Reference phasing correction\n"            \
            "     pileup           Pileup, support unique counting\n"         \
            "\n"                                                              \
            "  -- RDR calculation\n"                                          \
@@ -44,6 +46,7 @@ def main():
 
     command = sys.argv[1]
     if command == "fixref": baf_fix_ref(sys.argv)
+    elif command == "rpc": baf_rpc(sys.argv)
     elif command == "pileup": baf_pileup(sys.argv)
     elif command == "basefc": rdr_base_fc(sys.argv)
     elif command == "convert": reg_convert(sys.argv)
