@@ -33,6 +33,58 @@ def load_region_from_txt(fn, sep = "\t", verbose = False):
     fp.close()
     return reg_list
 
+def load_snp_from_tsv(fn, verbose = False):
+    """Load phased SNPs from TSV file.
+    @param fn       Path to TSV file containing 6 columns with header [str]:
+                    <chrom> <pos> <ref> <alt> <ref_hap> <alt_hap>
+    @param verbose  If print detailed log info [bool]
+    @return    A SNPSet object if success, None otherwise.
+    """
+    func = "load_snp_from_tsv"
+    fp = zopen(fn, "rt")
+    snp_set = SNPSet()
+    nl = 0
+    if verbose:
+        sys.stderr.write("[I::%s] start to load SNPs from tsv '%s' ...\n" % (func, fn))
+    for line in fp:
+        nl += 1
+        if nl == 1:
+            continue
+        parts = line.rstrip().split("\t")
+        if len(parts) < 6:
+            if verbose:
+                sys.stderr.write("[W::%s] too few columns of line %d.\n" % (func, nl))
+            continue
+        ref, alt = parts[2].upper(), parts[3].upper()
+        if len(ref) != 1 or ref not in "ACGTN":
+            if verbose:
+                sys.stderr.write("[W::%s] invalid REF base of line %d.\n" % (func, nl))
+            continue
+        if len(alt) != 1 or alt not in "ACGTN":
+            if verbose:
+                sys.stderr.write("[W::%s] invalid ALT base of line %d.\n" % (func, nl))
+            continue
+        a1, a2 = parts[4], parts[5]
+        if (a1 == "0" and a2 == "1") or (a1 == "1" and a2 == "0"):
+            snp = SNP(
+                chrom = parts[0], 
+                pos = int(parts[1]), 
+                ref = ref, 
+                alt = alt, 
+                ref_idx = int(a1), 
+                alt_idx = int(a2)
+            )
+            if snp_set.add(snp) < 0:
+                if verbose:
+                    sys.stderr.write("[E::%s] failed to add SNP of line %d.\n" % (func, nl))
+                return None
+        else:
+            if verbose:
+               sys.stderr.write("[W::%s] invalid GT of line %d.\n" % (func, nl))
+            continue          
+    fp.close()
+    return snp_set
+
 def load_snp_from_vcf(fn, verbose = False):
     """Load phased SNPs from VCF file.
     @param fn       Path to VCF file [str]

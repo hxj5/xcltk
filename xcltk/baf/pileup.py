@@ -19,7 +19,7 @@ from .plp.config import Config, \
 from .plp.core import sp_count
 from .plp.thread import ThreadData
 from .plp.utils import load_region_from_txt, load_snp_from_vcf, \
-    merge_mtx, merge_tsv, rewrite_mtx
+    load_snp_from_tsv, merge_mtx, merge_tsv, rewrite_mtx
 from .plp.zfile import zopen, ZF_F_GZIP, ZF_F_PLAIN
 
 def prepare_config(conf):
@@ -80,7 +80,11 @@ def prepare_config(conf):
 
     if conf.snp_fn:
         if os.path.isfile(conf.snp_fn):
-            conf.snp_set = load_snp_from_vcf(conf.snp_fn, verbose = True)
+            if conf.snp_fn.endswith(".vcf") or conf.snp_fn.endswith(".vcf.gz") \
+                    or conf.snp_fn.endswith(".vcf.bgz"):
+                conf.snp_set = load_snp_from_vcf(conf.snp_fn, verbose = True)
+            else:
+                conf.snp_set = load_snp_from_tsv(conf.snp_fn, verbose = True)
             if not conf.snp_set or conf.snp_set.get_n() <= 0:
                 sys.stderr.write("[E::%s] failed to load snp file.\n" % func)
                 return(-1)
@@ -138,7 +142,7 @@ def usage(fp = sys.stderr):
     s += "  -O, --outdir DIR       Output directory for sparse matrices.\n"
     s += "  -R, --region FILE      A TSV file listing target regions. The first 4 columns shoud be:\n"
     s += "                         chrom, start, end (both 1-based and inclusive), name.\n"
-    s += "  -P, --phasedSNP FILE   A VCF file listing phased SNPs (i.e., containing phased GT).\n"
+    s += "  -P, --phasedSNP FILE   A TSV or VCF file listing phased SNPs (i.e., containing phased GT).\n"
     s += "  -b, --barcode FILE     A plain file listing all effective cell barcode.\n"
     s += "  -h, --help             Print this message and exit.\n"
     s += "  -D, --debug INT        Used by developer for debugging [%d]\n" % CFG_DEBUG
