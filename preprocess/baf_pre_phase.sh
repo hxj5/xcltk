@@ -1,0 +1,225 @@
+#!/bin/bash
+# baf_pre_phase.sh - call germline SNPs to prepare for Sanger phasing.
+
+# TODO: 
+# - add reference version into the VCF header
+# - support calling germline SNPs for multiple bam files (-L)
+
+
+set -eux
+
+function usage() {
+    echo
+    echo "Usage: $prog [options]"
+    echo
+    echo "Options:"
+    echo "  -N, --name STR      Sample name."
+    echo "  -s, --bam FILE      Path to bam file."
+    echo "  -F, --phaseFA FILE  Path to Sanger-phasing hg19 fasta file."
+    echo "  -O, --outdir DIR    Path to output dir."
+    echo "  -g, --hg INT        Genome version, 19 or 38."
+    echo "  -u, --umi STR       UMI tag. Setting to None to count reads [${def_umi}]"
+    echo "  -D, --noDUP         If use, duplicate reads will be excluded."
+    echo "  -p, --ncores INT    Number of cores [${def_ncores}]"
+    echo "  -h, --help          Print this message and exit."
+    echo
+}
+
+
+# global settings 
+work_dir=`cd $(dirname $0); pwd`
+prog=baf_pre_phase.sh
+
+ucsc2ensembl=$work_dir/data/ucsc2ensembl.txt
+bin_py_liftover=$work_dir/liftOver_vcf.py
+chain_hg38to19=$work_dir/data/hg38ToHg19.over.chain.gz
+
+
+# default settings
+def_ncores=1
+def_umi=UB
+use_dup=1
+
+
+# check settings
+if [ ! -e "$work_dir/utils.sh" ]; then
+    echo "Error: utils file $work_dir/utils.sh does not exist!" >&2
+    exit 1
+fi
+source $work_dir/utils.sh
+
+assert_e  "$ucsc2ensembl"  "ucsc2ensembl file"
+assert_e  "$bin_py_liftover"  "LiftOver script"
+assert_e  "$chain_hg38to19"  "hg38-to-hg19 chain file"
+
+
+# parse args
+if [ $# -lt 1 ]; then
+    usage
+    exit 1
+fi
+
+cmdline=`echo $0 $*`
+log_msg "CMD: $cmdline"
+
+ARGS=`getopt -o N:s:F:O:g:u:Dp:h --long name:,bam:,phaseFA:,outdir:,hg:,umi:,noDUP,ncores:,help -n "" -- "$@"`
+if [ $? -ne 0 ]; then
+    log_err "Error: failed to parse command line. Terminating ..."
+    exit 1
+fi
+
+eval set -- "$ARGS"
+while true; do
+    case "$1" in
+        -N|--name) sid=$2; shift 2;;
+        -s|--bam) bam=$2; shift 2;;
+        -F|--phaseFA) fa_phase=$2; shift 2;;
+        -O|--outdir) out_dir=$2; shift 2;;
+        -g|--hg) hg=$2; shift 2;;
+        -u|--umi) umi=$2; shift 2;;
+        -U|--nodup) use_dup=0; shift;;
+        -p|--ncores) ncores=$2; shift 2;;
+        -h|--help) usage; shift; exit 0;;
+        --) shift; break;;
+        *) log_err "Internal error!"; exit 1;;
+    esac
+done
+
+
+# check cmdline args
+assert_n  "$sid"  "Sample name"
+assert_e  "$bam"  "bam file"
+assert_e  "$fa_phase"  "Sanger-phasing fasta file"
+
+assert_n  "$out_dir"  "out dir"
+if [ ! -e "$out_dir" ]; then
+    mkdir -p $out_dir
+fi
+out_dir=`cd $out_dir; pwd`
+
+assert_n  "$hg"  "Genome version"
+if [ $hg -ne 19 ] && [ $hg -ne 38 ]; then
+    log_err "Error: hg version should be 19 or 38!"
+    exit 1
+fi
+
+if [ -z "$umi" ]; then
+    umi=$def_umi
+fi
+
+if [ $use_dup -eq 0 ]; then
+    excl_flag=1796
+else
+    excl_flag=772
+fi
+
+if [ -z "$ncores" ]; then
+    ncores=$def_ncores
+fi
+
+
+###### Core Part ######
+
+res_dir=$out_dir/result
+if [ ! -e "$res_dir" ]; then
+    mkdir -p $res_dir
+fi
+
+# call germline SNPs
+raw_vname=${sid}.hg${hg}.raw.vcf.gz
+chroms="`seq 1 22` X Y"
+chroms=`echo $chroms | tr ' ' ',' | sed 's/,$//'`
+
+log_msg "Call germline SNPs."
+
+cellsnp-lite  -s $bam  -O $res_dir/cellsnp                \
+    --chrom $chroms  -p $ncores                            \
+    --minMAF 0.1  --minCOUNT 20                            \
+    --minLEN 30  --minMAPQ 20  --exclFLAG $excl_flag       \
+    --cellTAG None  --UMItag $umi                          \
+    --gzip  --genotype
+
+raw_vpath=$res_dir/cellsnp/cellSNP.cells.vcf.gz
+
+
+# Sanger Imputation Server fasta: chroms have no leading 'chr'
+# bcftools annotate --rename-chrs is to removing the leading 'chr'
+qc_vname=${raw_vname/.vcf/.het.qc.vcf}
+qc_vpath=$res_dir/$qc_vname
+
+log_msg "Keep heterozygous SNPs only."
+
+bcftools view -Ou $raw_vpath |                        \
+    bcftools view -Ou -i 'GT = "het"' |                \
+    bcftools view -Ou -i 'TYPE = "snp"' |                \
+    bcftools annotate -Ou --rename-chrs $ucsc2ensembl |  \
+    bcftools view -Oz -t $chroms > $qc_vpath
+
+
+# filter by GQ
+gq_bed=$res_dir/${qc_vname%.vcf.gz}.gq.bed
+gq_vname=${qc_vname/.vcf/.gq.vcf}
+gq_vpath=$res_dir/$gq_vname
+
+log_msg "Filter SNPs with low GQ score."
+
+bin_pl2gq=$res_dir/pl2gq.awk
+generate_bin_pl2gq $bin_pl2gq
+
+bcftools view -Ou $qc_vpath |                      \
+    bcftools query -f '%CHROM\t%POS[\t%PL]\n' |    \
+    $bin_pl2gq |                                   \
+    awk '$NF > 20 { printf("%s\t%d\t%d\t%s\n", $1, $2 - 1, $2, $NF) }' > $gq_bed
+
+bcftools view -Ou $qc_vpath |     \
+    bcftools view -Oz -T $gq_bed > $gq_vpath
+
+flt_vname=$gq_vname
+flt_vpath=$gq_vpath
+
+
+# convert hg38 to hg19
+lift_vname=${flt_vname/.vcf/.hg19.vcf}
+lift_vpath=$res_dir/$lift_vname
+
+if [ $hg -eq 19 ]; then
+    log_msg "Already hg19, skip liftover."
+    lift_vname=$flt_vname
+    lift_vpath=$flt_vpath
+else
+    log_msg "Convert hg38 to hg19."
+    python $bin_py_liftover  -c $chain_hg38to19  -i $flt_vpath   \
+        -o ${lift_vpath/.vcf/.tmp.vcf}  -P liftOver 
+    bcftools view -i 'POS > 0' -Oz ${lift_vpath/.vcf/.tmp.vcf} > ${lift_vpath}
+    rm ${lift_vpath/.vcf/.tmp.vcf}
+fi
+
+
+# bcftools fixref check
+log_msg "(Pre-xcltk-fixref) bcftools fixref check."
+bcftools +fixref $lift_vpath -- -f $fa_phase
+
+
+# xcltk fixref
+fix_vname=${lift_vname/.vcf/.fixref.sort.vcf}
+fix_vpath=$res_dir/$fix_vname
+
+log_msg "xcltk fixref."
+
+xcltk fixref  -i $lift_vpath  -r $fa_phase  -v |   \
+    bcftools sort -Oz > $fix_vpath
+
+
+# bcftools fixref check
+log_msg "(Post-xcltk-fixref) bcftools fixref check."
+bcftools +fixref $fix_vpath -- -f $fa_phase
+
+
+# move final result
+mv $fix_vpath $out_dir
+
+
+###### END ######
+log_msg "All Done!"
+log_msg "End"
+

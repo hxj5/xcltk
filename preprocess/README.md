@@ -10,6 +10,26 @@ To use the pipeline, the Github repo should be cloned firstly.
 ```shell
 git clone https://github.com/hxj5/xcltk.git
 ```
+
+### Dependencies
+
+**Softwares**
+
+All tools below should be added to system search path.
+
+- [bcftools](https://github.com/samtools/bcftools)
+- [bgzip or htslib](https://github.com/samtools/htslib)
+- [cellsnp-lite](https://github.com/single-cell-genetics/cellsnp-lite)
+- [LiftOver](https://genome-store.ucsc.edu/)
+- [python](https://www.python.org/)
+- [samtools](https://github.com/samtools/samtools)
+- [xcltk](https://github.com/hxj5/xcltk)
+
+**Files**
+
+- [hg19 fasta](https://imputation.sanger.ac.uk/?resources=1) from Sanger Imputation 
+  Server. [Download](ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/reference/human_g1k_v37.fasta.gz)
+
 ### BAF Part
 
 The two allele-specific AD and DP matrices mentioned above would be refered to as
