@@ -2,11 +2,9 @@
 # baf_pre_phase.sh - call germline SNPs to prepare for Sanger phasing.
 
 # TODO: 
-# - add reference version into the VCF header
-# - support calling germline SNPs for multiple bam files (-L)
+# - Add reference version into the VCF header
+# - Support calling germline SNPs for multiple bam files (-L)
 
-
-set -eux
 
 function usage() {
     echo
@@ -59,6 +57,8 @@ if [ $# -lt 1 ]; then
     exit 1
 fi
 
+set -x
+
 cmdline=`echo $0 $*`
 log_msg "CMD: $cmdline"
 
@@ -77,7 +77,7 @@ while true; do
         -O|--outdir) out_dir=$2; shift 2;;
         -g|--hg) hg=$2; shift 2;;
         -u|--umi) umi=$2; shift 2;;
-        -U|--nodup) use_dup=0; shift;;
+        -D|--noDUP) use_dup=0; shift;;
         -p|--ncores) ncores=$2; shift 2;;
         -h|--help) usage; shift; exit 0;;
         --) shift; break;;
@@ -88,10 +88,10 @@ done
 
 # check cmdline args
 assert_n  "$sid"  "Sample name"
-assert_e  "$bam"  "bam file"
+assert_e  "$bam"  "BAM file"
 assert_e  "$fa_phase"  "Sanger-phasing fasta file"
 
-assert_n  "$out_dir"  "out dir"
+assert_n  "$out_dir"  "Output dir"
 if [ ! -e "$out_dir" ]; then
     mkdir -p $out_dir
 fi

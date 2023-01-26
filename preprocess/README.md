@@ -28,7 +28,8 @@ All tools below should be added to system search path.
 **Files**
 
 - [hg19 fasta](https://imputation.sanger.ac.uk/?resources=1) from Sanger Imputation 
-  Server. [Download](ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/reference/human_g1k_v37.fasta.gz)
+  Server. Download from link 
+  ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/reference/human_g1k_v37.fasta.gz
 
 ### BAF Part
 
