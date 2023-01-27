@@ -23,7 +23,7 @@ function usage() {
     echo "  -O, --outdir DIR     Path to output dir."
     echo "  -g, --hg INT         Genome version, 19 or 38."
     echo "  -C, --celltag STR    Cell tag [${def_cell_tag}]"
-    echo "  -u, --umi STR        UMI tag. Setting to None to count reads [${def_umi}]"
+    echo "  -u, --umi STR        UMI tag. Set to None to count reads [${def_umi}]"
     echo "  -D, --noDUP          If use, duplicate reads will be excluded."
     echo "  -p, --ncores INT     Number of cores [${def_ncores}]"
     echo "  -h, --help           Print this message and exit."

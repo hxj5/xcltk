@@ -13,12 +13,15 @@ function usage() {
     echo "Options:"
     echo "  -N, --name STR      Sample name."
     echo "  -s, --bam FILE      Path to bam file."
+    echo "  -b, --barcode FILE  Path to barcode file. One barcode per line."
     echo "  -F, --phaseFA FILE  Path to Sanger-phasing hg19 fasta file."
     echo "  -O, --outdir DIR    Path to output dir."
     echo "  -g, --hg INT        Genome version, 19 or 38."
-    echo "  -u, --umi STR       UMI tag. Setting to None to count reads [${def_umi}]"
+    echo "  -C, --celltag STR   Cell tag [${def_cell_tag}]"
+    echo "  -u, --umi STR       UMI tag. Set to None to count reads [${def_umi}]"
     echo "  -D, --noDUP         If use, duplicate reads will be excluded."
     echo "  -p, --ncores INT    Number of cores [${def_ncores}]"
+    echo "  -S, --smartseq      The input data is SMART-seq."
     echo "  -h, --help          Print this message and exit."
     echo
 }
@@ -35,8 +38,10 @@ chain_hg38to19=$work_dir/data/hg38ToHg19.over.chain.gz
 
 # default settings
 def_ncores=1
+def_cell_tag=CB
 def_umi=UB
 use_dup=1
+is_smart_seq=0
 
 
 # check settings
@@ -62,7 +67,7 @@ set -x
 cmdline=`echo $0 $*`
 log_msg "CMD: $cmdline"
 
-ARGS=`getopt -o N:s:F:O:g:u:Dp:h --long name:,bam:,phaseFA:,outdir:,hg:,umi:,noDUP,ncores:,help -n "" -- "$@"`
+ARGS=`getopt -o N:s:b:F:O:g:C:u:Dp:Sh --long name:,bam:,barcode:,phaseFA:,outdir:,hg:,celltag:,umi:,noDUP,ncores:,smartseq,help -n "" -- "$@"`
 if [ $? -ne 0 ]; then
     log_err "Error: failed to parse command line. Terminating ..."
     exit 1
@@ -73,12 +78,15 @@ while true; do
     case "$1" in
         -N|--name) sid=$2; shift 2;;
         -s|--bam) bam=$2; shift 2;;
+        -b|--barcode) barcode=$2; shift 2;;
         -F|--phaseFA) fa_phase=$2; shift 2;;
         -O|--outdir) out_dir=$2; shift 2;;
         -g|--hg) hg=$2; shift 2;;
+        -C|--celltag) cell_tag=$2; shift 2;;
         -u|--umi) umi=$2; shift 2;;
         -D|--noDUP) use_dup=0; shift;;
         -p|--ncores) ncores=$2; shift 2;;
+        -S|--smartseq) is_smart_seq=1; shift;;
         -h|--help) usage; shift; exit 0;;
         --) shift; break;;
         *) log_err "Internal error!"; exit 1;;
@@ -89,6 +97,7 @@ done
 # check cmdline args
 assert_n  "$sid"  "Sample name"
 assert_e  "$bam"  "BAM file"
+assert_e  "$barcode"  "Barcode file"
 assert_e  "$fa_phase"  "Sanger-phasing fasta file"
 
 assert_n  "$out_dir"  "Output dir"
@@ -101,6 +110,10 @@ assert_n  "$hg"  "Genome version"
 if [ $hg -ne 19 ] && [ $hg -ne 38 ]; then
     log_err "Error: hg version should be 19 or 38!"
     exit 1
+fi
+
+if [ -z "$cell_tag" ]; then
+    cell_tag=$def_cell_tag
 fi
 
 if [ -z "$umi" ]; then
@@ -125,6 +138,18 @@ if [ ! -e "$res_dir" ]; then
     mkdir -p $res_dir
 fi
 
+# cell filtering
+flt_bam=$res_dir/${sid}.cell_filter.bam
+if [ $is_smart_seq -eq 0 ]; then
+    log_msg "Filter cells. Only keep cells with valid barcodes."
+    samtools view -h -b -D ${cell_tag}:${barcode} -@ $ncores $bam > $flt_bam
+    samtools index $flt_bam
+else
+    log_msg "The input is SMART-seq data; Skip cell filtering."
+    flt_bam=$bam
+fi
+
+
 # call germline SNPs
 raw_vname=${sid}.hg${hg}.raw.vcf.gz
 chroms="`seq 1 22` X Y"
@@ -132,7 +157,7 @@ chroms=`echo $chroms | tr ' ' ',' | sed 's/,$//'`
 
 log_msg "Call germline SNPs."
 
-cellsnp-lite  -s $bam  -O $res_dir/cellsnp                \
+cellsnp-lite  -s $flt_bam  -O $res_dir/cellsnp            \
     --chrom $chroms  -p $ncores                            \
     --minMAF 0.1  --minCOUNT 20                            \
     --minLEN 30  --minMAPQ 20  --exclFLAG $excl_flag       \
@@ -149,8 +174,8 @@ qc_vpath=$res_dir/$qc_vname
 
 log_msg "Keep heterozygous SNPs only."
 
-bcftools view -Ou $raw_vpath |                        \
-    bcftools view -Ou -i 'GT = "het"' |                \
+bcftools view -Ou $raw_vpath |                          \
+    bcftools view -Ou -i 'GT = "het"' |                  \
     bcftools view -Ou -i 'TYPE = "snp"' |                \
     bcftools annotate -Ou --rename-chrs $ucsc2ensembl |  \
     bcftools view -Oz -t $chroms > $qc_vpath
