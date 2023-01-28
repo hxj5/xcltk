@@ -62,10 +62,7 @@ if [ $# -lt 1 ]; then
     exit 1
 fi
 
-set -x
-
 cmdline=`echo $0 $*`
-log_msg "CMD: $cmdline"
 
 ARGS=`getopt -o N:s:b:F:O:g:C:u:Dp:Sh --long name:,bam:,barcode:,phaseFA:,outdir:,hg:,celltag:,umi:,noDUP,ncores:,smartseq,help -n "" -- "$@"`
 if [ $? -ne 0 ]; then
@@ -92,6 +89,9 @@ while true; do
         *) log_err "Internal error!"; exit 1;;
     esac
 done
+
+log_msg "CMD: $cmdline"
+set -x
 
 
 # check cmdline args
