@@ -1,21 +1,35 @@
-## XClone Preprocessing
+# XClone Preprocessing
 
-XClone takes three matrices of haploblocks as input: allele-specific
-AD and DP matrices and the other is the total read depth matrix of the blocks
-for each cell. XClone preprocessing pipeline is aimed to generate the three 
-matrices from SAM/BAM/CRAM files. It includes several steps described below.
+[XClone][XClone repo] is a statistical method that 
+integrates expression levels (RDR signals) and allelic balance (BAF signals) to 
+detect haplotype-aware CNVs and 
+reconstruct tumour clonal substructure from scRNA-seq data. It takes three matrices 
+as input: allele-specific AD and DP matrices (BAF signals) and the total read depth 
+matrix (RDR signals).
 
-To use the pipeline, the Github repo should be cloned firstly.
+This preprocessing pipeline is aimed to generate the three 
+matrices from SAM/BAM/CRAM files. It supports data from multiple single-cell 
+sequencing platforms, including 10x scRNA-seq and SMART-seq.
+
+## Dependencies
+
+We have wrapped the preprocessing pipeline into a github repo
+[xcltk][xcltk repo]
+To use the pipeline, the repo should be cloned firstly.
 
 ```shell
 git clone https://github.com/hxj5/xcltk.git
 ```
 
-### Dependencies
+You can find the scripts and data for preprocessing in the directory 
+[xcltk/preprocess][preprocess dir].
 
-**Softwares**
+In addition, the pipeline dependends on the below softwares and files.
 
-All tools below should be added to system search path.
+### Softwares
+
+All tools below, after being installed, should be added to system search path (i.e.,
+the system variable PATH).
 
 - [bcftools](https://github.com/samtools/bcftools)
 - [bgzip or htslib](https://github.com/samtools/htslib)
@@ -23,97 +37,279 @@ All tools below should be added to system search path.
 - [LiftOver](https://genome-store.ucsc.edu/)
 - [python](https://www.python.org/)
 - [samtools](https://github.com/samtools/samtools)
-- [xcltk](https://github.com/hxj5/xcltk)
+- [xcltk][xcltk repo]
 
-**Files**
+Note that except `liftOver`, all tools above can be easily installed through `conda`
+or `pip`.
+
+### Files
+
+[xcltk](https://github.com/hxj5/xcltk) uses 
+[Sanger Imputation Server][Sanger Server] for 
+reference phasing, i.e., infering haplotypes given a reference population panel.
+For now, the server only supports hg19 and it provides a specific hg19 fasta file
+listed below:
 
 - [hg19 fasta](https://imputation.sanger.ac.uk/?resources=1) from Sanger Imputation 
   Server. Download from link 
   ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/reference/human_g1k_v37.fasta.gz
 
-### BAF Part
+## Quick Start
 
-The two allele-specific AD and DP matrices mentioned above would be refered to as
-BAF (B-Allele Frequency) matrices. It takes several steps to get the 
-BAF matrices.
+The [xcltk][xcltk repo] preprocessing pipeline includes 2 parts: the RDR part and 
+the BAF part.
+The total read depth, refered to as RDR, contains the information of gene 
+expression levels. 
+The allele-specific AD and DP matrices, refered to as BAF (B-Allele Frequency), 
+contains the information of allelic balance.
 
-#### BAF Pre-Imputation
+### 10x scRNA-seq data
 
-The first step is pre-imputation. Germline SNPs would be called from 
-SAM/BAM/CRAM file and saved as VCF file, which would be processed and only 
-heterozygous SNPs would be used as input of the next step 
-[Sanger Imputation][Sanger Server]. 
+#### RDR part
 
-Quite a few softwares and some auxiliary datasets should be installed or downloaded 
-before running this step. The required resources are specified in a 
-[configure file][baf_pre_impute config]. It's recommended to make a copy of the configure 
-file and then modify the new copy instead of modifying the original file. 
+We recommend using `xcltk basefc` to generate the RDR matrix. It takes the 10x 
+scRNA-seq data as input and will output a cell x gene UMI count sparse matrix.
 
-To run this step, use the script `baf_pre_impute.sh` in `preprocess/baf_pre_impute`
-directory with proper settings. All possible settings could be found with the 
-`-h` option,
+Below is an example for 10x scRNA-seq data:
 
-```shell
-cd preprocess/baf_pre_impute
-./baf_pre_impute.sh -h
+```
+xcltk basefc               \
+    -s  <BAM file>          \
+    -b  <barcode file>      \
+    -r  <region file>       \
+    -T  tsv                 \
+    -O  <out dir>           \
+    -p  10                  \
+    --cellTAG  CB           \
+    --UMItag   UB           \
+    --minLEN   30           \
+    --minMAPQ  20           \
+    --maxFLAG  4096
 ```
 
-#### BAF Imputation (or Phasing only)
+Alternatively, you can use the cell x gene UMI count matrix outputed by 
+any other counting method, such as CellRanger.
 
-The VCF generated from previous step would be used for phasing or imputation on 
+#### BAF part
+
+The BAF part includes 3 steps: pre-phasing (pre-Sanger-Phasing), Sanger Phasing,
+and post-phasing (post-Sanger-Phasing). As mentioned above, xcltk uses
+[Sanger Phasing Server][Sanger Server] for reference phasing.
+
+##### Pre-Phasing
+
+This step is aimed to call germline SNPs from input BAM file and save the SNPs
+in a VCF file. To run this step, simply use the script
+[baf_pre_phase.sh][pre-phasing script]. 
+
+Below is an example for 10x scRNA-seq data, assuming it is aligned to hg38:
+
+```
+./baf_pre_phase.sh            \
+    -N  <sample name>         \
+    -s  <BAM file>            \
+    -b  <barcode file>        \
+    -F  <sanger hg19 fasta>   \
+    -O  <out dir>             \
+    -g  38                    \
+    -C  CB                    \
+    -u  UB                    \
+    -p  10 
+```
+
+Run `./baf_pre_phase.sh -h` to check detailed information for each option.
+
+#### Sanger Phasing
+
+The VCF generated from previous step would be used for reference phasing on
 [Sanger Imputation Server][Sanger Server]. There's a comprehensive introduction to
 this step at [here][Sanger Wiki].
 
-#### BAF pre-pileup
+Briefly, The heterozygous SNPs, submitted to the server in a VCF file, are phased 
+by selecting the "Haplotype Reference Consortium (r1.1)" reference panel and the 
+"phase with EAGLE2, no imputation" pipeline.
 
-The VCF file outputted by Sanger Imputation Server needs to be processed before used for pileuping. 
+The server will return a VCF file containing all phased SNPs.
 
-Similar to the Pre-Imputation step, this step also has a [configure file][baf_pre_pileup config] 
-that specifies the required softwares and datasets. Still, Copy-and-Modify is recommended.
+#### Post-Phasing
 
-To run this step, use the script `baf_pre_pileup.sh` in `preprocess/baf_post_impute` 
-directory with proper settings. All possible settings could be found with the `-h` option,
+This step is aimed to pileup UMI counts (AD and DP) for each SNP and then aggregate
+UMI counts in gene level, using the Sanger Phasing results, to obtain allele-specific
+cell x gene AD and DP matrices.
 
-```shell
-cd preprocess/baf_post_impute
-./baf_pre_pileup.sh -h
+To run this step, simply use the script [baf_post_phase.sh][post-phasing script]
+
+Below is an example for 10x scRNA-seq data, assuming it is aligned to hg38:
+
+```
+./baf_post_phase.sh        \
+    -N  <sample name>      \
+    -s  <BAM file>         \
+    -b  <barcode file>     \
+    -v  <phased VCF>       \
+    -f  <fasta file>       \
+    -O  <out dir>          \
+    -g  38                 \
+    -C  CB                 \
+    -u  UB                 \
+    -p  10
 ```
 
-#### BAF Pileup
+Run `./baf_post_phase.sh -h` to check detailed information for each option.
 
-Pileuping is aimed to extract variant information, mainly read depth of REF and 
-ALT alleles, from SAM/BAM/CRAM file for each cell.
+### SMARTA-seq data
 
-To run this step, the [configure file][baf_pileup config] should be provided and then use 
-the script `baf_pileup.sh` in `preprocess/baf_post_impute` directory with proper settings. 
-The script simply wraps cellsnp-lite and xcltk pileup. All possible settings could be 
-found with the `-h` option,
+As [xcltk][xcltk repo] only supports single BAM file as input for now,
+the BAM files should be merged into one single BAM file first if the input is
+SMART-seq data. Please follow the 
+[example](https://github.com/hxj5/xcltk/tree/master/preprocess/merge_smartseq)
+to merge the SMART-seq BAM files with proper settings.
 
-```shell
-cd preprocess/baf_post_impute
-./baf_pileup.sh -h
+Afterwards, there should be a merged BAM file containing `RG` tag and 
+a manually generated barcode file.
+
+#### RDR part
+
+We recommend using `xcltk basefc` to generate the RDR matrix. It takes the merged 
+BAM as input and will output a cell x gene read count matrix.
+
+Below is an example for merged SMART-seq data:
+
+```
+xcltk basefc               \
+    -s  <BAM file>          \
+    -b  <barcode file>      \
+    -r  <region file>       \
+    -T  tsv                 \
+    -O  <out dir>           \
+    -p  10                  \
+    --cellTAG  RG           \
+    --UMItag   None         \
+    --minLEN   30           \
+    --minMAPQ  20           \
+    --maxFLAG  255
 ```
 
-Alternatively, you could use other pileup tools for this step.
+Alternatively, you can use the cell x gene UMI count matrix outputed by 
+any other counting method.
 
-#### BAF Phasing SNP
+#### BAF part
 
-The allele-specific read depth of each variant for each cell, i.e. the AD and DP 
-matrices created in previous steps, should be phased into each self-defined blocks. 
-The blocks could be segments of even size that distribute uniformly along the 
-genome or other feature blocks.
+The BAF part includes 3 steps: pre-phasing (pre-Sanger-Phasing), Sanger Phasing,
+and post-phasing (post-Sanger-Phasing). As mentioned above, xcltk uses
+[Sanger Phasing Server][Sanger Server] for reference phasing.
 
-To run this step, simply use the `xcltk phase_snp` command with proper settings.
+##### Pre-Phasing
 
-### RDR Part
+This step is aimed to call germline SNPs from input BAM file and save the SNPs
+in a VCF file. To run this step, simply use the script
+[baf_pre_phase.sh][pre-phasing script]. 
 
-The total read depth matrix of each block for each cell, refered to as RDR matrix,
-could be found in the output of `cellranger count`, or alternatively could be 
-generated by `xcltk basefc` command with proper settings.
+Below is an example for merged SMART-seq data, assuming it is aligned to hg19:
 
-[baf_pre_impute config]: https://github.com/hxj5/xcltk/blob/master/preprocess/baf_pre_impute/baf_pre_impute.cfg
+```
+./baf_pre_phase.sh            \
+    -N  <sample name>         \
+    -s  <BAM file>            \
+    -b  <barcode file>        \
+    -F  <sanger hg19 fasta>   \
+    -O  <out dir>             \
+    -g  19                    \
+    -C  RG                    \
+    -u  None                  \
+    -p  10                    \
+    --noDUP                   \
+    --smartseq
+```
+
+Run `./baf_pre_phase.sh -h` to check detailed information for each option.
+
+#### Sanger Phasing
+
+The VCF generated from previous step would be used for reference phasing on
+[Sanger Imputation Server][Sanger Server]. There's a comprehensive introduction to
+this step at [here][Sanger Wiki].
+
+Briefly, The heterozygous SNPs, submitted to the server in a VCF file, are phased 
+by selecting the "Haplotype Reference Consortium (r1.1)" reference panel and the 
+"phase with EAGLE2, no imputation" pipeline.
+
+The server will return a VCF file containing all phased SNPs.
+
+#### Post-Phasing
+
+This step is aimed to pileup read counts (AD and DP) for each SNP and then aggregate
+read counts in gene level, using the Sanger Phasing results, to obtain allele-specific
+cell x gene AD and DP matrices.
+
+To run this step, simply use the script [baf_post_phase.sh][post-phasing script]
+
+Below is an example for 10x scRNA-seq data, assuming it is aligned to hg19:
+
+```
+./baf_post_phase.sh        \
+    -N  <sample name>      \
+    -s  <BAM file>         \
+    -b  <barcode file>     \
+    -v  <phased VCF>       \
+    -f  <fasta file>       \
+    -O  <out dir>          \
+    -g  19                 \
+    -C  RG                 \
+    -u  None               \
+    -p  10                 \
+    --noDUP
+```
+
+Run `./baf_post_phase.sh -h` to check detailed information for each option.
+
+### Notes
+
+The scripts in the BAF part and RDR part can be modified to be applied on other
+omics data, such as scDNA-seq or scATAC-seq data.
+
+For example, if you have matched scDNA-seq data with the scRNA-seq data, it is
+recommended to run the `Pre-Phasing` step using scDNA-seq data to obtain a
+more reliable genotyping results.
+
+## Details
+
+### BAF part
+
+[xcltk][xcltk repo] computes the BAF in each haplotype block and cell in three steps: 
+
+#### 1. Germline SNPs calling
+
+xcltk calls heterozygous germline SNPs by treating all cells as one bulk sample. 
+UMI information (if avaiable) would be ignored in this step.
+
+#### 2. Reference based SNP phasing
+
+xcltk performs reference based SNP phasing by using Sanger Imputation Service 
+(https://imputation.sanger.ac.uk/). The heterozygous SNPs,
+submitted to the server in a VCF file, are phased by selecting the 
+"Haplotype Reference Consortium (r1.1)" reference panel and the 
+"phase with EAGLE2, no imputation" pipeline.
+
+#### 3. BAF calculation in haplotype blocks and single cells
+
+xcltk computes the BAF by aggregating the counts of **unique** haplotype-specific 
+UMIs or reads, which are fetched from phased SNPs, 
+in haplotype blocks and single cells. 
+
+Finally, matrices of "block x cell" AD (UMI or read counts of one haplotype) and 
+DP (UMI or read counts of both haplotypes) would be outputed
+for downstream analysis.
+
+These three steps are implemented and wrapped into several script files, 
+which are publicly available at [xcltk/preprocess dir][preprocess dir].
+
+
+[post-phasing script]: https://github.com/hxj5/xcltk/blob/master/preprocess/baf_post_phase.sh
+[pre-phasing script]: https://github.com/hxj5/xcltk/blob/master/preprocess/baf_pre_phase.sh
+[preprocess dir]: https://github.com/hxj5/xcltk/tree/master/preprocess
 [Sanger Server]: https://imputation.sanger.ac.uk/
 [Sanger Wiki]: https://imputation.sanger.ac.uk/?instructions=1
-[baf_pre_pileup config]: https://github.com/hxj5/xcltk/blob/master/preprocess/baf_post_impute/baf_pre_pileup.cfg
-[baf_pileup config]: https://github.com/hxj5/xcltk/blob/master/preprocess/baf_post_impute/baf_pileup.cfg
+[XClone repo]: https://github.com/single-cell-genetics/XClone
+[xcltk repo]: https://github.com/hxj5/xcltk
 
