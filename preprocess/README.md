@@ -307,6 +307,21 @@ for downstream analysis.
 These three steps are implemented and wrapped into several script files, 
 which are publicly available at dir [xcltk/preprocess][preprocess dir].
 
+### RDR part
+
+[xcltk][xcltk repo] computes the RDR in each feature region and cell by extracting 
+and counting UMIs or reads overlapping with 
+target features, during which minimum reads filtering was performed. By default,
+reads with MAPQ<20, aligned length<30nt are filtered. 
+In addition, reads with FLAG higher than threshold are also filtered. 
+Specifically, reads with FLAG>4096 for UMI-based platforms (e.g., 10x scRNA-seq) 
+and reads with FLAG>255 for reads-based platforms 
+(e.g., SMART-seq2, 10x scDNA-seq, 10x scATAC-seq) are filtered. 
+Intronic reads and reads that are mapped to multiple features 
+are largely preserved for counting. 
+Finally, a `feature x cell` matrix of UMI or read counts would be outputed 
+for downstream analysis. You may see `xcltk basefc` for details.
+
 
 [post-phasing script]: https://github.com/hxj5/xcltk/blob/master/preprocess/baf_post_phase.sh
 [pre-phasing script]: https://github.com/hxj5/xcltk/blob/master/preprocess/baf_pre_phase.sh
@@ -315,4 +330,3 @@ which are publicly available at dir [xcltk/preprocess][preprocess dir].
 [Sanger Wiki]: https://imputation.sanger.ac.uk/?instructions=1
 [XClone repo]: https://github.com/single-cell-genetics/XClone
 [xcltk repo]: https://github.com/hxj5/xcltk
-
