@@ -7,15 +7,14 @@ reconstruct tumour clonal substructure from scRNA-seq data. It takes three matri
 as input: allele-specific AD and DP matrices (BAF signals) and the total read depth 
 matrix (RDR signals).
 
-This preprocessing pipeline is aimed to generate the three 
+The [xcltk][xcltk repo] preprocessing pipeline is aimed to generate the three 
 matrices from SAM/BAM/CRAM files. It supports data from multiple single-cell 
 sequencing platforms, including 10x scRNA-seq and SMART-seq.
 
 ## Dependencies
 
-We have wrapped the preprocessing pipeline into a github repo
-[xcltk][xcltk repo]
-To use the pipeline, the repo should be cloned firstly.
+To use the [xcltk][xcltk repo] pipeline, the repo should be cloned to local 
+machine first.
 
 ```shell
 git clone https://github.com/hxj5/xcltk.git
@@ -100,7 +99,7 @@ and post-phasing (post-Sanger-Phasing). As mentioned above, xcltk uses
 
 This step is aimed to call germline SNPs from input BAM file and save the SNPs
 in a VCF file. To run this step, simply use the script
-[baf_pre_phase.sh][pre-phasing script]. 
+[xcltk/preprocess/baf_pre_phase.sh][pre-phasing script]. 
 
 Below is an example for 10x scRNA-seq data, assuming it is aligned to hg38:
 
@@ -123,11 +122,11 @@ Run `./baf_pre_phase.sh -h` to check detailed information for each option.
 
 The VCF generated from previous step would be used for reference phasing on
 [Sanger Imputation Server][Sanger Server]. There's a comprehensive introduction to
-this step at [here][Sanger Wiki].
+this step at its [instruction page][Sanger Wiki].
 
 Briefly, The heterozygous SNPs, submitted to the server in a VCF file, are phased 
-by selecting the "Haplotype Reference Consortium (r1.1)" reference panel and the 
-"phase with EAGLE2, no imputation" pipeline.
+by selecting the `Haplotype Reference Consortium (r1.1)` reference panel and the 
+`phase with EAGLE2, no imputation` pipeline.
 
 The server will return a VCF file containing all phased SNPs.
 
@@ -137,7 +136,8 @@ This step is aimed to pileup UMI counts (AD and DP) for each SNP and then aggreg
 UMI counts in gene level, using the Sanger Phasing results, to obtain allele-specific
 cell x gene AD and DP matrices.
 
-To run this step, simply use the script [baf_post_phase.sh][post-phasing script]
+To run this step, simply use the script 
+[xcltk/preprocess/baf_post_phase.sh][post-phasing script]
 
 Below is an example for 10x scRNA-seq data, assuming it is aligned to hg38:
 
@@ -162,7 +162,8 @@ Run `./baf_post_phase.sh -h` to check detailed information for each option.
 As [xcltk][xcltk repo] only supports single BAM file as input for now,
 the BAM files should be merged into one single BAM file first if the input is
 SMART-seq data. Please follow the 
-[example](https://github.com/hxj5/xcltk/tree/master/preprocess/merge_smartseq)
+example in dir 
+[xcltk/preprocess/merge_smartseq](https://github.com/hxj5/xcltk/tree/master/preprocess/merge_smartseq)
 to merge the SMART-seq BAM files with proper settings.
 
 Afterwards, there should be a merged BAM file containing `RG` tag and 
@@ -190,7 +191,7 @@ xcltk basefc               \
     --maxFLAG  255
 ```
 
-Alternatively, you can use the cell x gene UMI count matrix outputed by 
+Alternatively, you can use the cell x gene read count matrix outputed by 
 any other counting method.
 
 #### BAF part
@@ -203,7 +204,7 @@ and post-phasing (post-Sanger-Phasing). As mentioned above, xcltk uses
 
 This step is aimed to call germline SNPs from input BAM file and save the SNPs
 in a VCF file. To run this step, simply use the script
-[baf_pre_phase.sh][pre-phasing script]. 
+[xcltk/preprocess/baf_pre_phase.sh][pre-phasing script]. 
 
 Below is an example for merged SMART-seq data, assuming it is aligned to hg19:
 
@@ -228,11 +229,11 @@ Run `./baf_pre_phase.sh -h` to check detailed information for each option.
 
 The VCF generated from previous step would be used for reference phasing on
 [Sanger Imputation Server][Sanger Server]. There's a comprehensive introduction to
-this step at [here][Sanger Wiki].
+this step at its [instruction page][Sanger Wiki].
 
 Briefly, The heterozygous SNPs, submitted to the server in a VCF file, are phased 
-by selecting the "Haplotype Reference Consortium (r1.1)" reference panel and the 
-"phase with EAGLE2, no imputation" pipeline.
+by selecting the `Haplotype Reference Consortium (r1.1)` reference panel and the 
+`phase with EAGLE2, no imputation` pipeline.
 
 The server will return a VCF file containing all phased SNPs.
 
@@ -242,9 +243,10 @@ This step is aimed to pileup read counts (AD and DP) for each SNP and then aggre
 read counts in gene level, using the Sanger Phasing results, to obtain allele-specific
 cell x gene AD and DP matrices.
 
-To run this step, simply use the script [baf_post_phase.sh][post-phasing script]
+To run this step, simply use the script 
+[xcltk/preprocess/baf_post_phase.sh][post-phasing script]
 
-Below is an example for 10x scRNA-seq data, assuming it is aligned to hg19:
+Below is an example for merged SMART-seq data, assuming it is aligned to hg19:
 
 ```
 ./baf_post_phase.sh        \
@@ -268,7 +270,8 @@ Run `./baf_post_phase.sh -h` to check detailed information for each option.
 The scripts in the BAF part and RDR part can be modified to be applied on other
 omics data, such as scDNA-seq or scATAC-seq data.
 
-For example, if you have matched scDNA-seq data with the scRNA-seq data, it is
+For example, if you have matched scDNA-seq data with the scRNA-seq data for the
+same sample, it is
 recommended to run the `Pre-Phasing` step using scDNA-seq data to obtain a
 more reliable genotyping results.
 
@@ -302,7 +305,7 @@ DP (UMI or read counts of both haplotypes) would be outputed
 for downstream analysis.
 
 These three steps are implemented and wrapped into several script files, 
-which are publicly available at [xcltk/preprocess dir][preprocess dir].
+which are publicly available at dir [xcltk/preprocess][preprocess dir].
 
 
 [post-phasing script]: https://github.com/hxj5/xcltk/blob/master/preprocess/baf_post_phase.sh
