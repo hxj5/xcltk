@@ -2,6 +2,12 @@
 History
 =======
 
+Release v0.1.16 (28/01/2023)
+============================
+* baf: add reference phasing correction (xcltk rpc).
+* preprocess: restructure, update scripts and data.
+* rdr: output 4-column features.
+
 Release v0.1.15 (17/07/2022)
 ============================
 * baf_pre_impute: keep het SNPs only after calling germline SNPs

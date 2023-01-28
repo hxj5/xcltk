@@ -1,6 +1,6 @@
 # Global configure
 
 PROGRAM = "xcltk"
-VERSION = "0.1.15"
+VERSION = "0.1.16"
 DEBUG = 0
 

@@ -33,24 +33,25 @@ You can check the full parameters with `xcltk -h`.
 
 ```
 Program: xcltk (Toolkit for XClone)
-Version: 0.1.15
+Version: 0.1.16
 
 Usage:   xcltk <command> [options]
 
 Commands:
   -- BAF calculation
-     fixref           Fix REF, ALT and GT
-     pileup           Pileup, support unique counting
+     fixref           Fix REF, ALT and GT.
+     rpc              Reference phasing correction.
+     pileup           Pileup, support unique counting.
 
   -- RDR calculation
-     basefc           Basic feature count
+     basefc           Basic feature counting.
 
   -- Region operations
-     convert          Convert different region file formats
+     convert          Convert different region file formats.
 
   -- Others
-     -h, --help       Print this message
-     -V, --version    Print version
+     -h, --help       Print this message and exit.
+     -V, --version    Print version and exit.
 ```
 
 [pypi]: https://pypi.org/project/xcltk

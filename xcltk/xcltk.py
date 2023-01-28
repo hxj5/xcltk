@@ -21,20 +21,20 @@ def __usage(fp = sys.stderr):
     msg += "Usage:   %s <command> [options]\n" % PROGRAM
     msg += "\n"                                          \
            "Commands:\n"                                  \
-           "  -- BAF calculation\n"                                        \
-           "     fixref           Fix REF, ALT and GT\n"                    \
-           "     rpc              Reference phasing correction\n"            \
-           "     pileup           Pileup, support unique counting\n"         \
+           "  -- BAF calculation\n"                                         \
+           "     fixref           Fix REF, ALT and GT.\n"                    \
+           "     rpc              Reference phasing correction.\n"            \
+           "     pileup           Pileup, support unique counting.\n"         \
            "\n"                                                              \
            "  -- RDR calculation\n"                                          \
-           "     basefc           Basic feature count\n"                     \
+           "     basefc           Basic feature counting.\n"                 \
            "\n"                                                              \
            "  -- Region operations\n"                                        \
-           "     convert          Convert different region file formats\n"   \
+           "     convert          Convert different region file formats.\n"   \
            "\n"                                                              \
            "  -- Others\n"                                                   \
-           "     -h, --help       Print this message\n"                       \
-           "     -V, --version    Print version\n"                            \
+           "     -h, --help       Print this message and exit.\n"             \
+           "     -V, --version    Print version and exit.\n"                 \
            "\n"
     fp.write(msg)
 
