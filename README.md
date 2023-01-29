@@ -40,8 +40,8 @@ Usage:   xcltk <command> [options]
 Commands:
   -- BAF calculation
      fixref           Fix REF, ALT and GT.
-     rpc              Reference phasing correction.
      pileup           Pileup, support unique counting.
+     rpc              Reference phasing correction.
 
   -- RDR calculation
      basefc           Basic feature counting.

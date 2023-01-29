@@ -23,8 +23,8 @@ def __usage(fp = sys.stderr):
            "Commands:\n"                                  \
            "  -- BAF calculation\n"                                         \
            "     fixref           Fix REF, ALT and GT.\n"                    \
-           "     rpc              Reference phasing correction.\n"            \
            "     pileup           Pileup, support unique counting.\n"         \
+           "     rpc              Reference phasing correction.\n"            \
            "\n"                                                              \
            "  -- RDR calculation\n"                                          \
            "     basefc           Basic feature counting.\n"                 \
@@ -46,8 +46,8 @@ def main():
 
     command = sys.argv[1]
     if command == "fixref": baf_fix_ref(sys.argv)
-    elif command == "rpc": baf_rpc(sys.argv)
     elif command == "pileup": baf_pileup(sys.argv)
+    elif command == "rpc": baf_rpc(sys.argv)
     elif command == "basefc": rdr_base_fc(sys.argv)
     elif command == "convert": reg_convert(sys.argv)
     elif command in ("-h", "--help"): __usage(); sys.exit(3)
