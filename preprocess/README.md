@@ -283,8 +283,7 @@ more reliable genotyping results.
 
 #### 1. Germline SNPs calling
 
-xcltk calls heterozygous germline SNPs by treating all cells as one bulk sample. 
-UMI information (if avaiable) would be ignored in this step.
+xcltk calls heterozygous germline SNPs by treating all cells as one bulk sample.
 
 #### 2. Reference based SNP phasing
 
