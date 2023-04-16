@@ -3,7 +3,9 @@
 [![](https://img.shields.io/pypi/v/xcltk.svg)][pypi]
 [![](https://img.shields.io/github/license/hxj5/xcltk)][licence]
 
-xcltk is a toolkit for XClone (**warning: under development, not stable**)
+xcltk is a toolkit to preprocess the BAF and RDR signals from single cell 
+data for CNV detection by [XClone][XClone].
+You can find the scripts of preprocessing at [preprocess][preprocess].
 
 All release notes are available at [doc/release.rst][release]
 
@@ -58,4 +60,6 @@ Commands:
 [licence]: https://github.com/hxj5/xcltk
 [release]: https://github.com/hxj5/xcltk/blob/master/doc/release.rst
 [conda]: https://docs.conda.io/en/latest/
+[XClone]: https://github.com/single-cell-genetics/XClone
+[preprocess]: https://github.com/hxj5/xcltk/tree/master/preprocess
 
