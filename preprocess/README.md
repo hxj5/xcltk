@@ -32,11 +32,11 @@ the system variable PATH).
 
 - [bcftools](https://github.com/samtools/bcftools)
 - [bgzip or htslib](https://github.com/samtools/htslib)
-- [cellsnp-lite](https://github.com/single-cell-genetics/cellsnp-lite)
+- [cellsnp-lite >= 1.2.0](https://github.com/single-cell-genetics/cellsnp-lite)
 - [LiftOver](https://genome-store.ucsc.edu/)
-- [python](https://www.python.org/)
+- [python (tested on python 3.7)](https://www.python.org/)
 - [samtools](https://github.com/samtools/samtools)
-- [xcltk][xcltk repo]
+- [xcltk >= 0.1.16][xcltk repo]
 
 Note that except `liftOver`, all tools above can be easily installed through `conda`
 or `pip`.
@@ -85,6 +85,11 @@ xcltk basefc               \
     --minMAPQ  20           \
     --maxFLAG  4096
 ```
+
+The `<region file>` is the whole list of features (typically genes). You may 
+use your own feature (gene) list file or our pre-compiled files 
+`annotate_genes_*.txt` at [xcltk/preprocess/data/][preprocess data dir].
+Type `xcltk basefc -h` for details of each option.
 
 Alternatively, you can use the cell x gene UMI count matrix outputed by 
 any other counting method, such as CellRanger.
@@ -191,6 +196,11 @@ xcltk basefc               \
     --maxFLAG  255
 ```
 
+The `<region file>` is the whole list of features (typically genes). You may 
+use your own feature (gene) list file or our pre-compiled files 
+`annotate_genes_*.txt` at [xcltk/preprocess/data/][preprocess data dir].
+Type `xcltk basefc -h` for details of each option.
+
 Alternatively, you can use the cell x gene read count matrix outputed by 
 any other counting method.
 
@@ -267,13 +277,25 @@ Run `./baf_post_phase.sh -h` to check detailed information for each option.
 
 ### Notes
 
-The scripts in the BAF part and RDR part can be modified to be applied on other
+1. **When matched omics data is available** The scripts in the BAF part and 
+RDR part can be modified to be applied on other
 omics data, such as scDNA-seq or scATAC-seq data.
-
 For example, if you have matched scDNA-seq data with the scRNA-seq data for the
 same sample, it is
 recommended to run the `Pre-Phasing` step using scDNA-seq data to obtain a
 more reliable genotyping results.
+
+2. **Use other reference phasing methods** Since xcltk preprocessing framework 
+is designed to be divided into three parts 
+(`Pre-Phasing`, `Phasing`, and `Post-Phasing`), 
+it should be flexible to use a different phasing method, such as Eagle2 used 
+in Numbat, before the `Post-Phasing` step. 
+For example, if you have phasing results from Numbat preprocessing pipeline, 
+you can run step `Post-Phasing` directly, skipping `Pre-Phasing` and `Phasing`.
+Specifically, you may try merging all the phased VCF files 
+(in the <output_dir_of_Numbat_preprocess>/phasing dir) 
+into one new VCF and running `baf_post_phase.sh` with proper `-g` and `-G`
+values.
 
 ## Details
 
@@ -325,7 +347,9 @@ for downstream analysis. You may see `xcltk basefc` for details.
 [post-phasing script]: https://github.com/hxj5/xcltk/blob/master/preprocess/baf_post_phase.sh
 [pre-phasing script]: https://github.com/hxj5/xcltk/blob/master/preprocess/baf_pre_phase.sh
 [preprocess dir]: https://github.com/hxj5/xcltk/tree/master/preprocess
+[preprocess data dir]: https://github.com/hxj5/xcltk/tree/master/preprocess/data
 [Sanger Server]: https://imputation.sanger.ac.uk/
 [Sanger Wiki]: https://imputation.sanger.ac.uk/?instructions=1
 [XClone repo]: https://github.com/single-cell-genetics/XClone
 [xcltk repo]: https://github.com/hxj5/xcltk
+
