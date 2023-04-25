@@ -21,7 +21,8 @@ function usage() {
     echo "                       If not specified, use built-in feature annotation."
     echo "  -f, --fasta FILE     Path to fasta file matching with @param -g/--hg."
     echo "  -O, --outdir DIR     Path to output dir."
-    echo "  -g, --hg INT         Genome version, 19 or 38."
+    echo "  -g, --hg INT         Genome version of BAM file (@param -s/--bam), 19 or 38."
+    echo "  -G, --hgvcf INT      Genome version of VCF file (@param -v/--vcf), 19 or 38 [${def_hg_vcf}]"
     echo "  -C, --celltag STR    Cell tag [${def_cell_tag}]"
     echo "  -u, --umi STR        UMI tag. Set to None to count reads [${def_umi}]"
     echo "  -D, --noDUP          If use, duplicate reads will be excluded."
@@ -38,11 +39,13 @@ prog="baf_post_phase.sh"
 ensembl2ucsc=$work_dir/data/ensembl2ucsc.txt
 bin_py_liftover=$work_dir/liftOver_vcf.py
 chain_hg19to38=$work_dir/data/hg19ToHg38.over.chain.gz
+chain_hg38to19=$work_dir/data/hg38ToHg19.over.chain.gz
 anno_hg19=$work_dir/data/annotate_genes_hg19_update_20230126.txt
 anno_hg38=$work_dir/data/annotate_genes_hg38_update_20230126.txt
 
 
 # default settings
+def_hg_vcf=19
 def_ncores=1
 def_cell_tag=CB
 def_umi=UB
@@ -61,6 +64,7 @@ source $work_dir/utils.sh
 assert_e  "$ensembl2ucsc"  "ensembl2ucsc file"
 assert_e  "$bin_py_liftover"  "LiftOver script"
 assert_e  "$chain_hg19to38"  "hg19-to-38 chain file"
+assert_e  "$chain_hg38to19"  "hg38-to-19 chain file"
 
 
 # parse args
@@ -71,7 +75,7 @@ fi
 
 cmdline=`echo $0 $*`
 
-ARGS=`getopt -o N:s:b:v:B:f:O:g:C:u:Dp:h --long name:,bam:,barcode:,vcf:,blocks:,fasta:,outdir:,hg:,celltag:,umi:,noDUP,ncores:,help -n "" -- "$@"`
+ARGS=`getopt -o N:s:b:v:B:f:O:g:G:C:u:Dp:h --long name:,bam:,barcode:,vcf:,blocks:,fasta:,outdir:,hg:,hgvcf:,celltag:,umi:,noDUP,ncores:,help -n "" -- "$@"`
 if [ $? -ne 0 ]; then
     echo "Error: failed to parse command line args. Terminating ..." >&2
     exit 1
@@ -88,6 +92,7 @@ while true; do
         -f|--fasta) fasta=$2; shift 2;;
         -O|--outdir) out_dir=$2; shift 2;;
         -g|--hg) hg=$2; shift 2;;
+        -G|--hgvcf) hg_vcf=$2; shift 2;;
         -C|--celltag) cell_tag=$2; shift 2;;
         -u|--umi) umi=$2; shift 2;;
         -D|--noDUP) use_dup=0; shift;;
@@ -118,6 +123,14 @@ out_dir=`cd $out_dir; pwd`
 assert_n  "$hg"  "Genome version"
 if [ $hg -ne 19 ] && [ $hg -ne 38 ]; then
     log_err "Error: hg version should be 19 or 38!"
+    exit 1
+fi
+
+if [ -z "$hg_vcf" ]; then
+    hg_vcf=$def_hg_vcf
+fi
+if [ $hg_vcf -ne 19 ] && [ $hg_vcf -ne 38 ]; then
+    log_err "Error: hgvcf should be 19 or 38!"
     exit 1
 fi
 
@@ -168,19 +181,28 @@ bcftools view -Oz -i 'GT = "het"' $raw_vpath > $flt_vpath
 
 
 # convert genome build
-lift_vname=${flt_vname%.vcf.gz}.hg${hg}.vcf.gz
-lift_vpath=$res_dir/$lift_vname
+lift_vname=$flt_vname
+lift_vpath=$flt_vpath
 
-if [ $hg -eq 19 ]; then
-    log_msg "Already hg19, skip liftover."
-    lift_vname=$flt_vname
-    lift_vpath=$flt_vpath
+if [ $hg_vcf -ne $hg ]; then
+    lift_vname=${flt_vname%.vcf.gz}.hg${hg}.vcf.gz
+    lift_vpath=$res_dir/$lift_vname
+
+    if [ $hg_vcf -eq 19 ]; then
+        log_msg "Convert hg19 to hg38."
+        python $bin_py_liftover  -c $chain_hg19to38  -i $flt_vpath  \
+            -o ${lift_vpath/.vcf/.tmp.vcf}  -P liftOver
+        bcftools view -i 'POS > 0' -Oz ${lift_vpath/.vcf/.tmp.vcf} > ${lift_vpath}
+        rm ${lift_vpath/.vcf/.tmp.vcf}
+    else
+        log_msg "Convert hg38 to hg19."
+        python $bin_py_liftover  -c $chain_hg38to19  -i $flt_vpath  \
+            -o ${lift_vpath/.vcf/.tmp.vcf}  -P liftOver
+        bcftools view -i 'POS > 0' -Oz ${lift_vpath/.vcf/.tmp.vcf} > ${lift_vpath}
+        rm ${lift_vpath/.vcf/.tmp.vcf}
+    fi
 else
-    log_msg "Convert hg19 to hg38."
-    python $bin_py_liftover  -c $chain_hg19to38  -i $flt_vpath  \
-        -o ${lift_vpath/.vcf/.tmp.vcf}  -P liftOver
-    bcftools view -i 'POS > 0' -Oz ${lift_vpath/.vcf/.tmp.vcf} > ${lift_vpath}
-    rm ${lift_vpath/.vcf/.tmp.vcf}
+    log_msg "Genome versions of VCF and BAM are the same, skip liftover."
 fi
 
 
