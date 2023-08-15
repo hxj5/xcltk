@@ -1,5 +1,5 @@
 #!/bin/bash
-# baf_pre_phase.sh - call germline SNPs to prepare for Sanger phasing.
+# baf_pre_phase.mouse.sh - call germline SNPs from mouse data.
 
 # TODO: 
 # - Test genotyping 
@@ -32,7 +32,7 @@ function usage() {
 
 # global settings 
 work_dir=`cd $(dirname $0); pwd`
-prog=baf_pre_phase.sh
+prog=baf_pre_phase.mouse.sh
 
 ucsc2ensembl=$work_dir/data/ucsc2ensembl.mouse.txt
 
