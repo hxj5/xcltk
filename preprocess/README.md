@@ -123,6 +123,12 @@ Below is an example for 10x scRNA-seq data, assuming it is aligned to hg38:
 
 Run `./baf_pre_phase.sh -h` to check detailed information for each option.
 
+Note that in this step, if cell type annotation is available and there are sufficient 
+normal (reference) cells, it is recommended to specify to `-b` only the normal cells
+instead of all valid cells, to reduce the number of false positive SNPs such as 
+somatic variants. Otherwise, when there are few normal cells, using all valid cells
+for genotyping may rescue some germline SNPs.
+
 #### Sanger Phasing
 
 The VCF generated from previous step would be used for reference phasing on
