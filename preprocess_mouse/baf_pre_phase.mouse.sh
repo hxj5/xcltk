@@ -1,15 +1,6 @@
 #!/bin/bash
 # baf_pre_phase.mouse.sh - call germline SNPs from mouse data.
 
-# TODO: 
-# - Test genotyping 
-#   1) using common SNPs instead of performing denovo genotyping;
-#   2) using normal cells only (or simply specify barcodes of normal cells in `-b`).
-# - Test reference phasing locally instead of using online Sanger phasing.
-# - Add reference version into the VCF header
-# - Support calling germline SNPs for multiple bam files (-L)
-
-
 function usage() {
     echo
     echo "Usage: $prog [options]"
