@@ -1,5 +1,5 @@
 #!/bin/bash
-# baf_post_phase.mode2a.mouse.sh 
+# baf_post_phase.scrna_mode2a.mouse.sh 
 # - calculate BAF for mouse data, assuming SNPs are called by cellsnp-lite mode 2a,
 #   from scRNA-seq data.
 
@@ -12,10 +12,10 @@ function usage() {
     echo "  -N, --name STR       Sample name."
     echo "  -s, --bam FILE       Path to bam file."
     echo "  -b, --barcode FILE   Path to barcode file, one barcode per line."
-    echo "  -v, --vcf FILE       Path to phased vcf."
+    echo "  -v, --vcf FILE       Path to VCF containing GT field."
     echo "  -B, --blocks FILE    Path to TSV file containing regions of feature blocks."
     echo "                       If not specified, use built-in feature annotation."
-    echo "  -f, --fasta FILE     Path to fasta file."
+    echo "  -f, --fasta FILE     Path to fasta file, e.g., mm10."
     echo "  -O, --outdir DIR     Path to output dir."
     echo "  -C, --celltag STR    Cell tag [${def_cell_tag}]"
     echo "  -u, --umi STR        UMI tag. Set to None to count reads [${def_umi}]"
@@ -28,7 +28,7 @@ function usage() {
 
 # global settings
 work_dir=`cd $(dirname $0); pwd`
-prog="baf_post_phase.sh"
+prog="baf_post_phase.scrna_mode2a.mouse.sh"
 
 ensembl2ucsc=$work_dir/data/ensembl2ucsc.txt
 anno_mm10=$work_dir/data/annotate_genes_mm10_cellranger-gex-2020A_20230815.txt
