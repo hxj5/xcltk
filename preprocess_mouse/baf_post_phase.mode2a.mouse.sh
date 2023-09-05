@@ -30,7 +30,7 @@ function usage() {
 work_dir=`cd $(dirname $0); pwd`
 prog="baf_post_phase.mode2a.mouse.sh"
 
-ensembl2ucsc=$work_dir/data/ensembl2ucsc.txt
+ensembl2ucsc=$work_dir/data/ensembl2ucsc.mouse.txt
 anno_mm10=$work_dir/data/annotate_genes_mm10_cellranger-gex-2020A_20230815.txt
 
 
@@ -155,7 +155,7 @@ cat $fasta | head -1 | grep -i '^>chr'
 
 if [ $? -eq 0 ]; then     # chrom names have leading chr
     log_msg "Target fasta has leading 'chr'; add 'chr' to VCF chrom names."
-    bcftools annotate -Oz --rename-chrs $ensembl2ucsc $lift_vpath > $chr_vpath
+    bcftools annotate -Oz --rename-chrs $ensembl2ucsc $flt_vpath > $chr_vpath
 else
     log_msg "Target fasta has no leading chr."
     chr_vname=$flt_vname
