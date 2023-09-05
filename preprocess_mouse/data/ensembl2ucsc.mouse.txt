@@ -20,3 +20,4 @@
 X	chrX
 Y	chrY
 MT	chrM
+M	chrM
