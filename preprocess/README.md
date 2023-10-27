@@ -11,6 +11,8 @@ The [xcltk][xcltk repo] preprocessing pipeline is aimed to generate the three
 matrices from SAM/BAM/CRAM files. It supports data from multiple single-cell 
 sequencing platforms, including 10x scRNA-seq and SMART-seq.
 
+![xcltk_overview.png](./xcltk_overview.png)
+
 ## Dependencies
 
 To use the [xcltk][xcltk repo] pipeline, the repo should be cloned to local 
