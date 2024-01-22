@@ -188,7 +188,7 @@ def pileup(argv):
     opts, args = getopt.getopt(argv[2:], "-s:-O:-R:-P:-b:-h-D:-p:", [
                      "sam=", 
                      "outdir=", 
-                     "region=", "phasedSNP=" "barcode=",
+                     "region=", "phasedSNP=", "barcode=",
                      "help", "debug=",
                      "nproc=", 
                      "cellTAG=", "UMItag=", 
@@ -207,7 +207,7 @@ def pileup(argv):
         elif op in ("-h", "--help"): usage(sys.stderr); sys.exit(1)
         elif op in ("-D", "--debug"): conf.debug = int(val)
 
-        elif op in ("-p", "--proc"): conf.nproc = int(val)
+        elif op in ("-p", "--nproc"): conf.nproc = int(val)
         elif op in ("--celltag"): conf.cell_tag = val
         elif op in ("--umitag"): conf.umi_tag = val
         elif op in ("--mincount"): conf.min_count = int(val)
