@@ -110,8 +110,9 @@ def base_fc(argv):
     else:
         out_dir = options.out_dir
     if os.path.isdir(os.path.abspath(out_dir)) == False:
-        print("Error: No such directory for file\n -- %s" %out_dir)
-        sys.exit(1)   
+        #print("Error: No such directory for file\n -- %s" %out_dir)
+        #sys.exit(1)   
+        os.mkdir(out_dir)
 
     reg_file, reg_type = options.reg_file, options.reg_type 
     if not reg_file or not reg_type:
