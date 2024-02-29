@@ -7,7 +7,7 @@ xcltk is a toolkit to preprocess the BAF and RDR signals from single cell
 data for CNV detection by [XClone][XClone].
 You can find the scripts of preprocessing at [preprocess][preprocess].
 
-All release notes are available at [doc/release.rst][release]
+All release notes are available at [docs/release.rst][release]
 
 ## Installation
 
