@@ -11,7 +11,7 @@ from scipy import sparse
 
 
 def xtk_baf_load_data(data_dir):
-    regions = xtk_load_regions(os.path.join(data_dir, "xcltk.regions.tsv"))
+    regions = xtk_load_regions(os.path.join(data_dir, "xcltk.region.tsv"))
     samples = xtk_load_samples(os.path.join(data_dir, "xcltk.samples.tsv"))
     AD_mtx = xtk_load_matrix(os.path.join(data_dir, "xcltk.AD.mtx"))
     DP_mtx = xtk_load_matrix(os.path.join(data_dir, "xcltk.DP.mtx"))
@@ -33,7 +33,7 @@ def xtk_baf_save_data(adata, out_dir):
         os.mkdir(out_dir)
     
     xtk_save_regions(adata.obs, 
-        fn = os.path.join(out_dir, "xcltk.regions.tsv"))
+        fn = os.path.join(out_dir, "xcltk.region.tsv"))
     
     xtk_save_samples(adata.var, 
         fn = os.path.join(out_dir, "xcltk.samples.tsv"))
