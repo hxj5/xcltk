@@ -6,9 +6,10 @@
 # --> exon 1 --> exon 2 ..., which is not required for the gtf format. But this
 # assumption is usually right for the gtf file downloaded from Ensembl database.
 
-import sys
-import subprocess
 import numpy as np
+import subprocess
+import sys
+
 
 class Transcript:
     def __init__(self, chrom, strand, start, stop, tran_id, tran_name="*", 

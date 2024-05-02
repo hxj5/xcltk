@@ -1,4 +1,5 @@
-#!/usr/bin/env python
+# fixref.py - fix reference allele of SNPs; mimic `bcftools +fixref`.
+
 #this script is aimed to make sure REFs match certain genome reference build.
 #it would change corresponding ALT & GT while delete other fields in FORMAT
 #Author: Xianjie Huang 
@@ -12,14 +13,17 @@
 
 #TODO: support other ploidy
 
-import sys
+
 import getopt
-import time
 import gzip
 import pysam
-from .config import APP
+import sys
+import time
+
+from ..config import APP
 
 COMMAND = "fixref"
+
 
 def __fix_rec(ref0, rec, out, verbose = False):
     """

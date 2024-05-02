@@ -1,3 +1,4 @@
+# count.py - allele counting for each feature.
 
 # Note: now it only supports 10x data.
 
@@ -8,7 +9,7 @@ import pickle
 import sys
 import time
 
-from .config import APP
+from ..config import APP
 from .plp.config import Config, \
     CFG_DEBUG, \
     CFG_CELL_TAG, CFG_UMI_TAG, CFG_UMI_TAG_BC, \
@@ -410,7 +411,7 @@ def pileup(argv):
 def run():
     pileup(sys.argv)
 
-COMMAND = "pileup"
+COMMAND = "alecnt"
 
 if __name__ == "__main__":
     run()

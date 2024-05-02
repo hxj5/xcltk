@@ -6,16 +6,16 @@
 
 # TODO: support multiple bam files
 
+import multiprocessing
+import numpy as np
 import os
 import sys
 import time
-import numpy as np
-import multiprocessing
+
 from optparse import OptionParser, OptionGroup
 
-from .config import APP
-from ..config import VERSION, DEBUG
-from ..utils.count import feature_count
+from .count import feature_count
+from ..config import APP, VERSION, DEBUG
 from ..utils.region import load_regions
 
 FID = None

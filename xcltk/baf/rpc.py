@@ -11,9 +11,10 @@ import os
 import pandas as pd
 import scipy as sp
 import scipy.io
-from scipy.special import logsumexp
 import sys
 import time
+
+from scipy.special import logsumexp
 
 
 def format_theta(theta, epsilon = 1e-6, inplace = True):

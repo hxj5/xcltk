@@ -8,8 +8,9 @@
 # So we need to use gzip to read GZIP and BGZIP files
 # it's probably ok to use pysam to write BGZIP files.
 
-import pysam
 import gzip
+import pysam
+
 
 class ZFile:
     """Simple File object wrapper that supports plain/gzip/bgzip

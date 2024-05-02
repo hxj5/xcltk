@@ -1,12 +1,13 @@
-# Convert Region file format
+# convert.py - Convert Region file format
 # Author: Xianjie Huang 
 
 import os
 import sys
+
 from optparse import OptionParser
+
+from ..config import APP, VERSION
 from ..utils.region import get_fixsize_regions, load_regions, output_regions
-from .config import APP
-from ..config import VERSION
 
 COMMAND = "convert"
 

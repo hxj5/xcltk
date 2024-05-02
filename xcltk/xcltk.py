@@ -6,30 +6,32 @@
 # - add install list (conda + pip)
 
 import sys
-from .config import PROGRAM, VERSION
+
+from .baf.count import pileup as baf_pileup
 from .baf.fixref import fixref as baf_fix_ref
-from .baf.pileup import pileup as baf_pileup
 from .baf.rpc import main_rpc as baf_rpc
+from .config import APP, VERSION
 from .rdr.basefc import base_fc as rdr_base_fc
-from .region.convert import convert as reg_convert
+from .tools.convert import convert as reg_convert
+
 
 def __usage(fp = sys.stderr):
     msg =  "\n"
-    msg += "Program: %s (Toolkit for XClone)\n" % PROGRAM
+    msg += "Program: %s (Toolkit for XClone)\n" % APP
     msg += "Version: %s\n" % VERSION
     msg += "\n"
-    msg += "Usage:   %s <command> [options]\n" % PROGRAM
+    msg += "Usage:   %s <command> [options]\n" % APP
     msg += "\n"                                          \
            "Commands:\n"                                  \
            "  -- BAF calculation\n"                                         \
+           "     alecnt           Allele counting for each feature.\n"      \
            "     fixref           Fix REF, ALT and GT.\n"                    \
-           "     pileup           Pileup, support unique counting.\n"         \
            "     rpc              Reference phasing correction.\n"            \
            "\n"                                                              \
            "  -- RDR calculation\n"                                          \
            "     basefc           Basic feature counting.\n"                 \
            "\n"                                                              \
-           "  -- Region operations\n"                                        \
+           "  -- Tools\n"                                        \
            "     convert          Convert different region file formats.\n"   \
            "\n"                                                              \
            "  -- Others\n"                                                   \
@@ -38,6 +40,7 @@ def __usage(fp = sys.stderr):
            "\n"
     fp.write(msg)
 
+
 def main():
     argc = len(sys.argv)
     if argc < 2:
@@ -45,8 +48,8 @@ def main():
         sys.exit(1)
 
     command = sys.argv[1]
-    if command == "fixref": baf_fix_ref(sys.argv)
-    elif command == "pileup": baf_pileup(sys.argv)
+    if command == "alecnt": baf_pileup(sys.argv)
+    elif command == "fixref": baf_fix_ref(sys.argv)
     elif command == "rpc": baf_rpc(sys.argv)
     elif command == "basefc": rdr_base_fc(sys.argv)
     elif command == "convert": reg_convert(sys.argv)

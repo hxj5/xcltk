@@ -3,11 +3,12 @@
 # Author: Yuanhua Huang
 # Date: 09/06/2019
 
-import os
-import sys
 import gzip
-import subprocess
 import numpy as np
+import os
+import subprocess
+import sys
+
 
 def parse_sample_info(sample_dat, sparse=True):
     """

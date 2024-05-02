@@ -1,6 +1,7 @@
 # Global configure
 
-PROGRAM = "xcltk"
+APP = "xcltk"
 VERSION = "0.1.16"
 DEBUG = 0
 
+__version__ = VERSION
