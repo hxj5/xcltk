@@ -3,3 +3,4 @@ from . import gtf
 from . import region
 from . import sam
 from . import vcf
+from . import xlog
