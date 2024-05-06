@@ -7,8 +7,9 @@ import pysam
 import sys
 
 from .mcount import MCount
-from .sam import check_read, sam_fetch
-from .zfile import zopen, ZF_F_GZIP
+
+from ...utils.sam import check_read, sam_fetch
+from ...utils.zfile import zopen, ZF_F_GZIP
 
 def sp_region(reg, conf):
     reg_ref_umi = {smp:set() for smp in conf.barcodes}

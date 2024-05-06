@@ -16,7 +16,7 @@ from optparse import OptionParser, OptionGroup
 
 from .count import feature_count
 from ..config import APP, VERSION, DEBUG
-from ..utils.region import load_regions
+from ..utils.gregion import load_regions
 
 FID = None
 PROCESSED = 0

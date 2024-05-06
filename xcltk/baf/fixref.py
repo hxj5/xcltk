@@ -15,10 +15,8 @@
 
 
 import getopt
-import gzip
 import pysam
 import sys
-import time
 
 from ..config import APP
 

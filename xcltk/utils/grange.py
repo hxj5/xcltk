@@ -1,4 +1,4 @@
-# Region routine
+# grange.py - genomic range/interval routine
 # Author: Xianjie Huang
 
 from functools import cmp_to_key

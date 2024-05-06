@@ -7,7 +7,7 @@ import sys
 from optparse import OptionParser
 
 from ..config import APP, VERSION
-from ..utils.region import get_fixsize_regions, load_regions, output_regions
+from ..utils.gregion import get_fixsize_regions, load_regions, output_regions
 
 COMMAND = "convert"
 
