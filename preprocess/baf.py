@@ -1,18 +1,13 @@
 # baf.py - preprocess the input BAM file to generate reference-phased cell x gene AD & DP matrices.
 
 import getopt
-import gzip
-import logging
 import os
-import pandas as pd
-import random
-import stat
-import subprocess
 import sys
 
 from logging import error, info
-from xcltk.baf.genotype import pileup
+from xcltk.baf.genotype import pileup, ref_phasing, vcf_add_genotype
 from xcltk.utils.base import assert_e, assert_n
+from xcltk.utils.vcf import vcf_index, vcf_merge, vcf_split_chrom
 from xcltk.utils.xlog import init_logging
 
 
@@ -105,7 +100,33 @@ def main(argv):
         else:
             error("invalid option: '%s'." % op)
             return(-1)
+        
+    ret = run_baf_preprocess(
+        label = label,
+        sam_fn = sam_fn, sam_list_fn = sam_list_fn, barcode_fn = barcode_fn,
+        snp_vcf_fn = snp_vcf_fn,
+        out_dir = out_dir,
+        gmap_fn = gmap_fn, eagle_fn = eagle_fn, panel_dir = panel_dir,
+        cell_tag = cell_tag, umi_tag = umi_tag,
+        ncores = ncores,
+        mode = mode
+    )
+    
+    info("All Done!")
 
+    return(ret)
+        
+
+def run_baf_preprocess(
+    label,
+    sam_fn = None, sam_list_fn = None, barcode_fn = None,
+    snp_vcf_fn = None,
+    out_dir = None,
+    gmap_fn = None, eagle_fn = None, panel_dir = None,
+    cell_tag = "CB", umi_tag = "UB",
+    ncores = 1,
+    mode = "10x"
+):
     info("xcltk BAF preprocessing starts ...")
 
     # check args
@@ -113,12 +134,20 @@ def main(argv):
 
     assert_n(label)
     sample = label if mode == "bulk" else None
-    assert_e(gmap_fn)
-    genome = "hg19" if "hg19" in gmap_fn else "hg38"
+    assert_e(snp_vcf_fn)
     if not os.path.exists(out_dir):
         os.mkdir(out_dir)
 
-    # other args will be checked in pileup().
+    assert_e(gmap_fn)
+    assert_e(eagle_fn)
+    assert_e(panel_dir)
+    for chrom in range(1, 23):
+        assert_e(os.path.join(panel_dir, "chr%d.genotypes.bcf" % chrom))
+        assert_e(os.path.join(panel_dir, "chr%d.genotypes.bcf.csi" % chrom))
+
+    genome = "hg19" if "hg19" in gmap_fn else "hg38"
+
+    # other args will be checked in pileup() and ref_phasing().
     info("run in '%s' mode (genome version '%s')" % (mode, genome))
 
     # pileup
@@ -142,6 +171,92 @@ def main(argv):
         script_fn = pileup_script,
         log_fn = pileup_log_fn
     )
+
+    pileup_vcf_fn = os.path.join(pileup_dir, "cellSNP.base.vcf.gz")
+    assert_e(pileup_vcf_fn)
+
+    info("pileup VCF is '%s'." % pileup_vcf_fn)
+
+    # prepare VCF files for phasing
+    info("prepare VCF files for phasing ...")
+
+    phasing_dir = os.path.join(out_dir, "phasing")
+    if not os.path.exists(phasing_dir):
+        os.mkdir(phasing_dir)
+    phasing_script = os.path.join(out_dir, "run_phasing.sh")
+    phasing_log_fn = os.path.join(out_dir, "phasing.log")
+
+    # add genotypes
+    info("add genotypes ...")
+
+    genotype_vcf_fn = os.path.join(out_dir, "%s.genotype.vcf.gz" % label)
+    vcf_add_genotype(
+        in_fn = pileup_vcf_fn,
+        out_fn = genotype_vcf_fn,
+        sample = label,
+        chr_prefix = True,     # add "chr" prefix
+        sort = True,
+        unique = True
+    )
+
+    # split VCF by chromosomes.
+    info("split VCF by chromosomes ...")
+
+    valid_chroms = []       # has "chr" prefix
+    target_vcf_list = []
+    res = vcf_split_chrom(
+        fn = genotype_vcf_fn,
+        out_dir = phasing_dir,
+        label = label,
+        chrom_list = ["chr" + str(i) for i in range(1, 23)],
+        out_prefix_list = None,
+        verbose = True
+    )
+    for chrom, n_variants, vcf_fn in res:
+        if n_variants > 0:
+            valid_chroms.append(chrom)
+            target_vcf_list.append(vcf_fn)
+            vcf_index(vcf_fn)
+
+    info("%d chromosome VCFs are outputted with variants." % len(valid_chroms))
+    #os.remove(genotype_vcf_fn)
+
+    # reference phasing
+    info("reference phasing ...")
+
+    ref_vcf_list = [os.path.join(panel_dir, "%s.genotypes.bcf" % chrom) \
+                    for chrom in valid_chroms]
+    out_prefix_list = [os.path.join(phasing_dir, "%s_%s.phased" % \
+                    (label, chrom)) for chrom in valid_chroms]
+    ref_phasing(
+        target_vcf_list = target_vcf_list,
+        ref_vcf_list = ref_vcf_list,
+        out_prefix_list = out_prefix_list,
+        gmap_fn = gmap_fn,
+        eagle_fn = eagle_fn,
+        out_dir = phasing_dir,
+        ncores = ncores,
+        script_fn = phasing_script,
+        log_fn = phasing_log_fn,
+        verbose = True
+    )
+
+    info("phased VCFs are in dir '%s'." % phasing_dir)
+
+    # merge phased VCFs
+    info("merge phased VCFs ...")
+
+    phased_vcf_list = ["%s.vcf.gz" % prefix for prefix in out_prefix_list]
+    for fn in phased_vcf_list:
+        assert_e(fn)
+
+    phased_vcf_fn = os.path.join(out_dir, "%s.phased.vcf.gz" % label)
+    vcf_merge(phased_vcf_list, phased_vcf_fn, sort = True)
+
+    info("merged VCF is '%s'." % phased_vcf_fn)
+
+    # count allele counts for each feature.
+    
 
 
 APP = "baf.py"

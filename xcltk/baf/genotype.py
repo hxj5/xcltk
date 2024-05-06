@@ -1,9 +1,6 @@
 # genotype.py - preprocess the input BAM file to generate reference-phased cell x gene AD & DP matrices.
 
-import gzip
 import os
-import pandas as pd
-import random
 import stat
 import subprocess
 import sys
@@ -11,6 +8,9 @@ import sys
 from logging import error, info
 from logging import warning as warn
 from ..utils.base import assert_e, assert_n
+from ..utils.vcf import vcf_load, vcf_save, \
+    vcf_add_chr_prefix_core, vcf_remove_chr_prefix_core, \
+    vcf_hdr_check_contig_core
 
 
 def pileup(
@@ -26,9 +26,11 @@ def pileup(
 ):
     """Pileup indexed BAM file, supporting both single-cell and bulk data.
 
-    The function internally will call `cellsnp-lite` for pileup.
-    The input BAM file(s) should be specified by one and only one of `sam_fn`
-    and `sam_list_fn`.
+    The function takes as input the BAM file and a list of SNPs for pileup,
+    and outputs three sparse matrices, "AD" (alternative allele counts), 
+    "DP" (reference and alternative allele counts), and "OTH" 
+    (counts of other alleles).
+    For pileup, it internally calls the `cellsnp-lite` command-line tool.
 
     Parameters
     ----------
@@ -36,8 +38,14 @@ def pileup(
         Comma separated indexed BAM/CRAM file(s).
     sam_list_fn : str
         A file listing BAM/CRAM files, each per line.
+        Note that The input BAM file(s) should be specified by one and only
+        one of `sam_fn` and `sam_list_fn`.
     barcode_fn : str
-        A plain file listing all effective cell barcodes (for 10x) or cell IDs (for smartseq).
+        A plain file listing all effective cell barcodes (for 10x) or 
+        cell IDs (for smartseq).
+        For smartseq data, the order of the BAM files (in `sam_fn` or 
+        `sam_list_fn`) and the sample IDs (in `barcode_fn`) should match 
+        each other.
     sample : str
         Sample ID (for bulk data).
     snp_vcf_fn : str
@@ -71,11 +79,6 @@ def pileup(
     ------
     AssertionError
         when some input file or dirs are invalid.
-
-    Notes
-    -----
-    1. For smartseq data, the order of the BAM files (in `sam_fn` or `sam_list_fn`)
-       and the sample IDs (in `barcode_fn`) should match each other.
     """
     # check args
     assert mode in ("10x", "smartseq", "bulk")
@@ -141,7 +144,8 @@ def pileup(
     cmd += "    --minMAF  %s  \\\n" % str(min_maf)
     cmd += "    --minCOUNT  %s  \\\n" % str(min_count)
     cmd += "    --cellTAG  %s  \\\n" % str(cell_tag)
-    cmd += "    --UMItag  %s  \n" % str(umi_tag)
+    cmd += "    --UMItag  %s  \\\n" % str(umi_tag)
+    cmd += "    --gzip    \n"
 
     with open(script_fn, "w") as fp:
         fp.write(cmd)
@@ -160,7 +164,218 @@ def pileup(
         )
         outs, errs = proc.communicate()
         ret = proc.returncode
+        if ret != 0:
+            raise RuntimeError(str(errs.decode()))
     except Exception as e:
         error(str(e))
         error("Error: pileup failed (retcode '%s')." % str(ret))
         sys.exit(1)
+
+
+def ref_phasing(
+    target_vcf_list, ref_vcf_list, out_prefix_list,
+    gmap_fn,
+    eagle_fn,
+    out_dir,
+    ncores = 1,
+    script_fn = None, log_fn = None,
+    verbose = False
+):
+    """Reference phasing
+
+    The functions takes as input the target and reference VCF files, together
+    with the reference panels for SNP phasing, and outputs corresponding
+    phased VCF (.vcf.gz) files in BGZF format.
+    It internally calls the `Eagle2` command-line tool for phasing.
+
+    Parameters
+    ----------
+    target_vcf_list : list
+        A list of target VCF files, i.e., the input VCF files to be phased.
+    ref_vcf_list : list
+        A list of reference VCF files, i.e., the input VCF files containing
+        reference genotypes.
+    out_prefix_list : list
+        A list of prefixes of the output VCF files. The output phased VCF
+        filename will be, e.g., `<out_prefix_list[0]>.vcf.gz`.
+    gmap_fn : str
+        The genetic map file.
+    eagle_fn : str
+        The Eagle2 binary executable file.
+    out_dir : str
+        The output dir.
+    ncores : int
+        Number of threads.
+    script_fn : str
+        Path to the script file that runs Eagle2. If `None`, use default path
+        `<out_dir>/run_phasing.sh`.
+    log_fn : str
+        Path to the logging file that records the output of Eagle2. If `None`,
+        use default path `<out_dir>/phasing.log`.
+    verbose : bool
+        Whether to show detailed logging information.
+
+    Returns
+    -------
+    None
+
+    Raises
+    ------
+    ValueError
+        When some input arguments are invalid.
+    AssertionError
+        When some input arguments are invalid.
+    """
+    if verbose:
+        info("start reference phasing ...")
+
+    # check args
+    if not target_vcf_list:
+        raise ValueError("target vcf list is empty.")
+    if not ref_vcf_list:
+        raise ValueError("reference vcf list is empty.")
+    if not out_prefix_list:
+        raise ValueError("output prefix list is empty.")
+    if len(target_vcf_list) != len(ref_vcf_list):
+        raise ValueError("number of target and reference vcf files should be the same.")
+    if len(target_vcf_list) != len(out_prefix_list):
+        raise ValueError("number of target vcf files and output prefix should be the same.")
+    for fn in target_vcf_list:
+        assert_e(fn)
+    for fn in ref_vcf_list:
+        assert_e(fn)
+    for prefix in out_prefix_list:
+        assert_n(prefix)
+
+    assert_e(gmap_fn)
+    assert_e(eagle_fn)
+    assert_n(out_dir)
+    if not os.path.exists(out_dir):
+        os.mkdir(out_dir)
+
+    if script_fn is None:
+        script_fn = os.path.join(out_dir, "run_phasing.sh")
+    if log_fn is None:
+        log_fn = os.path.join(out_dir, "phasing.log")
+
+    # generate pileup script
+    if verbose:
+        info("generate phasing script ...")
+
+    cmd  = ""
+    for target_vcf_fn, ref_vcf_fn, out_prefix in zip(
+        target_vcf_list, ref_vcf_list, out_prefix_list
+    ):
+        cmd += "%s  \\\n" % eagle_fn
+        cmd += "    --vcfTarget  %s    \\\n" % target_vcf_fn 
+        cmd += "    --vcfRef  %s   \\\n" % ref_vcf_fn 
+        cmd += "    --geneticMapFile  %s    \\\n" % gmap_fn
+        cmd += "    --outPrefix  %s    \\\n" % out_prefix
+        cmd += "    --numThreads  %d    \n" % ncores
+        cmd += "\n"
+
+    with open(script_fn, "w") as fp:
+        fp.write(cmd)
+    st = os.stat(script_fn)
+    os.chmod(script_fn, st.st_mode | stat.S_IXUSR)
+
+    # run phasing
+    if verbose:
+        info("run phasing ...")
+
+    ret = None
+    try:
+        proc = subprocess.Popen(
+            args = "%s 2>&1 | tee %s" % (script_fn, log_fn),
+            shell = True,
+            executable = "/bin/bash", 
+            stdout = subprocess.PIPE, 
+            stderr = subprocess.PIPE
+        )
+        outs, errs = proc.communicate()
+        ret = proc.returncode
+        if ret != 0:
+            raise RuntimeError(str(errs.decode()))
+    except Exception as e:
+        error(str(e))
+        error("Error: phasing failed (retcode '%s')." % str(ret))
+        sys.exit(1)
+
+
+def vcf_add_genotype(
+    in_fn, out_fn, 
+    sample, 
+    chr_prefix = None, 
+    sort = True,
+    unique = True
+):
+    """Add genotypes (`GT` field) in VCF file
+
+    The function adds variant genotpyes (i.e., the `GT` field) into the 
+    VCF file.
+    Currently, all genotypes will be simply set as "0/1" assuming all input
+    variants are heterzygous.
+
+    Parameters
+    ----------
+    in_fn : str
+        The input VCF file.
+    out_fn : str
+        The oupput VCF file.
+    sample : str
+        The sample name, used in the sample field of the output VCF.
+    chr_prefix : bool
+        Should the chromosome names have "chr" prefix. 
+        If `None`, keep it unchanged.
+    sort : bool
+        Whether the variants should be sorted. If `True`, the SNPs will be
+        sorted based on `CHROM`, `POS`, `REF`, `ALT`.
+    unique: bool
+        Whether the variants should be unique. 
+        If `True`, the duplicate variants (based on `CHROM`, `POS`, `REF`,
+        `ALT`) will be discarded, keeping the first unique records only.
+
+    Returns
+    -------
+    None
+
+    Raises
+    ------
+    ValueError
+    AssertionError
+    """
+    variants, header = vcf_load(in_fn)
+
+    if variants is None or variants.shape[0] <= 0:
+        raise ValueError("no records in vcf '%s'." % in_fn)
+    assert len(variants.columns) >= 8
+    assert variants.columns[0] == "CHROM"
+
+    # add genotype
+    if "FORMAT" in variants.columns:
+        warn("FORMAT in vcf '%s'." % in_fn)
+    if sample in variants.columns:
+        raise ValueError("sample name '%s' in vcf '%s'." % (sample, in_fn))
+
+    header[-1] = header[-1] + "\tFORMAT\t%s" % sample
+    variants["FORMAT"] = "GT"
+    variants[sample] = "0/1"
+
+    # make sure the vcf header "contig" lines are complete.
+    variants, header = vcf_hdr_check_contig_core(variants, header)
+
+    # process "chr" prefix
+    if chr_prefix is not None:
+        if chr_prefix:
+            variants, header = vcf_add_chr_prefix_core(variants, header)
+        else:
+            variants, header = vcf_remove_chr_prefix_core(variants, header)
+
+    # sort SNPs and drop duplicates
+    if sort:
+        variants = variants.sort_values(by = ["CHROM", "POS", "REF", "ALT"])
+    if unique:
+        variants = variants.drop_duplicates(
+            subset = ["CHROM", "POS", "REF", "ALT"])
+
+    vcf_save(variants, header, out_fn)
