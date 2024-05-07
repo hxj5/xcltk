@@ -7,7 +7,7 @@
 
 import sys
 
-from .baf.count import pileup as baf_pileup
+from .baf.count import pileup_main as baf_pileup
 from .baf.fixref import fixref as baf_fix_ref
 from .baf.rpc import main_rpc as baf_rpc
 from .config import APP, VERSION
