@@ -5,6 +5,7 @@ import os
 import sys
 
 from logging import error, info
+from xcltk.baf.count import pileup as baf_fc      # BAF feature counting
 from xcltk.baf.genotype import pileup, ref_phasing, vcf_add_genotype
 from xcltk.utils.base import assert_e, assert_n
 from xcltk.utils.vcf import vcf_index, vcf_merge, vcf_split_chrom
@@ -23,6 +24,8 @@ def usage(fp = sys.stdout):
     s += "  --barcode FILE     A plain file listing all effective cell barcodes (for 10x)\n"
     s += "                     or sample IDs (for smartseq).\n"
     s += "  --snpvcf FILE      A vcf file listing all candidate SNPs.\n"
+    s += "  --region FILE      A TSV file listing target features. The first 4 columns shoud be:\n"
+    s += "                     chrom, start, end (both 1-based and inclusive), name.\n"
     s += "  --outdir DIR       Output dir.\n"
     s += "  --gmap FILE        Path to genetic map provided by Eagle2\n"
     s += "                     (e.g. Eagle_v2.4.1/tables/genetic_map_hg38_withX.txt.gz).\n"
@@ -32,8 +35,8 @@ def usage(fp = sys.stdout):
     s += "  --help             Print this message and exit.\n"
     s += "\n"
     s += "Optional arguments:\n"
-    s += "  --cellTAG STR      Cell barcode tag [%s]\n" % CELL_TAG
-    s += "  --UMItag STR       UMI tag [%s]\n" % UMI_TAG
+    s += "  --cellTAG STR      Cell barcode tag; Set to None if not available [%s]\n" % CELL_TAG
+    s += "  --UMItag STR       UMI tag; Set to None if not available [%s]\n" % UMI_TAG
     s += "  --ncores INT       Number of threads [%d]\n" % N_CORES
     s += "  --smartseq         Run in smartseq mode.\n"
     s += "  --bulk             Run in bulk mode.\n"
@@ -42,6 +45,7 @@ def usage(fp = sys.stdout):
     s += "  1. One and only one of `--sam` and `--samlist` should be specified.\n"
     s += "  2. For smartseq data, the order of the BAM files (in `--sam` or `--samlist`)\n"
     s += "     and the sample IDs (in `--barcode`) should match each other.\n"
+    s += "  3. For bulk data, the label (`--label`) will be used as the sample ID.\n"
     s += "\n"
 
     fp.write(s)
@@ -55,7 +59,7 @@ def main(argv):
     init_logging(stream = sys.stdout)
 
     label = None
-    sam_fn = sam_list_fn = barcode_fn = snp_vcf_fn = None
+    sam_fn = sam_list_fn = barcode_fn = snp_vcf_fn = region_fn = None
     out_dir = None
     gmap_fn = eagle_fn = panel_dir = None
     cell_tag, umi_tag = CELL_TAG, UMI_TAG
@@ -67,7 +71,7 @@ def main(argv):
         shortopts = "", 
         longopts = [
             "label=",
-            "sam=", "samlist=", "barcode=", "snpvcf=",
+            "sam=", "samlist=", "barcode=", "snpvcf=", "region=",
             "outdir=",
             "gmap=", "eagle=", "paneldir=",
             "version", "help",
@@ -85,6 +89,7 @@ def main(argv):
         elif op in ("--samlist"): sam_list_fn = val
         elif op in ("--barcode"): barcode_fn = val
         elif op in ("--snpvcf"): snp_vcf_fn = val
+        elif op in ("--region"): region_fn = val
         elif op in ("--outdir"): out_dir = val
         elif op in ("--gmap"): gmap_fn = val
         elif op in ("--eagle"): eagle_fn = val
@@ -104,7 +109,7 @@ def main(argv):
     ret = run_baf_preprocess(
         label = label,
         sam_fn = sam_fn, sam_list_fn = sam_list_fn, barcode_fn = barcode_fn,
-        snp_vcf_fn = snp_vcf_fn,
+        snp_vcf_fn = snp_vcf_fn, region_fn = region_fn,
         out_dir = out_dir,
         gmap_fn = gmap_fn, eagle_fn = eagle_fn, panel_dir = panel_dir,
         cell_tag = cell_tag, umi_tag = umi_tag,
@@ -120,7 +125,7 @@ def main(argv):
 def run_baf_preprocess(
     label,
     sam_fn = None, sam_list_fn = None, barcode_fn = None,
-    snp_vcf_fn = None,
+    snp_vcf_fn = None, region_fn = None,
     out_dir = None,
     gmap_fn = None, eagle_fn = None, panel_dir = None,
     cell_tag = "CB", umi_tag = "UB",
@@ -144,6 +149,8 @@ def run_baf_preprocess(
     for chrom in range(1, 23):
         assert_e(os.path.join(panel_dir, "chr%d.genotypes.bcf" % chrom))
         assert_e(os.path.join(panel_dir, "chr%d.genotypes.bcf.csi" % chrom))
+
+    assert_e(region_fn)
 
     genome = "hg19" if "hg19" in gmap_fn else "hg38"
 
@@ -256,7 +263,39 @@ def run_baf_preprocess(
     info("merged VCF is '%s'." % phased_vcf_fn)
 
     # count allele counts for each feature.
-    
+    info("BAF feature counting ...")
+
+    fc_dir = os.path.join(out_dir, "baf_fc")
+    if not os.path.exists(fc_dir):
+        os.mkdir(fc_dir)
+
+    fc_barcode_fn = fc_sample_ids = fc_sample_id_fn = None
+    if mode == "10x":
+        fc_barcode_fn = barcode_fn
+    elif mode == "smartseq":
+        fc_sample_id_fn = barcode_fn
+    else:
+        fc_sample_ids = label
+    baf_fc(
+        sam_fn = sam_fn, 
+        barcode_fn = fc_barcode_fn,
+        region_fn = region_fn, 
+        phased_snp_fn = phased_vcf_fn,
+        out_dir = fc_dir,
+        sam_list_fn = sam_list_fn,
+        sample_ids = fc_sample_ids, 
+        sample_id_fn = fc_sample_id_fn,
+        debug_level = 0,
+        ncores = ncores,
+        cell_tag = cell_tag, umi_tag = umi_tag,
+        min_count = 1, min_maf = 0,
+        output_all_reg = True, no_dup_hap = True,
+        min_mapq = 20, min_len = 30,
+        incl_flag = 0, excl_flag = None,
+        no_orphan = True
+    )
+
+    info("feature BAFs are at '%s'." % fc_dir)
 
 
 APP = "baf.py"
