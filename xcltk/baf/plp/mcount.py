@@ -1,27 +1,45 @@
-# Reads Counting
+# mcount.py - Reads Counting
 # Author: Xianjie Huang
 
 from ...utils.sam import get_query_bases
 
+
 class UCount:
     """Counting Unit
-    @param scnt   A SCount object that the UCount object belongs to.
-    @param conf   A config::Config object.
-    @param allele The allele for the query SNP in this UMI [str]
+
+    Parameters
+    ----------
+    scnt : SCount object
+        A SCount object that the UCount object belongs to.
+    conf : config::Config object
+        Configuration.
+    allele : str
+        The allele for the query SNP in this UMI.
     """
     def __init__(self):
         self.scnt = None
         self.conf = None
         self.allele = None
 
+    # here we use `prepare` function to set `UCount`, instead of initialize
+    # directly in `__init__` function, in case a memory pool of `UCount`
+    # is used.
     def prepare(self, scnt, conf):
         self.scnt = scnt
         self.conf = conf
 
     def push_read(self, read):
         """Push one read into this count machine.
-        @param read   One pysam::AlignedSegment object.
-        @return       0 if success, -1 otherwise [int]
+        
+        Parameters
+        ----------
+        read : pysam::AlignedSegment object
+            A BAM read to be counted.
+
+        Returns
+        -------
+        int
+            0 if success, -1 otherwise.
         """
         snp = self.scnt.mcnt.snp
         try:
@@ -36,12 +54,21 @@ class UCount:
     def stat(self):
         return(0)
 
+
 class SCount:
     """Counting for single sample
-    @param mcnt     A MCount object that the SCount object belongs to.
-    @param conf     A config::Config object.
-    @param tcount   Total transcript / reads count for single sample.
-    @param umi_cnt  HashMap of <str:UCount> for umi:UCount pair, mainly for 10x data.
+
+    Parameters
+    ----------
+    mcnt : MCount object
+        A MCount object that the SCount object belongs to.
+    conf : config::Config object
+        Configuration.
+    tcount : list
+        Total read / UMI counts for A/C/G/T/N bases, only for this 
+        sample [list of int; 5 elements].
+    umi_cnt : dict
+        HashMap of <str:UCount> for umi:UCount pair, mainly for 10x data.
     """
     def __init__(self, mcnt, conf):
         self.mcnt = mcnt
@@ -87,15 +114,27 @@ class SCount:
                 self.tcount[idx] += 1
         return(0)
 
+
 class MCount:
     """Counting for multiple samples
-    @param samples    A list of sample IDs/barcodes [list of str]
-    @param conf       A config::Config object.
-    @param snp        A region::SNP object.
-    @param tcount     Array of total read / UMI counts [list of int]
-    @param base_idx   The mapping from base (str) to index (int) for @p tcount [dict]
-    @param cell_cnt   HashMap of <str, SCount> for sample:SCount pair.
-    @param is_reset   Has this object been reset [bool]
+
+    Parameters
+    ----------
+    samples : list
+        A list of cell barcodes or sample IDs [list of str].
+    conf : config::Config object
+        Configuration
+    snp : region::SNP object
+        The SNP beging pileuped.
+    tcount : list
+        Total read / UMI counts for A/C/G/T/N bases, aggregated for all 
+        samples [list of int; 5 elements].
+    base_idx : dict
+        The mapping from base (str) to index (int) for `tcount`.
+    cell_cnt : dict
+        HashMap of <str, SCount> for sample:SCount pair.
+    is_reset : boot
+        Has this object been reset.
     """
     def __init__(self, samples, conf):
         self.samples = samples
@@ -118,16 +157,30 @@ class MCount:
         self.is_reset = False
         return(0)
 
-    def push_read(self, read):
+    def push_read(self, read, sid = None):
         """Push one read into this counting machine.
-        @param read  A pysam::AlignedSegment object.
-        @return      0 if success, -1 error, -2 read filtered [int]
+
+        Parameters
+        ----------
+        read : pysam::AlignedSegment object
+            A BAM read to be counted.
+        sid : str
+            The ID of the sample that the read belongs to. 
+            Set to `None` if cell barcodes are used.
+
+        Returns
+        -------
+        int
+            0 if success, -1 error, -2 read filtered.
         """
         conf = self.conf
-        cb = read.get_tag(conf.cell_tag)
+        if conf.use_barcodes():
+            smp = read.get_tag(conf.cell_tag)
+        else:
+            smp = sid
         scnt = None
-        if cb in self.cell_cnt:
-            scnt = self.cell_cnt[cb]
+        if smp in self.cell_cnt:
+            scnt = self.cell_cnt[smp]
         else:
             return(-2)
 

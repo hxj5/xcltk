@@ -1,6 +1,5 @@
 # count.py - allele counting for each feature.
 
-# Note: now it only supports 10x data.
 
 import getopt
 import multiprocessing
@@ -10,9 +9,10 @@ import sys
 import time
 
 from logging import debug, error, info
+from logging import warning as warn
 
 from .plp.config import Config
-from .plp.core import sp_count
+from .plp.core import plp_features
 from .plp.thread import ThreadData
 from .plp.utils import load_region_from_txt, load_snp_from_vcf, \
     load_snp_from_tsv, merge_mtx, merge_tsv
@@ -28,17 +28,20 @@ def usage(fp = sys.stderr, conf = None):
     s += "Usage:   %s %s <options>\n" % (APP, COMMAND)
     s += "\n" 
     s += "Options:\n"
-    s += "  -s, --sam FILE         Indexed sam/bam/cram file.\n"
+    s += "  -s, --sam FILE         Comma separated indexed sam/bam/cram file.\n"
+    s += "  -S, --samList FILE     A list file containing bam files, each per line.\n"
     s += "  -b, --barcode FILE     A plain file listing all effective cell barcode.\n"
     s += "  -R, --region FILE      A TSV file listing target regions. The first 4 columns shoud be:\n"
     s += "                         chrom, start, end (both 1-based and inclusive), name.\n"
     s += "  -P, --phasedSNP FILE   A TSV or VCF file listing phased SNPs (i.e., containing phased GT).\n"
+    s += "  -i, --sampleList FILE  A list file containing sample IDs, each per line.\n"
+    s += "  -I, --sampleIDs STR    Comma separated sample IDs.\n"
     s += "  -O, --outdir DIR       Output directory for sparse matrices.\n"
     s += "  -h, --help             Print this message and exit.\n"
     s += "\n"
     s += "Optional arguments:\n"
     s += "  -p, --nproc INT        Number of processes [%d]\n" % conf.NPROC
-    s += "      --cellTAG STR      Tag for cell barcodes [%s]\n" % conf.CELL_TAG
+    s += "      --cellTAG STR      Tag for cell barcodes, set to None when using sample IDs [%s]\n" % conf.CELL_TAG
     s += "      --UMItag STR       Tag for UMI, set to None when reads only [%s]\n" % conf.UMI_TAG
     s += "      --minCOUNT INT     Mininum aggragated count for SNP [%d]\n" % conf.MIN_COUNT
     s += "      --minMAF FLOAT     Mininum minor allele fraction for SNP [%f]\n" % conf.MIN_MAF
@@ -76,10 +79,11 @@ def pileup_main(argv, conf = None):
 
     opts, args = getopt.getopt(
         args = argv[2:], 
-        shortopts = "-s:-b:-R:-P:-O:-h-p:-D:", 
+        shortopts = "-s:-S:-b:-R:-P:-i:-I:-O:-h-p:-D:", 
         longopts = [
-            "sam=", "barcode=",
+            "sam=", "samList=", "barcode=",
             "region=", "phasedSNP=",
+            "sampleList=", "sampleIDs=",
             "outdir=",
             "help",
 
@@ -95,9 +99,12 @@ def pileup_main(argv, conf = None):
         if len(op) > 2:
             op = op.lower()
         if op in   ("-s", "--sam"): conf.sam_fn = val
+        elif op in ("-S", "--samlist"): conf.sam_list_fn = val
         elif op in ("-b", "--barcode"): conf.barcode_fn = val
         elif op in ("-R", "--region"): conf.region_fn = val
         elif op in ("-P", "--phasedsnp"): conf.snp_fn = val
+        elif op in ("-i", "--samplelist"): conf.sample_id_fn = val
+        elif op in ("-I", "--sampleids"): conf.sample_id_str = val
         elif op in ("-O", "--outdir"): conf.out_dir = val
         elif op in ("-h", "--help"): usage(sys.stderr, conf.defaults); sys.exit(1)
 
@@ -128,6 +135,8 @@ def pileup(
     sam_fn, barcode_fn,
     region_fn, phased_snp_fn, 
     out_dir,
+    sam_list_fn = None,
+    sample_ids = None, sample_id_fn = None,
     debug_level = 0,
     ncores = 1,
     cell_tag = "CB", umi_tag = "UB",
@@ -140,9 +149,12 @@ def pileup(
     conf = Config()
 
     conf.sam_fn = sam_fn
+    conf.sam_list_fn = sam_list_fn
     conf.barcode_fn = barcode_fn
     conf.region_fn = region_fn
     conf.snp_fn = phased_snp_fn
+    conf.sample_id_str = sample_ids
+    conf.sample_id_fn = sample_id_fn
     conf.out_dir = out_dir
     conf.debug = debug_level
 
@@ -228,12 +240,12 @@ def pileup_core(conf):
         )
         thdata_list.append(thdata)
         if conf.debug > 0:
-            debug("data of thread-%d before sp_count:" % i)
+            debug("data of thread-%d before plp_features:" % i)
             thdata.show(fp = sys.stderr, prefix = "\t")
         mp_result.append(pool.apply_async(
-                func = sp_count, 
-                args = (thdata, ), 
-                callback = show_progress))   # TODO: error_callback?
+            func = plp_features, 
+            args = (thdata, ), 
+            callback = show_progress))   # TODO: error_callback?
     pool.close()
     pool.join()
     mp_result = [res.get() for res in mp_result]
@@ -246,7 +258,7 @@ def pileup_core(conf):
     # check running status of each sub-process
     for thdata in thdata_list:         
         if conf.debug > 0:
-            debug("data of thread-%d after sp_count:" %  thdata.idx)
+            debug("data of thread-%d after plp_features:" %  thdata.idx)
             thdata.show(fp = sys.stderr, prefix = "\t")
         if thdata.ret < 0:
             raise ValueError("errcode -3")
@@ -264,7 +276,7 @@ def pileup_core(conf):
     if merge_mtx(
         [td.out_ad_fn for td in thdata_list], ZF_F_GZIP, 
         conf.out_ad_fn, "w", ZF_F_PLAIN,
-        nr_reg_list, len(conf.barcodes), 
+        nr_reg_list, len(conf.samples),
         sum([td.nr_ad for td in thdata_list]),
         remove = True
     ) < 0:
@@ -273,7 +285,7 @@ def pileup_core(conf):
     if merge_mtx(
         [td.out_dp_fn for td in thdata_list], ZF_F_GZIP, 
         conf.out_dp_fn, "w", ZF_F_PLAIN,
-        nr_reg_list, len(conf.barcodes), 
+        nr_reg_list, len(conf.samples), 
         sum([td.nr_dp for td in thdata_list]),
         remove = True
     ) < 0:
@@ -282,7 +294,7 @@ def pileup_core(conf):
     if merge_mtx(
         [td.out_oth_fn for td in thdata_list], ZF_F_GZIP, 
         conf.out_oth_fn, "w", ZF_F_PLAIN,
-        nr_reg_list, len(conf.barcodes), 
+        nr_reg_list, len(conf.samples),
         sum([td.nr_oth for td in thdata_list]),
         remove = True
     ) < 0:
@@ -331,14 +343,27 @@ def prepare_config(conf):
     @note        This function should be called after cmdline is parsed.
     """
     if conf.sam_fn:
-        if not os.path.isfile(conf.sam_fn):
-            error("sam file '%s' does not exist." % conf.sam_fn)
+        if conf.sam_list_fn:
+            error("should not specify 'sam_fn' and 'sam_list_fn' together.")
             return(-1)
+        conf.sam_fn_list = conf.sam_fn.split(",")
     else:
-        error("sam file(s) needed!")
-        return(-1)
+        if not conf.sam_list_fn:
+            error("one of 'sam_fn' and 'sam_list_fn' should be specified.")
+            return(-1)
+        with open(conf.sam_list_fn, "r") as fp:
+            conf.sam_fn_list = [x.rstrip() for x in fp.readlines()]
+    
+    for fn in conf.sam_fn_list:
+        if not os.path.isfile(fn):
+            error("sam file '%s' does not exist." % fn)
+            return(-1)
 
     if conf.barcode_fn:
+        conf.sample_ids = None
+        if conf.sample_id_str or conf.sample_id_fn:
+            error("should not specify barcodes and sample IDs together.")
+            return(-1)
         if os.path.isfile(conf.barcode_fn):
             with zopen(conf.barcode_fn, "rt") as fp:
                 conf.barcodes = sorted([x.strip() for x in fp])   # UPDATE!! use numpy or pandas to load
@@ -348,10 +373,25 @@ def prepare_config(conf):
         else:
             error("barcode file '%s' does not exist." % conf.barcode_fn)
             return(-1)
-    else:       
+    else:
         conf.barcodes = None
-        error("barcode file needed!")
-        return(-1)
+        if conf.sample_id_str and conf.sample_id_fn:
+            error("should not specify 'sample_id_str' and 'sample_fn' together.")
+            return(-1)
+        elif conf.sample_id_str:
+            conf.sample_ids = conf.sample_id_str.split(",")
+        elif conf.sample_id_fn:
+            with zopen(conf.sample_id_fn, "rt") as fp:
+                conf.sample_ids = sorted([x.strip() for x in fp])
+        else:
+            warn("use default sample IDs ...")
+            conf.sample_ids = ["Sample%d" % i for i in \
+                range(len(conf.sam_fn_list))]
+        if len(conf.sample_ids) != len(conf.sam_fn_list):
+            error("numbers of sam files and sample IDs are different.")
+            return(-1)
+        
+    conf.samples = conf.barcodes if conf.barcodes else conf.sample_ids
 
     if not conf.out_dir:
         error("out dir needed!")
@@ -374,7 +414,7 @@ def prepare_config(conf):
                 error("failed to load region file.")
                 return(-1)
             info("count %d regions in %d single cells." % (
-                len(conf.reg_list), len(conf.barcodes)))
+                len(conf.reg_list), len(conf.samples)))
         else:
             error("region file '%s' does not exist." % conf.region_fn)
             return(-1)
@@ -409,8 +449,7 @@ def prepare_config(conf):
         error("should not specify cell_tag or barcodes alone.")
         return(-1)
     else:
-        error("should specify cell_tag and barcodes.")
-        return(-1)        
+        pass    
 
     if conf.umi_tag:
         if conf.umi_tag.upper() == "AUTO":
@@ -421,12 +460,10 @@ def prepare_config(conf):
         elif conf.umi_tag.upper() == "NONE":
             conf.umi_tag = None
     else:
-        error("umi tag needed!")
-        return(-1)
+        pass
 
-    if conf.barcodes:
-        with open(conf.out_sample_fn, "w") as fp:
-            fp.write("".join([b + "\n" for b in conf.barcodes]))
+    with open(conf.out_sample_fn, "w") as fp:
+        fp.write("".join([smp + "\n" for smp in conf.samples]))
 
     if conf.excl_flag < 0:
         if conf.use_umi():
