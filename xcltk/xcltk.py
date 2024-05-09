@@ -57,6 +57,3 @@ def main():
     elif command in ("-h", "--help"): __usage(); sys.exit(3)
     elif command in ("-V", "--version"): sys.stderr.write("%s\n" % VERSION); sys.exit(3)
     else: sys.stderr.write("Error: wrong command '%s'\n" % command); sys.exit(5)
-
-if __name__ == "__main__":
-    main()

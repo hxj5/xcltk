@@ -47,7 +47,7 @@ def usage(fp = sys.stdout):
     s += "Optional arguments:\n"
     s += "  --cellTAG STR      Cell barcode tag; Set to None if not available [%s]\n" % CELL_TAG
     s += "  --UMItag STR       UMI tag; Set to None if not available [%s]\n" % UMI_TAG
-    s += "  --nproc INT        Number of threads [%d]\n" % N_CORES
+    s += "  --ncores INT       Number of threads [%d]\n" % N_CORES
     s += "\n"
     s += "Notes:\n"
     s += "1. One and only one of `--sam` and `--samlist` should be specified.\n"
@@ -88,7 +88,7 @@ def pipeline_main(argv):
             "version", "help",
             
             "cellTAG=", "UMItag=",
-            "nproc="
+            "ncores="
         ])
 
     for op, val in opts:
@@ -110,7 +110,7 @@ def pipeline_main(argv):
 
         elif op in ("--celltag"): cell_tag = val
         elif op in ("--umitag"): umi_tag = val
-        elif op in ("--nproc"): ncores = int(val)     # keep it in `str` format.
+        elif op in ("--ncores"): ncores = int(val)     # keep it in `str` format.
         else:
             error("invalid option: '%s'." % op)
             return(-1)

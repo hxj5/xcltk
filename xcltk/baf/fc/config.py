@@ -1,4 +1,4 @@
-# config.py - global configuration
+# config.py - configuration
 
 import sys
 from ...config import APP

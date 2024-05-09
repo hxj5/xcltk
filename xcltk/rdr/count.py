@@ -40,7 +40,7 @@ def usage(fp = sys.stdout, conf = None):
     s += "  -h, --help             Print this message and exit.\n"
     s += "\n"
     s += "Optional arguments:\n"
-    s += "  -p, --nproc INT        Number of processes [%d]\n" % conf.NPROC
+    s += "  -p, --ncores INT       Number of processes [%d]\n" % conf.NPROC
     s += "      --cellTAG STR      Tag for cell barcodes, set to None when using sample IDs [%s]\n" % conf.CELL_TAG
     s += "      --UMItag STR       Tag for UMI, set to None when reads only [%s]\n" % conf.UMI_TAG
     s += "  -D, --debug INT        Used by developer for debugging [%d]\n" % conf.DEBUG
@@ -83,7 +83,7 @@ def fc_main(argv, conf = None):
             "outdir=",
             "help",
 
-            "nproc=", 
+            "ncores=",
             "cellTAG=", "UMItag=",
             "debug=",
 
@@ -102,7 +102,7 @@ def fc_main(argv, conf = None):
         elif op in ("-O", "--outdir"): conf.out_dir = val
         elif op in ("-h", "--help"): usage(sys.stdout, conf.defaults); sys.exit(0)
 
-        elif op in ("-p", "--nproc"): conf.nproc = int(val)
+        elif op in ("-p", "--ncores"): conf.nproc = int(val)
         elif op in (      "--celltag"): conf.cell_tag = val
         elif op in (      "--umitag"): conf.umi_tag = val
         elif op in ("-D", "--debug"): conf.debug = int(val)
