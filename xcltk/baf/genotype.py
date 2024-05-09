@@ -15,10 +15,11 @@ from ..utils.vcf import vcf_load, vcf_save, \
 
 def pileup(
     sam_fn = None, sam_list_fn = None, 
-    barcode_fn = None, sample = None,
+    barcode_fn = None, sample_id_fn = None,
+    sample_id = None,
     snp_vcf_fn = None,
     out_dir = None,
-    mode = "10x",
+    mode = "droplet",
     cell_tag = "CB", umi_tag = "UB",
     ncores = 1,
     min_maf = 0.1, min_count = 20,
@@ -41,19 +42,21 @@ def pileup(
         Note that The input BAM file(s) should be specified by one and only
         one of `sam_fn` and `sam_list_fn`.
     barcode_fn : str
-        A plain file listing all effective cell barcodes (for 10x) or 
-        cell IDs (for smartseq).
-        For smartseq data, the order of the BAM files (in `sam_fn` or 
-        `sam_list_fn`) and the sample IDs (in `barcode_fn`) should match 
-        each other.
-    sample : str
+        A plain file listing all effective cell barcodes (for droplet-based
+        data, e.g., 10x Genomics).
+    sample_id_fn : str
+        A plain file listing all sample IDs (for well-based data, e.g.,
+        SMART-seq).
+        For well-based data, the order of the BAM files (in `sam_fn` or 
+        `sam_list_fn`) and the sample IDs should match each other.
+    sample_id : str
         Sample ID (for bulk data).
     snp_vcf_fn : str
         A vcf file listing all candidate SNPs.
     out_dir : str
         Output dir.
     mode : str
-        One of "10x", "smartseq", and `bulk`.
+        One of "droplet", "well", and `bulk`.
     cell_tag : str
         Cell barcode tag, set to `None` to turn it off.
     umi_tag : str
@@ -81,7 +84,7 @@ def pileup(
         when some input file or dirs are invalid.
     """
     # check args
-    assert mode in ("10x", "smartseq", "bulk")
+    assert mode in ("droplet", "well", "bulk")
 
     sam_list = None
     if sam_fn is None:
@@ -96,18 +99,20 @@ def pileup(
             assert_e(fn)
     assert len(sam_list) >= 1
 
-    if mode == "bulk":
-        assert_n(sample)
-        assert len(sam_list) == 1
-    else:
+
+    if mode == "droplet":
         assert_e(barcode_fn)
-        barcodes = [line.strip() for line in open(barcode_fn, "r")]
-        if mode == "smartseq":
-            assert len(sam_list) == len(barcodes)
+    elif mode == "well":
+        assert_e(sample_id_fn)
+        sid_list = [line.strip() for line in open(sample_id_fn, "r")]
+        assert len(sam_list) == len(sid_list)
+    else:
+        assert_n(sample_id)
+        assert len(sam_list) == 1
 
     assert_e(snp_vcf_fn)
 
-    if mode in ("smartseq", "bulk"):
+    if mode in ("well", "bulk"):
         if str(cell_tag) != "None":
             warn("cell tag is not 'None' in mode '%s'." % mode)
         if str(umi_tag) != "None":
@@ -132,12 +137,12 @@ def pileup(
         cmd += "    -s  %s  \\\n" % sam_fn
     else:
         cmd += "    -S  %s  \\\n" % sam_list_fn
-    if mode == "10x":
+    if mode == "droplet":
         cmd += "    -b  %s  \\\n" % barcode_fn
-    elif mode == "smartseq":
-        cmd += "    -i  %s  \\\n" % barcode_fn
+    elif mode == "well":
+        cmd += "    -i  %s  \\\n" % sample_id_fn
     else:
-        cmd += "    -I  %s  \\\n" % sample
+        cmd += "    -I  %s  \\\n" % sample_id
     cmd += "    -O  %s  \\\n" % out_dir
     cmd += "    -R  %s  \\\n" % snp_vcf_fn
     cmd += "    -p  %s  \\\n" % str(ncores)

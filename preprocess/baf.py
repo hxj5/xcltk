@@ -21,10 +21,12 @@ def usage(fp = sys.stdout):
     s += "  --label STR        Task label.\n"
     s += "  --sam FILE         Comma separated indexed BAM/CRAM file(s).\n"
     s += "  --samlist FILE     A file listing BAM/CRAM files, each per line.\n"
-    s += "  --barcode FILE     A plain file listing all effective cell barcodes (for 10x)\n"
-    s += "                     or sample IDs (for smartseq).\n"
-    s += "  --snpvcf FILE      A vcf file listing all candidate SNPs.\n"
-    s += "  --region FILE      A TSV file listing target features. The first 4 columns shoud be:\n"
+    s += "  --barcode FILE     A plain file listing all effective cell barcodes, for\n"
+    s += "                     droplet-based data, e.g., 10x Genomics.\n"
+    s += "  --sampleid FILE    A plain file listing sample IDs, one ID per BAM, for\n"
+    s += "                     well-based data, e.g., SMART-seq.\n"
+    s += "  --snpvcf FILE      A VCF file listing all candidate SNPs.\n"
+    s += "  --region FILE      A TSV file listing target features. The first 4 columns are:\n"
     s += "                     chrom, start, end (both 1-based and inclusive), name.\n"
     s += "  --outdir DIR       Output dir.\n"
     s += "  --gmap FILE        Path to genetic map provided by Eagle2\n"
@@ -38,13 +40,11 @@ def usage(fp = sys.stdout):
     s += "  --cellTAG STR      Cell barcode tag; Set to None if not available [%s]\n" % CELL_TAG
     s += "  --UMItag STR       UMI tag; Set to None if not available [%s]\n" % UMI_TAG
     s += "  --ncores INT       Number of threads [%d]\n" % N_CORES
-    s += "  --smartseq         Run in smartseq mode.\n"
-    s += "  --bulk             Run in bulk mode.\n"
     s += "\n"
     s += "Notes:\n"
     s += "  1. One and only one of `--sam` and `--samlist` should be specified.\n"
-    s += "  2. For smartseq data, the order of the BAM files (in `--sam` or `--samlist`)\n"
-    s += "     and the sample IDs (in `--barcode`) should match each other.\n"
+    s += "  2. For well-based data, the order of the BAM files (in `--sam` or `--samlist`)\n"
+    s += "     and the sample IDs (in `--sampleid`) should match each other.\n"
     s += "  3. For bulk data, the label (`--label`) will be used as the sample ID.\n"
     s += "\n"
 
@@ -54,31 +54,33 @@ def usage(fp = sys.stdout):
 def main(argv):
     if len(argv) < 2:
         usage()
-        sys.exit(1)
+        sys.exit(0)
 
     init_logging(stream = sys.stdout)
 
     label = None
-    sam_fn = sam_list_fn = barcode_fn = snp_vcf_fn = region_fn = None
+    sam_fn = sam_list_fn = None
+    barcode_fn = sample_id_fn = None
+    snp_vcf_fn = region_fn = None
     out_dir = None
     gmap_fn = eagle_fn = panel_dir = None
     cell_tag, umi_tag = CELL_TAG, UMI_TAG
     ncores = N_CORES
-    mode = "10x"
 
     opts, args = getopt.getopt(
         args = argv[1:],
         shortopts = "", 
         longopts = [
             "label=",
-            "sam=", "samlist=", "barcode=", "snpvcf=", "region=",
+            "sam=", "samlist=", 
+            "barcode=", "sampleid=",
+            "snpvcf=", "region=",
             "outdir=",
             "gmap=", "eagle=", "paneldir=",
             "version", "help",
             
             "cellTAG=", "UMItag=",
-            "ncores=",
-            "smartseq", "bulk"
+            "ncores="
         ])
 
     for op, val in opts:
@@ -88,33 +90,32 @@ def main(argv):
         elif op in ("--sam"): sam_fn = val
         elif op in ("--samlist"): sam_list_fn = val
         elif op in ("--barcode"): barcode_fn = val
+        elif op in ("--sampleid"): sample_id_fn = val
         elif op in ("--snpvcf"): snp_vcf_fn = val
         elif op in ("--region"): region_fn = val
         elif op in ("--outdir"): out_dir = val
         elif op in ("--gmap"): gmap_fn = val
         elif op in ("--eagle"): eagle_fn = val
         elif op in ("--paneldir"): panel_dir = val
-        elif op in ("--version"): error(VERSION); sys.exit(1)
-        elif op in ("--help"): usage(); sys.exit(1)
+        elif op in ("--version"): sys.stdout.write(VERSION + "\n"); sys.exit(0)
+        elif op in ("--help"): usage(); sys.exit(0)
 
         elif op in ("--celltag"): cell_tag = val
         elif op in ("--umitag"): umi_tag = val
         elif op in ("--ncores"): ncores = int(val)     # keep it in `str` format.
-        elif op in ("--smartseq"): mode = "smartseq"
-        elif op in ("--bulk"): mode = "bulk"
         else:
             error("invalid option: '%s'." % op)
             return(-1)
         
     ret = run_baf_preprocess(
         label = label,
-        sam_fn = sam_fn, sam_list_fn = sam_list_fn, barcode_fn = barcode_fn,
+        sam_fn = sam_fn, sam_list_fn = sam_list_fn, 
+        barcode_fn = barcode_fn, sample_id_fn = sample_id_fn,
         snp_vcf_fn = snp_vcf_fn, region_fn = region_fn,
         out_dir = out_dir,
         gmap_fn = gmap_fn, eagle_fn = eagle_fn, panel_dir = panel_dir,
         cell_tag = cell_tag, umi_tag = umi_tag,
-        ncores = ncores,
-        mode = mode
+        ncores = ncores
     )
     
     info("All Done!")
@@ -124,22 +125,37 @@ def main(argv):
 
 def run_baf_preprocess(
     label,
-    sam_fn = None, sam_list_fn = None, barcode_fn = None,
+    sam_fn = None, sam_list_fn = None, 
+    barcode_fn = None, sample_id_fn = None,
     snp_vcf_fn = None, region_fn = None,
     out_dir = None,
     gmap_fn = None, eagle_fn = None, panel_dir = None,
     cell_tag = "CB", umi_tag = "UB",
-    ncores = 1,
-    mode = "10x"
+    ncores = 1
 ):
     info("xcltk BAF preprocessing starts ...")
 
     # check args
     info("check args ...")
 
+    mode = None
+    sample_id = None
+
     assert_n(label)
-    sample = label if mode == "bulk" else None
+    assert (not sam_fn) ^ (not sam_list_fn)
+    assert not (barcode_fn and sample_id_fn)
+    if barcode_fn:
+        assert_e(barcode_fn)
+        mode = "droplet"
+    elif sample_id_fn:
+        assert_e(sample_id_fn)
+        mode = "well"
+    else:
+        mode = "bulk"
+        sample_id = label
+
     assert_e(snp_vcf_fn)
+    assert_e(region_fn)
     if not os.path.exists(out_dir):
         os.mkdir(out_dir)
 
@@ -149,8 +165,6 @@ def run_baf_preprocess(
     for chrom in range(1, 23):
         assert_e(os.path.join(panel_dir, "chr%d.genotypes.bcf" % chrom))
         assert_e(os.path.join(panel_dir, "chr%d.genotypes.bcf.csi" % chrom))
-
-    assert_e(region_fn)
 
     genome = "hg19" if "hg19" in gmap_fn else "hg38"
 
@@ -168,7 +182,8 @@ def run_baf_preprocess(
 
     pileup(
         sam_fn = sam_fn, sam_list_fn = sam_list_fn,
-        barcode_fn = barcode_fn, sample = sample,
+        barcode_fn = barcode_fn, sample_id_fn = sample_id_fn, 
+        sample_id = sample_id,
         snp_vcf_fn = snp_vcf_fn,
         out_dir = pileup_dir,
         mode = mode,
@@ -269,22 +284,15 @@ def run_baf_preprocess(
     if not os.path.exists(fc_dir):
         os.mkdir(fc_dir)
 
-    fc_barcode_fn = fc_sample_ids = fc_sample_id_fn = None
-    if mode == "10x":
-        fc_barcode_fn = barcode_fn
-    elif mode == "smartseq":
-        fc_sample_id_fn = barcode_fn
-    else:
-        fc_sample_ids = label
     baf_fc(
         sam_fn = sam_fn, 
-        barcode_fn = fc_barcode_fn,
+        barcode_fn = barcode_fn,
         region_fn = region_fn, 
         phased_snp_fn = phased_vcf_fn,
         out_dir = fc_dir,
         sam_list_fn = sam_list_fn,
-        sample_ids = fc_sample_ids, 
-        sample_id_fn = fc_sample_id_fn,
+        sample_ids = sample_id,
+        sample_id_fn = sample_id_fn,
         debug_level = 0,
         ncores = ncores,
         cell_tag = cell_tag, umi_tag = umi_tag,
