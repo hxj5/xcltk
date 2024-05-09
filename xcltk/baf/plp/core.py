@@ -211,6 +211,7 @@ def plp_snp(snp, sam_list, mcnt, conf):
             return code. 0 if success; negative if error; positive if filtered.
         (2) mcnt : mcount::MCount object
     """
+    ret = None
     if mcnt.add_snp(snp) < 0:   # mcnt reset() inside.
         return((-3, mcnt))
     for idx, sam in enumerate(sam_list):

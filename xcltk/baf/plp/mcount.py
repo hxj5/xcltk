@@ -69,6 +69,8 @@ class SCount:
         sample [list of int; 5 elements].
     umi_cnt : dict
         HashMap of <str:UCount> for umi:UCount pair, mainly for 10x data.
+    is_reset : bool
+        Has this object been reset.
     """
     def __init__(self, mcnt, conf):
         self.mcnt = mcnt
@@ -76,6 +78,7 @@ class SCount:
 
         self.tcount = [0] * 5
         self.umi_cnt = {}
+        self.is_reset = False
 
     def push_read(self, read):
         conf = self.conf
@@ -98,9 +101,12 @@ class SCount:
             return(0)
 
     def reset(self):
+        if self.is_reset:
+            return
         for i in range(len(self.tcount)):
             self.tcount[i] = 0
         self.umi_cnt.clear()
+        self.is_reset = True
 
     def stat(self):
         for ucnt in self.umi_cnt.values():
@@ -133,7 +139,7 @@ class MCount:
         The mapping from base (str) to index (int) for `tcount`.
     cell_cnt : dict
         HashMap of <str, SCount> for sample:SCount pair.
-    is_reset : boot
+    is_reset : bool
         Has this object been reset.
     """
     def __init__(self, samples, conf):
@@ -151,8 +157,7 @@ class MCount:
         self.is_reset = False
 
     def add_snp(self, snp):
-        if not self.is_reset:
-            self.reset()
+        self.reset()
         self.snp = snp
         self.is_reset = False
         return(0)
@@ -190,6 +195,9 @@ class MCount:
         return(0)
 
     def reset(self):
+        if self.is_reset:
+            return
+        self.snp = None
         if self.tcount:
             for i in range(len(self.tcount)):
                 self.tcount[i] = 0

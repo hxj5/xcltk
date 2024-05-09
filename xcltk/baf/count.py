@@ -71,8 +71,8 @@ def pileup_main(argv, conf = None):
         conf = Config()
 
     if len(argv) <= 2:
-        usage(sys.stderr, conf.defaults)
-        sys.exit(1)
+        usage(sys.stdout, conf.defaults)
+        sys.exit(0)
 
     conf.argv = argv.copy()
     init_logging(stream = sys.stderr)
@@ -106,7 +106,7 @@ def pileup_main(argv, conf = None):
         elif op in ("-i", "--samplelist"): conf.sample_id_fn = val
         elif op in ("-I", "--sampleids"): conf.sample_id_str = val
         elif op in ("-O", "--outdir"): conf.out_dir = val
-        elif op in ("-h", "--help"): usage(sys.stderr, conf.defaults); sys.exit(1)
+        elif op in ("-h", "--help"): usage(sys.stdout, conf.defaults); sys.exit(0)
 
         elif op in ("-p", "--nproc"): conf.nproc = int(val)
         elif op in (      "--celltag"): conf.cell_tag = val
@@ -382,7 +382,7 @@ def prepare_config(conf):
             conf.sample_ids = conf.sample_id_str.split(",")
         elif conf.sample_id_fn:
             with zopen(conf.sample_id_fn, "rt") as fp:
-                conf.sample_ids = sorted([x.strip() for x in fp])
+                conf.sample_ids = [x.strip() for x in fp]
         else:
             warn("use default sample IDs ...")
             conf.sample_ids = ["Sample%d" % i for i in \

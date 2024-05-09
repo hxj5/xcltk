@@ -7,11 +7,11 @@
 
 import sys
 
-from .baf.count import pileup_main as baf_pileup
-from .baf.fixref import fixref as baf_fix_ref
+from .baf.count import pileup_main as baf_fc
+from .baf.fixref import fixref as baf_fixref
 from .baf.rpc import main_rpc as baf_rpc
 from .config import APP, VERSION
-from .rdr.basefc import base_fc as rdr_base_fc
+from .rdr.count import fc_main as rdr_fc
 from .tools.convert import convert as reg_convert
 
 
@@ -48,10 +48,10 @@ def main():
         sys.exit(1)
 
     command = sys.argv[1]
-    if command == "alecnt": baf_pileup(sys.argv)
-    elif command == "fixref": baf_fix_ref(sys.argv)
+    if command == "alecnt": baf_fc(sys.argv)
+    elif command == "fixref": baf_fixref(sys.argv)
     elif command == "rpc": baf_rpc(sys.argv)
-    elif command == "basefc": rdr_base_fc(sys.argv)
+    elif command == "basefc": rdr_fc(sys.argv)
     elif command == "convert": reg_convert(sys.argv)
     elif command in ("-h", "--help"): __usage(); sys.exit(3)
     elif command in ("-V", "--version"): sys.stderr.write("%s\n" % VERSION); sys.exit(3)
@@ -59,4 +59,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
