@@ -5,12 +5,19 @@ import os
 import sys
 
 from logging import error, info
-from .count import pileup as baf_fc      # BAF feature counting
+from .count import afc_wrapper as baf_fc      # BAF feature counting
 from .genotype import pileup, ref_phasing, vcf_add_genotype
 from ..config import APP, VERSION
 from ..utils.base import assert_e, assert_n
 from ..utils.vcf import vcf_index, vcf_merge, vcf_split_chrom
 from ..utils.xlog import init_logging
+
+
+COMMAND = "baf"
+
+CELL_TAG = "CB"
+N_CORES = 1
+UMI_TAG = "UB"
 
 
 def usage(fp = sys.stdout):
@@ -43,10 +50,10 @@ def usage(fp = sys.stdout):
     s += "  --nproc INT        Number of threads [%d]\n" % N_CORES
     s += "\n"
     s += "Notes:\n"
-    s += "  1. One and only one of `--sam` and `--samlist` should be specified.\n"
-    s += "  2. For well-based data, the order of the BAM files (in `--sam` or `--samlist`)\n"
-    s += "     and the sample IDs (in `--sampleList`) should match each other.\n"
-    s += "  3. For bulk data, the label (`--label`) will be used as the sample ID.\n"
+    s += "1. One and only one of `--sam` and `--samlist` should be specified.\n"
+    s += "2. For well-based data, the order of the BAM files (in `--sam` or `--samlist`)\n"
+    s += "   and the sample IDs (in `--sampleList`) should match each other.\n"
+    s += "3. For bulk data, the label (`--label`) will be used as the sample ID.\n"
     s += "\n"
 
     fp.write(s)
@@ -108,7 +115,7 @@ def pipeline_main(argv):
             error("invalid option: '%s'." % op)
             return(-1)
         
-    ret = run_baf_preprocess(
+    ret = pipeline_wrapper(
         label = label,
         sam_fn = sam_fn, sam_list_fn = sam_list_fn, 
         barcode_fn = barcode_fn, sample_id_fn = sample_id_fn,
@@ -124,7 +131,7 @@ def pipeline_main(argv):
     return(ret)
         
 
-def run_baf_preprocess(
+def pipeline_wrapper(
     label,
     sam_fn = None, sam_list_fn = None, 
     barcode_fn = None, sample_id_fn = None,
@@ -305,10 +312,3 @@ def run_baf_preprocess(
     )
 
     info("feature BAFs are at '%s'." % fc_dir)
-
-
-COMMAND = "baf"
-
-CELL_TAG = "CB"
-N_CORES = 1
-UMI_TAG = "UB"

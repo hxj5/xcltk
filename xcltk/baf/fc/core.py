@@ -1,10 +1,9 @@
-# core.py
+# core.py - core part of feature counting.
 
 import math
 import os
 import pickle
 import pysam
-import sys
 
 from logging import debug, error, info
 
@@ -37,7 +36,7 @@ def check_read(read, conf):
 # NOTE: 
 # 1. bgzf errors when using pysam.AlignmentFile.fetch in parallel (with multiprocessing)
 #    https://github.com/pysam-developers/pysam/issues/397
-def plp_features(thdata):
+def fc_features(thdata):
     conf = thdata.conf
     thdata.ret = -1
 
@@ -75,7 +74,7 @@ def plp_features(thdata):
             (reg.chrom, reg.start, reg.end - 1, reg.name)
         if reg.snp_list:
             ret, reg_ref_cnt, reg_alt_cnt, reg_oth_cnt, reg_dp_cnt = \
-                plp_fet1(reg, sam_list, mcnt, conf)
+                fc_fet1(reg, sam_list, mcnt, conf)
             if ret < 0:
                 raise RuntimeError("errcode -9")
 
@@ -137,7 +136,7 @@ def plp_features(thdata):
     return((0, thdata))
 
 
-def plp_fet1(reg, sam_list, mcnt, conf):
+def fc_fet1(reg, sam_list, mcnt, conf):
     reg_ref_umi = {smp:set() for smp in conf.samples}
     reg_alt_umi = {smp:set() for smp in conf.samples}
     reg_oth_umi = {smp:set() for smp in conf.samples}

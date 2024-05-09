@@ -1,5 +1,4 @@
-# mcount.py - Reads Counting
-# Author: Xianjie Huang
+# mcount.py - counting machine for features.
 
 
 class SCount:

@@ -1,5 +1,4 @@
-# sam.py - Sam File Routine
-# Author: Xianjie Huang
+# sam.py - SAM/BAM file routine
 
 
 def get_query_bases(read, full_length=False):

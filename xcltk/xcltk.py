@@ -1,19 +1,17 @@
-# cmdline options
-# Author: Xianjie Huang 
+# xcltk.py - xcltk cmdline interface.
 
-#TODO: 
-# - basefc: support multiple bam files
+#TODO:
 # - add install list (conda + pip)
 
 import sys
 
-from .baf.count import pileup_main as baf_allelefc
-from .baf.fixref import fixref as baf_fixref
+from .baf.count import afc_main as baf_allelefc
+from .baf.fixref import fixref_main as baf_fixref
 from .baf.pipeline import pipeline_main as baf_baf
-from .baf.rpc import main_rpc as baf_rpc
+from .baf.rpc import rpc_main as baf_rpc
 from .config import APP, VERSION
 from .rdr.count import fc_main as rdr_basefc
-from .tools.convert import convert as tools_convert
+from .tools.convert import convert_main as tools_convert
 
 
 def __usage(fp = sys.stderr):

@@ -1,3 +1,5 @@
+# gtf.py - simple GTF/GFF file parser.
+
 # This module is to parse the gtf file, whoes format can be found at:
 # www.ensembl.org/info/website/upload/gff.html
 # Author: Yuanhua Huang
@@ -8,7 +10,6 @@
 
 import numpy as np
 import subprocess
-import sys
 
 
 class Transcript:

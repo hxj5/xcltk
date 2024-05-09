@@ -1,4 +1,4 @@
-# gfeature.py - genomic features
+# gfeature.py - genomic features, supporting interval query.
 
 from ...utils.grange import Region, RegionSet
 

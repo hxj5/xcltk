@@ -2,7 +2,6 @@
 
 #this script is aimed to make sure REFs match certain genome reference build.
 #it would change corresponding ALT & GT while delete other fields in FORMAT
-#Author: Xianjie Huang 
 
 #features:
 #  support gzip/bgzip input and output vcf
@@ -11,14 +10,16 @@
 #  support only ploidy = 2 now
 #  indels would be filtered
 
-#TODO: support other ploidy
+#TODO:
+# - support other ploidy
+# - implement fixref_wrapper().
 
 
 import getopt
 import pysam
 import sys
 
-from ..config import APP
+from ..config import APP, VERSION
 
 COMMAND = "fixref"
 
@@ -144,6 +145,7 @@ def __fix_rec(ref0, rec, out, verbose = False):
 
     return((ret, new_rec))
 
+
 def __fix_file(in_fn, out_fn, ref_fn, verbose = False):
     """
     @abstract       Fix REF, ALT & GT while delete other fields in FORMAT
@@ -205,9 +207,11 @@ def __fix_file(in_fn, out_fn, ref_fn, verbose = False):
 
     return(0)
 
-def __usage(fp = sys.stderr):
+
+def __usage(fp = sys.stdout):
     msg =  "\n"
-    msg += "Usage: %s %s [options]\n" % (APP, COMMAND)
+    msg += "Version: %s\n" % VERSION
+    msg += "Usage:   %s %s [options]\n" % (APP, COMMAND)
     msg += "\n"                                                        \
            "Options:\n"                                                \
            "  -i, --input FILE    Path to input vcf file\n"              \
@@ -217,18 +221,22 @@ def __usage(fp = sys.stderr):
            "  -h, --help          Print this message\n"                                       \
            "\n"                                            \
            "Note:\n"                                       \
-           "  REF, ALT and GT would be checked and possibly fixed. Fields other than GT\n" \
-           "  in FORMAT would be deleted.\n"                     \
+           "1. REF, ALT and GT would be checked and possibly fixed. Fields other than GT\n" \
+           "   in FORMAT would be deleted.\n"                     \
            "\n"    
     fp.write(msg)
 
-def fixref(argv):
+
+def fixref_main(argv):
     # parse and check command line
     if len(argv) < 3:
-        __usage(sys.stderr)
-        sys.exit(1)
+        __usage(sys.stdout)
+        sys.exit(0)
            
-    opts, args = getopt.getopt(argv[2:], "-h-i:-r:-o:-v", ["help", "input=", "ref=", "output=", "verbose"])
+    opts, args = getopt.getopt(
+        argv[2:], 
+        "-h-i:-r:-o:-v", 
+        ["help", "input=", "ref=", "output=", "verbose"])
     ref_file = in_vcf_file = out_vcf_file = None
     verbose = False
     for op, val in opts:
@@ -236,13 +244,9 @@ def fixref(argv):
         elif op in ("-r", "--ref"): ref_file = val
         elif op in ("-o", "--output"): out_vcf_file = val
         elif op in ("-v", "--verbose"): verbose = True
-        elif op in ("-h", "--help"): __usage(sys.stderr); sys.exit(1)
+        elif op in ("-h", "--help"): __usage(sys.stdout); sys.exit(0)
         else: sys.stderr.write("invalid option: %s\n" % op); sys.exit(1)
 
     # TODO: check args
     
     __fix_file(in_vcf_file, out_vcf_file, ref_file, verbose)
-
-if __name__ == "__main__":
-    fixref(sys.argv)
-

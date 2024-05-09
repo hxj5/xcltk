@@ -1,7 +1,6 @@
-# Global Configure
+# config.py - global configuration.
 
 import sys
-from ...config import APP
 
 class Config:
     def __init__(self):
@@ -14,17 +13,13 @@ class Config:
         self.sample_id_str = None
         self.sample_id_fn = None
         self.region_fn = None
-        self.snp_fn = None
         self.out_dir = None
         self.debug = self.defaults.DEBUG
 
         self.cell_tag = self.defaults.CELL_TAG
         self.umi_tag = self.defaults.UMI_TAG
         self.nproc = self.defaults.NPROC
-        self.min_count = self.defaults.MIN_COUNT
-        self.min_maf = self.defaults.MIN_MAF
         self.output_all_reg = self.defaults.OUTPUT_ALL_REG
-        self.no_dup_hap = self.defaults.NO_DUP_HAP
 
         self.min_mapq = self.defaults.MIN_MAPQ
         self.min_len = self.defaults.MIN_LEN
@@ -35,17 +30,14 @@ class Config:
         self.barcodes = None     # list of barcode strings.
         self.sample_ids = None
         self.reg_list = None     # list of gene/block objects.
-        self.snp_set = None      # set of SNPs.
 
         self.sam_fn_list = None
         self.samples = None
 
-        self.out_prefix = APP + "."
+        self.out_prefix = ""
         self.out_region_fn = None
         self.out_sample_fn = None
-        self.out_ad_fn = None
-        self.out_dp_fn = None
-        self.out_oth_fn = None   
+        self.out_mtx_fn = None
 
     def show(self, fp = None, prefix = ""):
         if fp is None:
@@ -58,7 +50,6 @@ class Config:
         s += "%ssample_id_str = %s\n" % (prefix, self.sample_id_str)
         s += "%ssample_id_file = %s\n" % (prefix, self.sample_id_fn)
         s += "%sregion_file = %s\n" % (prefix, self.region_fn)
-        s += "%ssnp_file = %s\n" % (prefix, self.snp_fn)
         s += "%sout_dir = %s\n" % (prefix, self.out_dir)
         s += "%sdebug_level = %d\n" % (prefix, self.debug)
         s += "%s\n" % prefix
@@ -66,10 +57,7 @@ class Config:
         s += "%scell_tag = %s\n" % (prefix, self.cell_tag)
         s += "%sumi_tag = %s\n" % (prefix, self.umi_tag)
         s += "%snumber_of_processes = %d\n" % (prefix, self.nproc)
-        s += "%smin_count = %d\n" % (prefix, self.min_count)
-        s += "%smin_maf = %f\n" % (prefix, self.min_maf)
         s += "%soutput_all_reg = %s\n" % (prefix, self.output_all_reg)
-        s += "%sno_dup_hap = %s\n" % (prefix, self.no_dup_hap)
         s += "%s\n" % prefix
 
         s += "%smin_mapq = %d\n" % (prefix, self.min_mapq)
@@ -87,15 +75,11 @@ class Config:
                 if self.sample_ids is not None else -1)
         s += "%snumber_of_regions = %d\n" % (prefix, len(self.reg_list) if \
                 self.reg_list is not None else -1)
-        s += "%snumber_of_snps = %d\n" % (prefix, self.snp_set.get_n() if \
-                self.snp_set is not None else -1)
         s += "%s\n" % prefix
 
         s += "%soutput_region_file = %s\n" % (prefix, self.out_region_fn)
         s += "%soutput_sample_file = %s\n" % (prefix, self.out_sample_fn)
-        s += "%soutput_ad_file = %s\n" % (prefix, self.out_ad_fn)
-        s += "%soutput_dp_file = %s\n" % (prefix, self.out_dp_fn)
-        s += "%soutput_oth_file = %s\n" % (prefix, self.out_oth_fn)
+        s += "%soutput_mtx_file = %s\n" % (prefix, self.out_mtx_fn)
         s += "%s\n" % prefix
 
         fp.write(s)
@@ -114,10 +98,7 @@ class DefaultConfig:
         self.UMI_TAG = "UB"
         self.UMI_TAG_BC = "UB"    # the default umi tag for 10x data.
         self.NPROC = 1
-        self.MIN_COUNT = 1 
-        self.MIN_MAF = 0
-        self.OUTPUT_ALL_REG = False
-        self.NO_DUP_HAP = True
+        self.OUTPUT_ALL_REG = True
 
         self.MIN_MAPQ = 20
         self.MIN_LEN = 30

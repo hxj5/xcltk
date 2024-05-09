@@ -1,4 +1,4 @@
-# Utils
+# utils.py - help functions.
 
 import os
 import sys

@@ -1,5 +1,5 @@
-# gregion.py - Utils for Genome Region Processing
-# Author: Xianjie Huang 
+# gregion.py - utils for genome region processing
+
 
 # TODO: add bgzip support
 

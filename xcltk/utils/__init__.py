@@ -5,3 +5,4 @@ from . import gtf
 from . import sam
 from . import vcf
 from . import xlog
+from . import zfile

@@ -1,5 +1,4 @@
-# mcount.py - Reads Counting
-# Author: Xianjie Huang
+# mcount.py - counting machine for features.
 
 from ...utils.sam import get_query_bases
 
@@ -131,7 +130,7 @@ class MCount:
     conf : config::Config object
         Configuration
     snp : region::SNP object
-        The SNP beging pileuped.
+        The SNP being pileuped.
     tcount : list
         Total read / UMI counts for A/C/G/T/N bases, aggregated for all 
         samples [list of int; 5 elements].

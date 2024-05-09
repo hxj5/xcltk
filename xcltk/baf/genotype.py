@@ -1,4 +1,4 @@
-# genotype.py - preprocess the input BAM file to generate reference-phased cell x gene AD & DP matrices.
+# genotype.py - help functions for BAF pipeline (`pipeline.py`).
 
 import os
 import stat

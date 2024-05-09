@@ -1,6 +1,6 @@
 This folder contains feature annotation files of common genomic versions.
 These pre-compiled files can be used in several xcltk commands, including
-`xcltk alecnt (-r/--region)` and `xcltk basefc (-r/--region)`.
+`xcltk allelefc (-r/--region)` and `xcltk basefc (-r/--region)`.
 The key part of the files are their first 4 columns:
 
 - chrom : str; chromosome name of the feature.
@@ -20,6 +20,6 @@ header line and reordering the selected columns of file
 refdata-gex-GRCh38-2020-A and is used by
 [XClone][XClone repo].
 
-[XClone anno hg19](https://github.com/hxj5/XClone/blob/master/xclone/data/anno_data/annotate_genes_hg19_update.txt)
-[XClone anno hg38](https://github.com/hxj5/XClone/blob/master/xclone/data/anno_data/annotate_genes_hg38_update.txt)
 
+[XClone anno hg19](https://github.com/single-cell-genetics/XClone/blob/master/xclone/data/anno_data/annotate_genes_hg19_update.txt)
+[XClone anno hg38](https://github.com/single-cell-genetics/XClone/blob/master/xclone/data/anno_data/annotate_genes_hg38_update.txt)

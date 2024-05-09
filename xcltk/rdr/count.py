@@ -11,17 +11,19 @@ import time
 from logging import debug, error, info
 from logging import warning as warn
 
-from .plp.config import Config
-from .plp.core import plp_features
-from .plp.thread import ThreadData
-from .plp.utils import load_region_from_txt, merge_mtx, merge_tsv
+from .fc.config import Config
+from .fc.core import fc_features
+from .fc.thread import ThreadData
+from .fc.utils import load_region_from_txt, merge_mtx, merge_tsv
 
 from ..config import APP, VERSION
 from ..utils.xlog import init_logging
 from ..utils.zfile import zopen, ZF_F_GZIP, ZF_F_PLAIN
 
+COMMAND = "basefc"
 
-def usage(fp = sys.stderr, conf = None):
+
+def usage(fp = sys.stdout, conf = None):
     s =  "\n"
     s += "Version: %s\n" % VERSION
     s += "Usage:   %s %s <options>\n" % (APP, COMMAND)
@@ -58,7 +60,7 @@ def usage(fp = sys.stderr, conf = None):
 def fc_main(argv, conf = None):
     """Command-Line interface.
     @param argv   A list of cmdline parameters [list]
-    @param conf   The plp.Config object.
+    @param conf   The fc.Config object.
     @return       0 if success, -1 otherwise [int]
     """
     if conf is None:
@@ -202,10 +204,10 @@ def fc_core(conf):
         )
         thdata_list.append(thdata)
         if conf.debug > 0:
-            debug("data of thread-%d before plp_features:" % i)
+            debug("data of thread-%d before fc_features:" % i)
             thdata.show(fp = sys.stderr, prefix = "\t")
         mp_result.append(pool.apply_async(
-            func = plp_features, 
+            func = fc_features, 
             args = (thdata, ), 
             callback = show_progress))   # TODO: error_callback?
     pool.close()
@@ -220,7 +222,7 @@ def fc_core(conf):
     # check running status of each sub-process
     for thdata in thdata_list:         
         if conf.debug > 0:
-            debug("data of thread-%d after plp_features:" %  thdata.idx)
+            debug("data of thread-%d after fc_features:" %  thdata.idx)
             thdata.show(fp = sys.stderr, prefix = "\t")
         if thdata.ret < 0:
             raise ValueError("errcode -3")
@@ -400,10 +402,3 @@ def prepare_config(conf):
 
 def show_progress(rv = None):
     return(rv)
-
-
-COMMAND = "basefc"
-
-
-if __name__ == "__main__":
-    fc_main(sys.argv)

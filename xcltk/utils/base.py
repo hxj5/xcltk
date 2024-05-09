@@ -1,5 +1,4 @@
-# Base Utils
-# Author: Xianjie Huang
+# base.py - basic utils.
 
 import os
 

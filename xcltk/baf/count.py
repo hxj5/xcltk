@@ -11,10 +11,10 @@ import time
 from logging import debug, error, info
 from logging import warning as warn
 
-from .plp.config import Config
-from .plp.core import plp_features
-from .plp.thread import ThreadData
-from .plp.utils import load_region_from_txt, load_snp_from_vcf, \
+from .fc.config import Config
+from .fc.core import fc_features
+from .fc.thread import ThreadData
+from .fc.utils import load_region_from_txt, load_snp_from_vcf, \
     load_snp_from_tsv, merge_mtx, merge_tsv
 
 from ..config import APP, VERSION
@@ -22,7 +22,10 @@ from ..utils.xlog import init_logging
 from ..utils.zfile import zopen, ZF_F_GZIP, ZF_F_PLAIN
 
 
-def usage(fp = sys.stderr, conf = None):
+COMMAND = "allelefc"
+
+
+def usage(fp = sys.stdout, conf = None):
     s =  "\n"
     s += "Version: %s\n" % VERSION
     s += "Usage:   %s %s <options>\n" % (APP, COMMAND)
@@ -61,10 +64,10 @@ def usage(fp = sys.stderr, conf = None):
     fp.write(s)
 
 
-def pileup_main(argv, conf = None):
+def afc_main(argv, conf = None):
     """Command-Line interface.
     @param argv   A list of cmdline parameters [list]
-    @param conf   The plp.Config object.
+    @param conf   The fc.Config object.
     @return       0 if success, -1 otherwise [int]
     """
     if conf is None:
@@ -127,11 +130,11 @@ def pileup_main(argv, conf = None):
             error("invalid option: '%s'." % op)
             return(-1)
         
-    ret = pileup_run(conf)
+    ret = afc_run(conf)
     return(ret)
 
 
-def pileup(
+def afc_wrapper(
     sam_fn, barcode_fn,
     region_fn, phased_snp_fn, 
     out_dir,
@@ -173,11 +176,11 @@ def pileup(
         conf.excl_flag = -1
     conf.no_orphan = no_orphan
 
-    ret = pileup_run(conf)
+    ret = afc_run(conf)
     return(ret)
 
 
-def pileup_core(conf):
+def afc_core(conf):
     if prepare_config(conf) < 0:
         raise ValueError("errcode -2")
     info("program configuration:")
@@ -240,10 +243,10 @@ def pileup_core(conf):
         )
         thdata_list.append(thdata)
         if conf.debug > 0:
-            debug("data of thread-%d before plp_features:" % i)
+            debug("data of thread-%d before fc_features:" % i)
             thdata.show(fp = sys.stderr, prefix = "\t")
         mp_result.append(pool.apply_async(
-            func = plp_features, 
+            func = fc_features, 
             args = (thdata, ), 
             callback = show_progress))   # TODO: error_callback?
     pool.close()
@@ -258,7 +261,7 @@ def pileup_core(conf):
     # check running status of each sub-process
     for thdata in thdata_list:         
         if conf.debug > 0:
-            debug("data of thread-%d after plp_features:" %  thdata.idx)
+            debug("data of thread-%d after fc_features:" %  thdata.idx)
             thdata.show(fp = sys.stderr, prefix = "\t")
         if thdata.ret < 0:
             raise ValueError("errcode -3")
@@ -301,7 +304,7 @@ def pileup_core(conf):
         raise ValueError("errcode -21")
     
 
-def pileup_run(conf):
+def afc_run(conf):
     ret = -1
     cmdline = None
 
@@ -315,7 +318,7 @@ def pileup_run(conf):
         info("CMD: %s" % cmdline)
 
     try:
-        ret = pileup_core(conf)
+        ret = afc_core(conf)
     except ValueError as e:
         error(str(e))
         error("Running program failed.")
@@ -476,10 +479,3 @@ def prepare_config(conf):
 
 def show_progress(rv = None):
     return(rv)
-
-
-COMMAND = "alecnt"
-
-
-if __name__ == "__main__":
-    pileup_main(sys.argv)

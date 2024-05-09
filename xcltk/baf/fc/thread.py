@@ -1,5 +1,4 @@
-# Thread
-# Author: Xianjie Huang
+# thread.py - wrapper of data for each thread.
 
 import sys
 
