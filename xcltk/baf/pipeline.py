@@ -1,29 +1,30 @@
-# baf.py - preprocess the input BAM file to generate reference-phased cell x gene AD & DP matrices.
+# pipeline.py - preprocess the input BAM file to generate reference-phased cell x gene AD & DP matrices.
 
 import getopt
 import os
 import sys
 
 from logging import error, info
-from xcltk.baf.count import pileup as baf_fc      # BAF feature counting
-from xcltk.baf.genotype import pileup, ref_phasing, vcf_add_genotype
-from xcltk.utils.base import assert_e, assert_n
-from xcltk.utils.vcf import vcf_index, vcf_merge, vcf_split_chrom
-from xcltk.utils.xlog import init_logging
+from .count import pileup as baf_fc      # BAF feature counting
+from .genotype import pileup, ref_phasing, vcf_add_genotype
+from ..config import APP, VERSION
+from ..utils.base import assert_e, assert_n
+from ..utils.vcf import vcf_index, vcf_merge, vcf_split_chrom
+from ..utils.xlog import init_logging
 
 
 def usage(fp = sys.stdout):
     s =  "\n" 
     s += "Version: %s\n" % VERSION
-    s += "Usage:   %s [options]\n" % APP
+    s += "Usage:   %s %s [options]\n" % (APP, COMMAND)
     s += "\n" 
     s += "Options:\n"
     s += "  --label STR        Task label.\n"
     s += "  --sam FILE         Comma separated indexed BAM/CRAM file(s).\n"
-    s += "  --samlist FILE     A file listing BAM/CRAM files, each per line.\n"
+    s += "  --samList FILE     A file listing BAM/CRAM files, each per line.\n"
     s += "  --barcode FILE     A plain file listing all effective cell barcodes, for\n"
     s += "                     droplet-based data, e.g., 10x Genomics.\n"
-    s += "  --sampleid FILE    A plain file listing sample IDs, one ID per BAM, for\n"
+    s += "  --sampleList FILE  A plain file listing sample IDs, one ID per BAM, for\n"
     s += "                     well-based data, e.g., SMART-seq.\n"
     s += "  --snpvcf FILE      A VCF file listing all candidate SNPs.\n"
     s += "  --region FILE      A TSV file listing target features. The first 4 columns are:\n"
@@ -39,20 +40,20 @@ def usage(fp = sys.stdout):
     s += "Optional arguments:\n"
     s += "  --cellTAG STR      Cell barcode tag; Set to None if not available [%s]\n" % CELL_TAG
     s += "  --UMItag STR       UMI tag; Set to None if not available [%s]\n" % UMI_TAG
-    s += "  --ncores INT       Number of threads [%d]\n" % N_CORES
+    s += "  --nproc INT        Number of threads [%d]\n" % N_CORES
     s += "\n"
     s += "Notes:\n"
     s += "  1. One and only one of `--sam` and `--samlist` should be specified.\n"
     s += "  2. For well-based data, the order of the BAM files (in `--sam` or `--samlist`)\n"
-    s += "     and the sample IDs (in `--sampleid`) should match each other.\n"
+    s += "     and the sample IDs (in `--sampleList`) should match each other.\n"
     s += "  3. For bulk data, the label (`--label`) will be used as the sample ID.\n"
     s += "\n"
 
     fp.write(s)
 
 
-def main(argv):
-    if len(argv) < 2:
+def pipeline_main(argv):
+    if len(argv) <= 2:
         usage()
         sys.exit(0)
 
@@ -68,19 +69,19 @@ def main(argv):
     ncores = N_CORES
 
     opts, args = getopt.getopt(
-        args = argv[1:],
+        args = argv[2:],
         shortopts = "", 
         longopts = [
             "label=",
-            "sam=", "samlist=", 
-            "barcode=", "sampleid=",
+            "sam=", "samList=", 
+            "barcode=", "sampleList=",
             "snpvcf=", "region=",
             "outdir=",
             "gmap=", "eagle=", "paneldir=",
             "version", "help",
             
             "cellTAG=", "UMItag=",
-            "ncores="
+            "nproc="
         ])
 
     for op, val in opts:
@@ -90,7 +91,7 @@ def main(argv):
         elif op in ("--sam"): sam_fn = val
         elif op in ("--samlist"): sam_list_fn = val
         elif op in ("--barcode"): barcode_fn = val
-        elif op in ("--sampleid"): sample_id_fn = val
+        elif op in ("--samplelist"): sample_id_fn = val
         elif op in ("--snpvcf"): snp_vcf_fn = val
         elif op in ("--region"): region_fn = val
         elif op in ("--outdir"): out_dir = val
@@ -102,7 +103,7 @@ def main(argv):
 
         elif op in ("--celltag"): cell_tag = val
         elif op in ("--umitag"): umi_tag = val
-        elif op in ("--ncores"): ncores = int(val)     # keep it in `str` format.
+        elif op in ("--nproc"): ncores = int(val)     # keep it in `str` format.
         else:
             error("invalid option: '%s'." % op)
             return(-1)
@@ -306,13 +307,8 @@ def run_baf_preprocess(
     info("feature BAFs are at '%s'." % fc_dir)
 
 
-APP = "baf.py"
-VERSION = "0.0.1"
+COMMAND = "baf"
 
 CELL_TAG = "CB"
 N_CORES = 1
 UMI_TAG = "UB"
-
-
-if __name__ == "__main__":
-    main(sys.argv)
