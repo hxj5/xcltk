@@ -14,6 +14,8 @@ class SCount:
         Total read / UMI counts, only for this sample.
     umi_set : set
         The set of UMIs belonging to the feature and the sample.
+    is_rest : bool
+        Has this object been reset?
     """
     def __init__(self, mcnt, conf):
         self.mcnt = mcnt
@@ -21,6 +23,13 @@ class SCount:
 
         self.tcount = 0
         self.umi_set = set()
+        self.is_reset = False
+
+    def mark_reset_false(self):
+        self.is_reset = False
+
+    def mark_reset_true(self):
+        self.is_reset = True
 
     def push_read(self, read):
         conf = self.conf
@@ -34,8 +43,11 @@ class SCount:
         return(0)
 
     def reset(self):
+        if self.is_reset:
+            return
         self.tcount = 0
         self.umi_set.clear()
+        self.mark_reset_true()
 
     def stat(self):
         self.tcount = len(self.umi_set)
@@ -69,6 +81,23 @@ class MCount:
                 return(-2)
             self.cell_cnt[smp] = SCount(self, self.conf)
         self.is_reset = False
+
+    def add_region(self, reg):
+        self.reset()
+        self.mark_reset_false()
+        return(0)
+    
+    def mark_reset_false(self, recursive = True):
+        self.is_reset = False
+        if recursive:
+            for scnt in self.cell_cnt.values():
+                scnt.mark_reset_false()
+
+    def mark_reset_true(self, recursive = False):
+        self.is_reset = True
+        if recursive:
+            for scnt in self.cell_cnt.values():
+                scnt.mark_reset_true()
 
     def push_read(self, read, sid = None):
         """Push one read into this counting machine.
@@ -107,9 +136,9 @@ class MCount:
             return
         self.tcount = 0
         if self.cell_cnt:
-            for smp in self.cell_cnt:
-                self.cell_cnt[smp].reset()
-        self.is_reset = True
+            for scnt in self.cell_cnt.values():
+                scnt.reset()
+        self.mark_reset_true()
 
     def stat(self):
         for smp in self.samples:

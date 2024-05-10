@@ -172,8 +172,7 @@ def afc_wrapper(
     conf.min_mapq = min_mapq
     conf.min_len = min_len
     conf.incl_flag = incl_flag
-    if excl_flag is None:
-        conf.excl_flag = -1
+    conf.excl_flag = -1 if excl_flag is None else excl_flag
     conf.no_orphan = no_orphan
 
     ret = afc_run(conf)

@@ -14,11 +14,20 @@ class UCount:
         Configuration.
     allele : str
         The allele for the query SNP in this UMI.
+    is_reset : bool
+        Has this object been reset.
     """
     def __init__(self):
         self.scnt = None
         self.conf = None
         self.allele = None
+        self.is_reset = False
+
+    def mark_reset_false(self):
+        self.is_reset = False
+
+    def mark_reset_true(self):
+        self.is_reset = True
 
     # here we use `prepare` function to set `UCount`, instead of initialize
     # directly in `__init__` function, in case a memory pool of `UCount`
@@ -49,6 +58,12 @@ class UCount:
             bases = get_query_bases(read, full_length = False)
             self.allele = bases[idx].upper()
         return(0)
+    
+    def reset(self):
+        if self.is_reset:
+            return
+        self.allele = None
+        self.mark_reset_true()
 
     def stat(self):
         return(0)
@@ -79,6 +94,18 @@ class SCount:
         self.umi_cnt = {}
         self.is_reset = False
 
+    def mark_reset_false(self, recursive = True):
+        self.is_reset = False
+        #if recursive:
+        #    for ucnt in self.umi_cnt.values():
+        #        ucnt.mark_reset_false()
+
+    def mark_reset_true(self, recursive = False):
+        self.is_reset = True
+        #if recursive:
+        #    for ucnt in self.umi_cnt.values():
+        #        ucnt.mark_reset_true()
+
     def push_read(self, read):
         conf = self.conf
         umi = None
@@ -104,8 +131,11 @@ class SCount:
             return
         for i in range(len(self.tcount)):
             self.tcount[i] = 0
-        self.umi_cnt.clear()
-        self.is_reset = True
+        self.umi_cnt.clear()    
+        # after clear(), no need to reset ucnt, otherwise,
+        # for ucnt in self.umi_cnt.values():
+        #     ucnt.reset()
+        self.mark_reset_true()
 
     def stat(self):
         for ucnt in self.umi_cnt.values():
@@ -158,8 +188,20 @@ class MCount:
     def add_snp(self, snp):
         self.reset()
         self.snp = snp
-        self.is_reset = False
+        self.mark_reset_false()
         return(0)
+    
+    def mark_reset_false(self, recursive = True):
+        self.is_reset = False
+        if recursive:
+            for scnt in self.cell_cnt.values():
+                scnt.mark_reset_false()
+
+    def mark_reset_true(self, recursive = False):
+        self.is_reset = True
+        if recursive:
+            for scnt in self.cell_cnt.values():
+                scnt.mark_reset_true()
 
     def push_read(self, read, sid = None):
         """Push one read into this counting machine.
@@ -201,9 +243,9 @@ class MCount:
             for i in range(len(self.tcount)):
                 self.tcount[i] = 0
         if self.cell_cnt:
-            for smp in self.cell_cnt:
-                self.cell_cnt[smp].reset()
-        self.is_reset = True
+            for scnt in self.cell_cnt.values():
+                scnt.reset()
+        self.mark_reset_true()
 
     def stat(self):
         for smp in self.samples:

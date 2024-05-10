@@ -69,6 +69,7 @@ def fc_features(thdata):
                 (thdata.idx, reg.get_id()))
             
         mcnt.reset()
+        mcnt.add_region(reg)
         str_reg = "%s\t%d\t%d\t%s\n" % \
             (reg.chrom, reg.start, reg.end - 1, reg.get_id())
         ret, counts = fc_fet1(reg, sam_list, mcnt, conf)
