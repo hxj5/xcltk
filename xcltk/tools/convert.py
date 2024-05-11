@@ -1,4 +1,4 @@
-# convert.py - convert formats between genomic features.
+# convert.py - convert between different formats of genomic features.
 
 #TODO:
 #- use getopt to re-implement cmdline.

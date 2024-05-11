@@ -1,4 +1,4 @@
-# count.py - allele counting for each feature.
+# count.py - basic feature counting.
 
 
 import getopt

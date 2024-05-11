@@ -60,16 +60,16 @@ Usage:   xcltk <command> [options]
 
 Commands:
   -- BAF calculation
-     allelefc         Allele counting for each feature.
+     allelefc         Allele-specific feature counting.
      baf              Preprocessing pipeline for XClone BAF.
-     fixref           Fix REF, ALT and GT.
+     fixref           Fix REF allele mismatches based on reference FASTA.
      rpc              Reference phasing correction.
 
   -- RDR calculation
      basefc           Basic feature counting.
 
   -- Tools
-     convert          Convert different region file formats.
+     convert          Convert between different formats of genomic features.
 
   -- Others
      -h, --help       Print this message and exit.

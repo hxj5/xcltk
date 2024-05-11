@@ -1,4 +1,4 @@
-# fixref.py - fix reference allele of SNPs; mimic `bcftools +fixref`.
+# fixref.py - fix reference allele mismatches of SNPs; mimic `bcftools +fixref`.
 
 #this script is aimed to make sure REFs match certain genome reference build.
 #it would change corresponding ALT & GT while delete other fields in FORMAT

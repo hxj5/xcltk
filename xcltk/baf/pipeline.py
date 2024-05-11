@@ -285,7 +285,7 @@ def pipeline_wrapper(
 
     info("merged VCF is '%s'." % phased_vcf_fn)
 
-    # count allele counts for each feature.
+    # allele-specific feature counting.
     info("BAF feature counting ...")
 
     fc_dir = os.path.join(out_dir, "baf_fc")

@@ -172,7 +172,7 @@ xcltk basefc     \
 ```
 
 
-### SMARTA-seq data
+### SMART-seq data
 
 #### BAF part
 

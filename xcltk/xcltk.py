@@ -13,23 +13,23 @@ from .tools.convert import convert_main as tools_convert
 
 def __usage(fp = sys.stdout):
     msg =  "\n"
-    msg += "Program: %s (Toolkit for XClone)\n" % APP
+    msg += "Program: %s (Toolkit for XClone Preprocessing)\n" % APP
     msg += "Version: %s\n" % VERSION
     msg += "\n"
     msg += "Usage:   %s <command> [options]\n" % APP
     msg += "\n"                                          \
            "Commands:\n"                                  \
            "  -- BAF calculation\n"                                         \
-           "     allelefc         Allele counting for each feature.\n"      \
+           "     allelefc         Allele-specific feature counting.\n"      \
            "     baf              Preprocessing pipeline for XClone BAF.\n"   \
-           "     fixref           Fix REF, ALT and GT.\n"                    \
+           "     fixref           Fix REF allele mismatches based on reference FASTA.\n"  \
            "     rpc              Reference phasing correction.\n"            \
            "\n"                                                              \
            "  -- RDR calculation\n"                                          \
            "     basefc           Basic feature counting.\n"                 \
            "\n"                                                              \
            "  -- Tools\n"                                        \
-           "     convert          Convert different region file formats.\n"   \
+           "     convert          Convert between different formats of genomic features.\n"   \
            "\n"                                                              \
            "  -- Others\n"                                                   \
            "     -h, --help       Print this message and exit.\n"             \
