@@ -1,8 +1,5 @@
 # xcltk.py - xcltk cmdline interface.
 
-#TODO:
-# - add install list (conda + pip)
-
 import sys
 
 from .baf.count import afc_main as baf_allelefc
@@ -14,7 +11,7 @@ from .rdr.count import fc_main as rdr_basefc
 from .tools.convert import convert_main as tools_convert
 
 
-def __usage(fp = sys.stderr):
+def __usage(fp = sys.stdout):
     msg =  "\n"
     msg += "Program: %s (Toolkit for XClone)\n" % APP
     msg += "Version: %s\n" % VERSION
@@ -45,7 +42,7 @@ def main():
     argc = len(sys.argv)
     if argc < 2:
         __usage()
-        sys.exit(1)
+        sys.exit(0)
 
     command = sys.argv[1]
     if command == "allelefc": baf_allelefc(sys.argv)
@@ -54,6 +51,6 @@ def main():
     elif command == "rpc": baf_rpc(sys.argv)
     elif command == "basefc": rdr_basefc(sys.argv)
     elif command == "convert": tools_convert(sys.argv)
-    elif command in ("-h", "--help"): __usage(); sys.exit(3)
-    elif command in ("-V", "--version"): sys.stderr.write("%s\n" % VERSION); sys.exit(3)
-    else: sys.stderr.write("Error: wrong command '%s'\n" % command); sys.exit(5)
+    elif command in ("-h", "--help"): __usage(); sys.exit(0)
+    elif command in ("-V", "--version"): sys.stderr.write("%s\n" % VERSION); sys.exit(0)
+    else: sys.stderr.write("Error: wrong command '%s'\n" % command); sys.exit(1)

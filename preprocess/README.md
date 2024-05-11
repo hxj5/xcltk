@@ -1,11 +1,11 @@
 # xcltk: Toolkit for XClone Preprocessing
 
-The [XClone][XClone repo] is a statistical method that integrates the 
-expression levels (read depth ratio; RDR signals) and the allelic balance
-(B-allele frequency; BAF signals) to detect haplotype-aware copy number 
-variations (CNVs) and reconstruct tumour clonal substructure from 
-scRNA-seq data. 
-It takes three matrices as input: allele-specific *AD* and *DP* matrices
+[XClone][XClone repo] is a statistical method to detect haplotype-aware 
+copy number variations (CNVs) and reconstruct tumour clonal substructure from
+scRNA-seq data, 
+by integrating the expression levels (read depth ratio; RDR signals) and 
+the allelic balance (B-allele frequency; BAF signals).
+It takes three matrices as input: the allele-specific *AD* and *DP* matrices
 (BAF signals) and the *total read depth* matrix (RDR signals).
 
 The [xcltk][xcltk repo] package implements a preprocessing pipeline to 
@@ -23,8 +23,8 @@ To use the pipeline, please install
 [python (tested on python 3.11)](https://www.python.org/) and 
 [xcltk >= 0.3.0][xcltk repo], together with a few dependencies listed below.
 
-- [bcftools](https://github.com/samtools/bcftools)
-- [bgzip or htslib](https://github.com/samtools/htslib)
+- [bcftools][bcftools]
+- [bgzip or htslib][htslib]
 - [cellsnp-lite >= 1.2.0][cellsnp-lite]
 - [eagle2][eagle2]
 
@@ -69,8 +69,7 @@ tar xzvf Eagle_v2.4.1.tar.gz
 
 In addition, the pipeline relies on a common SNP VCF (for pileup), 
 phasing reference panel and genetic map (for phasing with eagle2).
-You can download the files using following links. 
-Credits to [Numbat][Numbat] authors.
+You can download the files using following links.
 
 #### 1000G SNP VCF
 
@@ -83,6 +82,10 @@ wget https://sourceforge.net/projects/cellsnp/files/SNPlist/genome1K.phase3.SNP_
 ```
 
 #### 1000G Reference Panel
+
+The pre-compiled files below will be used by Eagle2 as reference panel for
+SNP phasing.
+Credits to the authors of [Numbat][Numbat].
 
 ```
 # hg38
@@ -101,7 +104,8 @@ e.g., `Eagle_v2.4.1/tables`.
 #### Feature annotations
 
 Check [data/anno](https://github.com/hxj5/xcltk/tree/master/data/anno) folder
-in the xcltk Github repo for the latest version of feature annotation files.
+in the [xcltk][xcltk repo] Github repo for the latest version of feature 
+annotation files.
 
 ```
 # hg38
@@ -115,7 +119,7 @@ wget https://raw.githubusercontent.com/hxj5/xcltk/master/data/anno/annotate_gene
 ## Quick Start
 
 As mentioned, the [xcltk][xcltk repo] preprocessing pipeline aims to generate
-the three matrices, AD & DP & total read depth matrices, 
+the three matrices, the *AD*, *DP*, and *total read depth* matrices, 
 from input BAM file(s).
 The allele-specific AD and DP matrices, refered to as **BAF** 
 (B-Allele Frequency), contains the information of allelic balance.
@@ -235,17 +239,18 @@ If you have matched omics data, especially the DNA data, you may try using
 it to get the phased SNPs.
 For example, if you have matched scDNA-seq data of the same sample,
 you may
-- (1) call `xcltk.baf.genotype::pileup()` function on the scDNA-seq data 
-  to obtain a more reliable genotyping results.
-- (2) call `xcltk.baf.genotype::ref_phasing()` function to do the reference
-  phasing.
-  Before phasing, you may need to split the VCF file by chromosomes 
-  with `xcltk.utils.vcf::vcf_split_chrom()` and index the new VCF files with
-  `xcltk.utils.vcf::vcf_index()`.
-  After phasing, you may merge the chromosome-specific phased VCF files with 
-  `xcltk.utils.vcf::vcf_merge()`.
-- (3) call `xcltk.baf.count::afc_wrapper()` function to do allele-specific
-  feature counting on the scRNA-seq data.
+
+1. call `xcltk.baf.genotype::pileup()` function on the scDNA-seq data 
+   to obtain a more reliable genotyping results.
+2. call `xcltk.baf.genotype::ref_phasing()` function to do the reference
+   phasing.
+   Before phasing, you may need to split the VCF file by chromosomes 
+   with `xcltk.utils.vcf::vcf_split_chrom()` and index the new VCF files with
+   `xcltk.utils.vcf::vcf_index()`.
+   After phasing, you may merge the chromosome-specific phased VCF files with 
+   `xcltk.utils.vcf::vcf_merge()`.
+3. call `xcltk.baf.count::afc_wrapper()` function to do allele-specific
+   feature counting on the scRNA-seq data.
 
 
 ## Pipeline walkthrough
@@ -253,13 +258,13 @@ you may
 ### BAF part
 
 [xcltk][xcltk repo] implements `xcltk baf` command line tool to compute 
-the BAF in each feature and single cell.
+the BAF signals for each feature and single cell.
 It mainly includes three steps, while each step has been implemented in a
 specific function.
 
 #### 1. Germline SNPs calling
 
-xcltk calls heterozygous germline SNPs using a pseudo-bulk strategy, i.e.,
+xcltk calls germline heterozygous SNPs using a pseudo-bulk strategy, i.e.,
 by aggregating UMIs/reads of all cells as one bulk sample.
 By default, it only keeps SNPs with `--minCOUNT 20` and `--minMAF 0.1`.
 
@@ -275,22 +280,23 @@ This step is implemented in the function `ref_phasing()` in module
 
 #### 3. BAF calculation for features and single cells
 
-xcltk computes the BAF signals by aggregating the counts of **unique** 
+xcltk computes the BAF signals by aggregating the counts of unique
 haplotype-specific UMIs or reads, which are fetched from phased SNPs, 
 in haplotype features (blocks) and single cells.
 
 This step is implemented in the function `afc_wrapper()` in module
 `xcltk.baf.count` and also as a command line tool `xcltk allelefc`.
 
-Finally, matrices of "feature x cell" AD (UMI or read counts of one haplotype)
+Finally, matrices of *feature x cell* AD (UMI or read counts of one haplotype)
 and DP (UMI or read counts of both haplotypes) would be outputed
 for downstream analysis.
 
 ### RDR part
 
-[xcltk][xcltk repo] computes the RDR in each feature and cell by 
+[xcltk][xcltk repo] computes the RDR signals in each feature and cell by 
 extracting and counting UMIs or reads overlapping with target features, 
-during which minimum reads filtering was performed. 
+during which minimum reads filtering was performed.
+
 By default, reads with MAPQ<20, aligned length<30nt are filtered. 
 In addition, reads with certain FLAG bits will also be filtered.
 Specifically, by default, reads with `UNMAP,SECONDARY,QCFAIL` 
@@ -299,15 +305,18 @@ Specifically, by default, reads with `UNMAP,SECONDARY,QCFAIL`
 10x scDNA-seq, 10x scATAC-seq) will be filtered.
 Intronic reads and reads that are mapped to multiple features are largely 
 preserved for counting. 
-Finally, a `feature x cell` matrix of UMI or read counts would be outputed 
+Finally, a *feature x cell* matrix of UMI or read counts would be outputed 
 for downstream analysis.
 
 This step is implemented in the `xcltk basefc` command line tool.
 
 
+
+[bcftools]: https://github.com/samtools/bcftools
 [cellranger]: https://www.10xgenomics.com/support/software/cell-ranger/latest
 [cellsnp-lite]: https://github.com/single-cell-genetics/cellsnp-lite
 [eagle2]: https://alkesgroup.broadinstitute.org/Eagle/
+[htslib]: https://github.com/samtools/htslib
 [Numbat]: https://github.com/kharchenkolab/numbat/
 [STARsolo]: https://github.com/alexdobin/STAR
 [XClone repo]: https://github.com/single-cell-genetics/XClone
