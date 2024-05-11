@@ -1,11 +1,12 @@
-# Utils for Genome Region Processing
-# Author: Xianjie Huang 
+# gregion.py - utils for genome region processing
+
 
 # TODO: add bgzip support
 
+import gzip 
 import os
 import sys
-import gzip 
+
 from .gtf import load_genes
 
 CHROM_LEN_HG19 = (249250621, 243199373, 198022430, 191154276, 180915260, 171115067,  # chr1 - chr6

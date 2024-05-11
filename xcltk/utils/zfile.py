@@ -1,5 +1,4 @@
-# File Class
-# Author: Xianjie Huang
+# zfile.py - wrapper of file object, supporting GZIP/BGZIP. 
 
 # Note that there's a bug when reading BGZIP file with pysam (issue #438):
 #   it will stop reading when encounting a blank line, this could be caused 
@@ -8,8 +7,9 @@
 # So we need to use gzip to read GZIP and BGZIP files
 # it's probably ok to use pysam to write BGZIP files.
 
-import pysam
 import gzip
+import pysam
+
 
 class ZFile:
     """Simple File object wrapper that supports plain/gzip/bgzip

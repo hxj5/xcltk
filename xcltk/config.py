@@ -1,6 +1,5 @@
-# Global configure
+# config.py - global configuration.
 
-PROGRAM = "xcltk"
-VERSION = "0.1.16"
+APP = "xcltk"
+VERSION = "0.3.0"
 DEBUG = 0
-

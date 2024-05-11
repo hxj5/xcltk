@@ -1,16 +1,19 @@
-# Convert Region file format
-# Author: Xianjie Huang 
+# convert.py - convert formats between genomic features.
+
+#TODO:
+#- use getopt to re-implement cmdline.
 
 import os
 import sys
+
 from optparse import OptionParser
-from ..utils.region import get_fixsize_regions, load_regions, output_regions
-from .config import APP
-from ..config import VERSION
+
+from ..config import APP, VERSION
+from ..utils.gregion import get_fixsize_regions, load_regions, output_regions
 
 COMMAND = "convert"
 
-def convert(argv):
+def convert_main(argv):
     # parse command line options
     if len(argv) < 3:
         sys.stderr.write("Welcome to %s %s v%s!\n\n" % (APP, COMMAND, VERSION))
@@ -78,6 +81,3 @@ def convert(argv):
 
     # output regions
     output_regions(reg_list, out_file, out_type)
-
-if __name__ == "__main__":
-    convert(sys.argv)

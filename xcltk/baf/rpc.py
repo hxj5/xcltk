@@ -1,6 +1,4 @@
-# rpc.py - Reference Phasing Correction
-# Xianjie Huang
-# 2023-01-05
+# rpc.py - reference phasing correction
 
 import anndata as ad
 import getopt
@@ -11,9 +9,14 @@ import os
 import pandas as pd
 import scipy as sp
 import scipy.io
-from scipy.special import logsumexp
 import sys
 import time
+
+from scipy.special import logsumexp
+from ..config import APP, VERSION
+
+
+COMMAND = "rpc"
 
 
 def format_theta(theta, epsilon = 1e-6, inplace = True):
@@ -410,8 +413,7 @@ def multi_reg_rpc(
 
 
 class Config:
-    def __init__(self, app):
-        self.app = app
+    def __init__(self):
         self.def_epsilon_hap = 1e-2
         self.def_n_init = 100
         self.def_n_proc = 1
@@ -512,9 +514,10 @@ def load_DP(DP_mtx_fn):
     return(DP)
 
 
-def usage(conf, fp = sys.stderr):
-    s =  "\n" 
-    s += "Usage: %s <options>\n" % conf.app
+def usage(conf, fp = sys.stdout):
+    s =  "\n"
+    s += "Version: %s\n" % VERSION
+    s += "Usage:   %s %s <options>\n" % (APP, COMMAND)
     s += "\n" 
     s += "Options:\n"
     s += "  -b, --barcode FILE     A plain file listing all effective cell barcode.\n"
@@ -585,15 +588,15 @@ def quit(main_func, cmdline, start_time, state = 0, err_msg = None):
     sys.stdout.write("\n")
 
 
-def main_rpc(argv):
-    func = "main_rpc"
+def rpc_main(argv):
+    func = "rpc_main"
 
     start_time = time.time()
 
-    conf = Config(app = "rpc.py")
+    conf = Config()
     if len(argv) <= 2:
-        usage(conf, sys.stderr)
-        sys.exit(1)
+        usage(conf, sys.stdout)
+        sys.exit(0)
 
     opts, args = getopt.getopt(argv[2:], 
         "-b:-p:-A:-D:-O:-P:-R:-S:-h-v", 
@@ -616,7 +619,7 @@ def main_rpc(argv):
         elif op in ("-P", "--phasedsnp"): conf.snp_fn = val
         elif op in ("-R", "--region"): conf.region_fn = val
         elif op in ("-S", "--sid"): conf.sid = val
-        elif op in ("-h", "--help"): usage(conf); sys.exit(1)
+        elif op in ("-h", "--help"): usage(conf); sys.exit(0)
         elif op in ("-v", "--verbose"): conf.verbose = True
         elif op in ("--epsilonhap"): conf.epsilon_hap = float(val)
         elif op in ("--ninit"): conf.n_init = int(val)
@@ -682,7 +685,3 @@ def main_rpc(argv):
     # quit
     quit(func, cmdline, start_time, state = 0)
     return(0)
-
-
-if __name__ == "__main__":
-    main_rpc(sys.argv)

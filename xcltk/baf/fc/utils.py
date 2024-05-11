@@ -1,9 +1,11 @@
-# Utils
+# utils.py - help functions.
 
 import os
 import sys
-from .region import SNP, SNPSet, BlockRegion
-from .zfile import zopen, ZF_F_GZIP, ZF_F_PLAIN
+
+from .gfeature import SNP, SNPSet, BlockRegion
+from ...utils.zfile import zopen, ZF_F_GZIP, ZF_F_PLAIN
+
 
 def load_region_from_txt(fn, sep = "\t", verbose = False):
     """Load regions from plain file.
@@ -32,6 +34,7 @@ def load_region_from_txt(fn, sep = "\t", verbose = False):
         reg_list.append(reg)
     fp.close()
     return reg_list
+
 
 def load_snp_from_tsv(fn, verbose = False):
     """Load phased SNPs from TSV file.
@@ -84,6 +87,7 @@ def load_snp_from_tsv(fn, verbose = False):
             continue          
     fp.close()
     return snp_set
+
 
 def load_snp_from_vcf(fn, verbose = False):
     """Load phased SNPs from VCF file.
@@ -157,6 +161,7 @@ def load_snp_from_vcf(fn, verbose = False):
     fp.close()
     return snp_set
 
+
 def _fmt_line(ln, k):
         items = ln.split("\t")
         items[0] = str(int(items[0]) + k)
@@ -204,6 +209,7 @@ def merge_mtx(in_fn_list, in_format,
             os.remove(in_fn)
     return(0) 
 
+
 # internal use only!
 def merge_tsv(in_fn_list, in_format, 
               out_fn, out_fmode, out_format, 
@@ -224,6 +230,7 @@ def merge_tsv(in_fn_list, in_format,
         for in_fn in in_fn_list:
             os.remove(in_fn)
     return(0)
+
 
 # internal use only!
 def rewrite_mtx(in_fn, in_format, 

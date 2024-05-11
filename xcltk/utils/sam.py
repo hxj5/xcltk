@@ -1,62 +1,5 @@
-# Copied from cellSNP, https://github.com/single-cell-genetics/cellSNP/blob/purePython/cellSNP/utils/cellsnp_utils.py
-# SAM file utils 
-# Author: Xianjie Huang
+# sam.py - SAM/BAM file routine
 
-import pysam
-
-# Operations of CIGAR, copied from pysam (https://pysam.readthedocs.io/en/latest/api.html#pysam.AlignedSegment.cigartuples)
-# Do not change these values unless you know what you are doing.
-BAM_CMATCH = 0
-BAM_CINS = 1
-BAM_CDEL = 2
-BAM_CREF_SKIP = 3
-BAM_CSOFT_CLIP = 4
-BAM_CHARD_CLIP = 5
-BAM_CPAD = 6
-BAM_CEQUAL = 7
-BAM_CDIFF = 8
-BAM_CBACK = 9
-
-
-# for pysam
-CACHE_CHROM = None
-CACHE_SAMFILE = None
-
-def check_pysam_chrom(samFile, chrom=None):
-    """Chech if samFile is a file name or pysam object, and if chrom format. 
-    """
-    global CACHE_CHROM
-    global CACHE_SAMFILE
-
-    if CACHE_CHROM is not None:
-        if (samFile == CACHE_SAMFILE) and (chrom == CACHE_CHROM):
-            return CACHE_SAMFILE, CACHE_CHROM
-
-    if type(samFile) == str:
-        ftype = samFile.split(".")[-1]
-        if ftype != "bam" and ftype != "sam" and ftype != "cram" :
-            print("Error: file type need suffix of bam, sam or cram.")
-            sys.exit(1)
-        if ftype == "cram":
-            samFile = pysam.AlignmentFile(samFile, "rc")
-        elif ftype == "bam":
-            samFile = pysam.AlignmentFile(samFile, "rb")
-        else:
-            samFile = pysam.AlignmentFile(samFile, "r")
-
-    if chrom is not None:
-        if chrom not in samFile.references:
-            if chrom.startswith("chr"):
-                chrom = chrom.split("chr")[1]
-            else:
-                chrom = "chr" + chrom
-        if chrom not in samFile.references:
-            print("Can't find references %s in samFile" %chrom)
-            return samFile, None
-    
-    CACHE_CHROM = chrom
-    CACHE_SAMFILE = samFile
-    return samFile, chrom
 
 def get_query_bases(read, full_length=False):
     """
@@ -87,6 +30,7 @@ def get_query_bases(read, full_length=False):
             pos += l
         # else: do nothing.
     return result
+
 
 def get_query_qualities(read, full_length=False):
     """
@@ -121,3 +65,43 @@ def get_query_qualities(read, full_length=False):
         # else: do nothing.
     return result
 
+
+def sam_fetch(sam, chrom, start, end):
+    """Provide a wrapper for sam-fetch method that could automatically
+       handle chrom with or without "chr" prefix.
+    @param sam    A pysam.AlignmentFile object.
+    @param chrom  Chromosome name [str]
+    @param start  1-based, inclusive [int]
+    @param end    1-based, inclusive [int]
+    @return       Iterator if success, None otherwise. 
+    """
+    try:   # sam.fetch(): start and stop denote 0-based, half-open intervals.
+        itr = sam.fetch(chrom, start - 1, end) 
+    except:
+        pass
+    else:
+        if itr:
+            return itr
+    chrom = chrom[3:] if chrom.startswith("chr") else "chr" + chrom
+    try:
+        itr = sam.fetch(chrom, start - 1, end)
+    except:
+        return None
+    else:
+        return itr if itr else None
+
+BAM_FPAIRED = 1
+BAM_FPROPER_PAIR = 2
+
+# Cigar
+# reference: https://pysam.readthedocs.io/en/latest/api.html#pysam.AlignedSegment.cigartuples
+BAM_CMATCH = 0
+BAM_CINS = 1
+BAM_CDEL = 2
+BAM_CREF_SKIP = 3
+BAM_CSOFT_CLIP = 4
+BAM_CHARD_CLIP = 5
+BAM_CPAD = 6
+BAM_CEQUAL = 7
+BAM_CDIFF = 8
+BAM_CBACK = 9

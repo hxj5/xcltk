@@ -2,6 +2,59 @@
 History
 =======
 
+Release v0.3.0 (11/05/2024)
+===========================
+The v0.2.x was skipped since this new version has several substantial updates:
+
+* BAF: do reference phasing on local machines instead of using online 
+  service.
+* BAF & RDR: better support well-based (e.g., SMART-seq) data without
+  the need to merge the input BAM files first;
+* coding improvement using a more unified framework, mainly using the
+  `fc` (feature counting) and `utils` sub-modules.
+
+Feature enhancement
+
+BAF part:
+
+* add `xcltk baf` command line tool to support reference phasing on
+  local machines instead of using online service.
+* `xcltk allelefc`: better support well-based (e.g., SMART-seq) data without
+  the need to merge the input BAM files first;
+* `xcltk allelefc`: both REF and ALT allele counting will exclude the 
+  UMIs/reads mapped to both alleles when *no_dup_hap* is True.
+
+RDR part:
+
+* better support well-based (e.g., SMART-seq) data without the need to merge
+  the input BAM files first;
+* re-implement the `xcltk basefc` using the `fc` (feature counting) framework.
+
+Preprocess:
+
+* re-implement the preprocess pipeline by 
+  (1) replace the bash scripts with python functions, e.g., 
+      wrapping SNP calling (previously `baf_pre_phase.sh`) into 
+      `xcltk.baf.genotype::pileup()`; 
+      reference phasing locally with `xcltk.baf.genotype::ref_phasing()`;
+      wrapping allele-specific feature counting (previously 
+      `baf_post_phase.sh`) with `xcltk.baf.count::afc_wrapper()`.
+  (2) further wrap the three functions into a pipeline implemented as
+      a sub-module `xcltk.baf.pipeline` and also as a command line tool
+      `xcltk baf`.
+
+Others:
+
+* rename the cmdline command `xcltk pileup` to `xcltk allelefc`.
+* make the cmdline options more unified, e.g., "--samList" and "--ncores" in
+  "xcltk allelefc", "xcltk pipeline", and "xcltk basefc".
+* usage() functions by default output to *stdout* instead of *stderr*.
+* cmdline "--help" option exit code changes from 1 to 0.
+* add/update a few util sub-modules such as `vcf.py`, `xlog.py` etc.
+* add post_hoc scripts for post-processing xcltk output.
+* initialize "data" dir and add feature annotation files.
+
+
 Release v0.1.16 (28/01/2023)
 ============================
 * baf: add reference phasing correction (xcltk rpc).
