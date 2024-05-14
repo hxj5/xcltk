@@ -1,8 +1,8 @@
 # xcltk: Toolkit for XClone Preprocessing
 
-[XClone][XClone repo] is a statistical method to detect haplotype-aware 
-copy number variations (CNVs) and reconstruct tumour clonal substructure from
-scRNA-seq data, 
+[XClone][XClone repo] is a statistical method to detect allele- and
+haplotype-specific copy number variations (CNVs) and reconstruct 
+tumour clonal substructure from scRNA-seq data,
 by integrating the expression levels (read depth ratio; RDR signals) and 
 the allelic balance (B-allele frequency; BAF signals).
 It takes three matrices as input: the allele-specific *AD* and *DP* matrices
@@ -29,7 +29,7 @@ To use the pipeline, please install
 - [eagle2][eagle2]
 
 Please install these softwares and add them to the system search path (i.e.,
-the system variable PATH).
+the system variable `PATH`).
 
 #### Use conda environment (recommended)
 

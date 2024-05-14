@@ -4,9 +4,9 @@
 [![](https://img.shields.io/github/license/hxj5/xcltk)][licence]
 
 
-[XClone][XClone repo] is a statistical method to detect haplotype-aware 
-copy number variations (CNVs) and reconstruct tumour clonal substructure from
-scRNA-seq data, 
+[XClone][XClone repo] is a statistical method to detect allele- and 
+haplotype-specific copy number variations (CNVs) and reconstruct 
+tumour clonal substructure from scRNA-seq data, 
 by integrating the expression levels (read depth ratio; RDR signals) and 
 the allelic balance (B-allele frequency; BAF signals).
 It takes three matrices as input: the allele-specific *AD* and *DP* matrices
@@ -29,23 +29,23 @@ All release notes are available at [docs/release.rst][release]
 
 ## Installation
 
+### Install via pip (latest stable version)
+
 xcltk is avaliable through [pypi][pypi].
-To install, type the following command line, and add `-U` for upgrading:
 
 ```shell
 pip install -U xcltk
 ```
 
-Alternatively, you can install from this GitHub repository for latest (often
-development) version by following command line
+### Install from this Github Repo (latest stable/dev version)
 
 ```shell
 pip install -U git+https://github.com/hxj5/xcltk
 ```
 
-In either case, if you don't have write permission for your current Python 
+In either case, if you don't have write permission for your current Python
 environment, we suggest creating a separate [conda][conda] environment 
-or add --user for your current one.
+or add `--user` for your current one.
 
 
 ## Manual
