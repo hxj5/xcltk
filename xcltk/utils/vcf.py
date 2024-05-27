@@ -59,7 +59,8 @@ def vcf_load(fn):
     assert pre_line[:6] == "#CHROM"
     
     # load variants
-    variants = pd.read_csv(fn, sep = "\t", header = None, comment = "#")
+    variants = pd.read_csv(fn, sep = "\t", header = None, comment = "#",
+                            dtype = {0: str})
     variants.columns = pre_line.strip()[1:].split("\t")
     
     return((variants, header))

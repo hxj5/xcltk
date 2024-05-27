@@ -465,7 +465,8 @@ def load_region_meta(region_fn):
     A dataframe containing 4 column [pd.DataFrame]:
         chrom [str], start [int], end [int], name [str]
     """
-    region_meta = pd.read_csv(region_fn, sep = "\t", header = None)
+    region_meta = pd.read_csv(region_fn, sep = "\t", header = None, 
+                            dtype = {0: str})
     region_meta.columns = ["chrom", "start", "end", "name"]
     region_meta["chrom"] = region_meta["chrom"].astype(str)
     region_meta["chrom"] = region_meta["chrom"].str.replace(  \
@@ -490,7 +491,8 @@ def load_snp_meta(snp_fn):
     ref_hap, haplotype ID of REF allele [int]
     alt_hap, haplotype ID of ALT allele [int]
     """
-    snp_meta = pd.read_csv(snp_fn, sep = "\t", comment = "#", header = None)
+    snp_meta = pd.read_csv(snp_fn, sep = "\t", comment = "#", header = None,
+                            dtype = {0: str})
     snp_meta = snp_meta[[0, 1, 3, 4, 9]]
     snp_meta.columns = ["chrom", "pos", "ref", "alt", "gt"]
     snp_meta["chrom"] = snp_meta["chrom"].astype(str)

@@ -80,7 +80,7 @@ def xtk_load_matrix(fn):
 
 
 def xtk_load_regions(fn):
-    df = pd.read_csv(fn, header = None, sep = "\t")
+    df = pd.read_csv(fn, header = None, sep = "\t", dtype = {0: str})
     df.columns = ["chrom", "start", "end", "reg_id"]
     return(df)
 
