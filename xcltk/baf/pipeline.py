@@ -207,6 +207,11 @@ def pipeline_wrapper(
 
     info("pileup VCF is '%s'." % pileup_vcf_fn)
 
+    # TODO: further filter SNPs given `minMAF` and `minCOUNT`, considering
+    # only REF and ALT (AD & DP) alleles, but not OTH alleles.
+    # cellsnp-lite (at least v1.2.3 and before) may keep some SNPs unexpectly,
+    # e.g., SNP with `AD=9;DP=9;OTH=1` when `minMAF=0.1; minCOUNT=10`.
+
     # prepare VCF files for phasing
     info("prepare VCF files for phasing ...")
 
