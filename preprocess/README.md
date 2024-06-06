@@ -21,7 +21,7 @@ platforms.
 
 To use the pipeline, please install
 [python (tested on python 3.11)](https://www.python.org/) and 
-[xcltk >= 0.3.0][xcltk repo], together with a few dependencies listed below.
+[xcltk >= 0.3.1][xcltk repo], together with a few dependencies listed below.
 
 - [bcftools][bcftools]
 - [bgzip or htslib][htslib]

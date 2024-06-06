@@ -2,6 +2,13 @@
 History
 =======
 
+Release v0.3.1 (06/06/2024)
+===========================
+* BAF: in ref_phasing, use multiprocessing to phase SNPs of one chromosome
+  per subprocess.
+* specify dtype of column 0 as str in pd.read_csv() when loading region file.
+
+
 Release v0.3.0 (11/05/2024)
 ===========================
 The v0.2.x was skipped since this new version has several substantial updates:
