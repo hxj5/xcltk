@@ -1,5 +1,7 @@
 # genotype.py - help functions for BAF pipeline (`pipeline.py`).
 
+
+import multiprocessing
 import os
 import stat
 import subprocess
@@ -124,7 +126,7 @@ def pileup(
             warn("umi tag is 'None' in mode '%s'." % mode)
 
     if not os.path.exists(out_dir):
-        os.mkdir(out_dir)
+        os.makedirs(out_dir, exist_ok = True)
     
     if not script_fn:
         script_fn = os.path.join(out_dir, "run_pileup.sh")
@@ -183,7 +185,7 @@ def ref_phasing(
     eagle_fn,
     out_dir,
     ncores = 1,
-    script_fn = None, log_fn = None,
+    script_fn_prefix = None, log_fn_prefix = None,
     verbose = False
 ):
     """Reference phasing
@@ -202,7 +204,7 @@ def ref_phasing(
         reference genotypes.
     out_prefix_list : list
         A list of prefixes of the output VCF files. The output phased VCF
-        filename will be, e.g., `<out_prefix_list[0]>.vcf.gz`.
+        file path will be, e.g., `<out_prefix_list[0]>.vcf.gz`.
     gmap_fn : str
         The genetic map file.
     eagle_fn : str
@@ -211,12 +213,12 @@ def ref_phasing(
         The output dir.
     ncores : int
         Number of threads.
-    script_fn : str
-        Path to the script file that runs Eagle2. If `None`, use default path
-        `<out_dir>/run_phasing.sh`.
-    log_fn : str
-        Path to the logging file that records the output of Eagle2. If `None`,
-        use default path `<out_dir>/phasing.log`.
+    script_fn_prefix : str
+        Prefix to the script files that run Eagle2. If `None`, use default
+        value `<out_dir>/run_phasing`.
+    log_fn_prefix : str
+        Prefix to the logging files that record the output of Eagle2. 
+        If `None`, use default value `<out_dir>/phasing`.
     verbose : bool
         Whether to show detailed logging information.
 
@@ -256,38 +258,49 @@ def ref_phasing(
     assert_e(eagle_fn)
     assert_n(out_dir)
     if not os.path.exists(out_dir):
-        os.mkdir(out_dir)
+        os.makedirs(out_dir, exist_ok = True)
 
-    if script_fn is None:
-        script_fn = os.path.join(out_dir, "run_phasing.sh")
-    if log_fn is None:
-        log_fn = os.path.join(out_dir, "phasing.log")
-
-    # generate pileup script
-    if verbose:
-        info("generate phasing script ...")
-
-    cmd  = ""
-    for target_vcf_fn, ref_vcf_fn, out_prefix in zip(
-        target_vcf_list, ref_vcf_list, out_prefix_list
-    ):
-        cmd += "%s  \\\n" % eagle_fn
-        cmd += "    --vcfTarget  %s    \\\n" % target_vcf_fn 
-        cmd += "    --vcfRef  %s   \\\n" % ref_vcf_fn 
-        cmd += "    --geneticMapFile  %s    \\\n" % gmap_fn
-        cmd += "    --outPrefix  %s    \\\n" % out_prefix
-        cmd += "    --numThreads  %d    \n" % ncores
-        cmd += "\n"
-
-    with open(script_fn, "w") as fp:
-        fp.write(cmd)
-    st = os.stat(script_fn)
-    os.chmod(script_fn, st.st_mode | stat.S_IXUSR)
+    if script_fn_prefix is None:
+        script_fn_prefix = os.path.join(out_dir, "run_phasing")
+    if log_fn_prefix is None:
+        log_fn_prefix = os.path.join(out_dir, "phasing")
 
     # run phasing
     if verbose:
         info("run phasing ...")
 
+    pool = multiprocessing.Pool(processes = ncores)
+    result = []
+    idx = 0
+    for target_vcf_fn, ref_vcf_fn, out_prefix in zip(
+        target_vcf_list, ref_vcf_list, out_prefix_list
+    ):
+        cmd  = ""
+        cmd += "%s  \\\n" % eagle_fn
+        cmd += "    --vcfTarget  %s    \\\n" % target_vcf_fn 
+        cmd += "    --vcfRef  %s   \\\n" % ref_vcf_fn 
+        cmd += "    --geneticMapFile  %s    \\\n" % gmap_fn
+        cmd += "    --outPrefix  %s    \\\n" % out_prefix
+        cmd += "    --numThreads  %d    \n" % 1        # min(ncores, 3)
+        cmd += "\n"
+
+        idx += 1
+        script_fn = script_fn_prefix + "_%d.sh" % idx
+        log_fn = log_fn_prefix + "_%d.log" % idx
+        with open(script_fn, "w") as fp:
+            fp.write(cmd)
+        st = os.stat(script_fn)
+        os.chmod(script_fn, st.st_mode | stat.S_IXUSR)
+
+        result.append(pool.apply_async(
+            func = ref_phasing1, 
+            args = (script_fn, log_fn))
+        )
+    pool.close()
+    pool.join()
+
+
+def ref_phasing1(script_fn, log_fn):
     ret = None
     try:
         proc = subprocess.Popen(

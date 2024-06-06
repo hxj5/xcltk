@@ -165,7 +165,9 @@ def pipeline_wrapper(
     assert_e(snp_vcf_fn)
     assert_e(region_fn)
     if not os.path.exists(out_dir):
-        os.mkdir(out_dir)
+        os.makedirs(out_dir, exist_ok = True)
+    script_dir = os.path.join(out_dir, "scripts")
+    os.makedirs(script_dir, exist_ok = True)
 
     assert_e(gmap_fn)
     assert_e(eagle_fn)
@@ -184,9 +186,11 @@ def pipeline_wrapper(
 
     pileup_dir = os.path.join(out_dir, "pileup")
     if not os.path.exists(pileup_dir):
-        os.mkdir(pileup_dir)
-    pileup_script = os.path.join(out_dir, "run_pileup.sh")
-    pileup_log_fn = os.path.join(out_dir, "pileup.log")
+        os.makedirs(pileup_dir, exist_ok = True)
+    pileup_script_dir = os.path.join(script_dir, "pileup")
+    os.makedirs(pileup_script_dir, exist_ok = True)
+    pileup_script = os.path.join(pileup_script_dir, "run_pileup.sh")
+    pileup_log_fn = os.path.join(pileup_script_dir, "pileup.log")
 
     pileup(
         sam_fn = sam_fn, sam_list_fn = sam_list_fn,
@@ -217,9 +221,11 @@ def pipeline_wrapper(
 
     phasing_dir = os.path.join(out_dir, "phasing")
     if not os.path.exists(phasing_dir):
-        os.mkdir(phasing_dir)
-    phasing_script = os.path.join(out_dir, "run_phasing.sh")
-    phasing_log_fn = os.path.join(out_dir, "phasing.log")
+        os.makedirs(phasing_dir, exist_ok = True)
+    phasing_script_dir = os.path.join(script_dir, "phasing")
+    os.makedirs(phasing_script_dir, exist_ok = True)
+    phasing_script_prefix = os.path.join(phasing_script_dir, "run_phasing")
+    phasing_log_prefix = os.path.join(phasing_script_dir, "phasing")
 
     # add genotypes
     info("add genotypes ...")
@@ -271,8 +277,8 @@ def pipeline_wrapper(
         eagle_fn = eagle_fn,
         out_dir = phasing_dir,
         ncores = ncores,
-        script_fn = phasing_script,
-        log_fn = phasing_log_fn,
+        script_fn_prefix = phasing_script_prefix,
+        log_fn_prefix = phasing_log_prefix,
         verbose = True
     )
 
@@ -295,7 +301,7 @@ def pipeline_wrapper(
 
     fc_dir = os.path.join(out_dir, "baf_fc")
     if not os.path.exists(fc_dir):
-        os.mkdir(fc_dir)
+        os.makedirs(fc_dir, exist_ok = True)
 
     baf_fc(
         sam_fn = sam_fn, 
