@@ -48,7 +48,7 @@ then install the softwares in the env.
 conda create -n xcltk python=3.11
 conda activate xcltk
 conda install -c conda-forge -c bioconda bcftools cellsnp-lite
-pip install 'xcltk>=0.3.0'
+pip install 'xcltk>=0.3.1'
 ```
 
 Importantly, [eagle2][eagle2] has to be manually installed since there is not 
