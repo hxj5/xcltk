@@ -1,5 +1,8 @@
 # pipeline.py - preprocess the input BAM file to generate reference-phased cell x gene AD & DP matrices.
 
+# TODO:
+# 1. add --minCOUNT and --minMAF options.
+
 import getopt
 import os
 import sys
@@ -201,7 +204,7 @@ def pipeline_wrapper(
         mode = mode,
         cell_tag = cell_tag, umi_tag = umi_tag,
         ncores = ncores,
-        min_maf = 0.1, min_count = 20,
+        min_count = 20, min_maf = 0.1,
         script_fn = pileup_script,
         log_fn = pileup_log_fn
     )
