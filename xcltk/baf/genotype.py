@@ -24,7 +24,7 @@ def pileup(
     mode = "droplet",
     cell_tag = "CB", umi_tag = "UB",
     ncores = 1,
-    min_maf = 0.1, min_count = 20,
+    min_count = 20, min_maf = 0.1,
     script_fn = None, log_fn = None
 ):
     """Pileup indexed BAM file, supporting both single-cell and bulk data.
@@ -65,10 +65,10 @@ def pileup(
         UMI tag, set to `None` to turn it off.
     ncores : int
         Number of threads.
-    min_maf : float
-        Minimum minor allele frequency.
     min_count : int
         Minimum aggregated count.
+    min_maf : float
+        Minimum minor allele frequency.
     script_fn : str
         Path to the script file that runs cellsnp-lite. If `None`, use default
         path `<out_dir>/run_pileup.sh`.
@@ -148,8 +148,8 @@ def pileup(
     cmd += "    -O  %s  \\\n" % out_dir
     cmd += "    -R  %s  \\\n" % snp_vcf_fn
     cmd += "    -p  %s  \\\n" % str(ncores)
-    cmd += "    --minMAF  %s  \\\n" % str(min_maf)
     cmd += "    --minCOUNT  %s  \\\n" % str(min_count)
+    cmd += "    --minMAF  %s  \\\n" % str(min_maf)
     cmd += "    --cellTAG  %s  \\\n" % str(cell_tag)
     cmd += "    --UMItag  %s  \\\n" % str(umi_tag)
     cmd += "    --gzip    \n"
