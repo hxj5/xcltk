@@ -5,6 +5,7 @@
 
 import gzip 
 import os
+import pysam
 import sys
 
 from .gtf import load_genes
@@ -20,25 +21,40 @@ CHROM_LEN_HG38 = (248956422, 242193529, 198295559, 190214555, 181538259, 1708059
                   58617616, 64444167, 46709983, 50818468, 156040895, 57227415)       # chr19 - chrY
 
 class Region:
-    '''
-    @abstract      A wrapper for different region formats, e.g. bed/gff
-    @param chrom   Chromosome name [str]
-    @param start   Start pos of this region: 1-based, included [int]
-    @param end     End pos of this region: 1-based, included [int]
-    @param _id     Region ID [str]
+    '''A wrapper for different region formats.
+
+    Attributes
+    ----------
+    chrom : str
+        Chromosome name.
+    start : int
+        Start pos of this region: 1-based, included.
+    end : int
+        End pos of this region: 1-based, included.
+     _id : str
+        Region ID.
     '''
     def __init__(self, chrom = None, start = None, end = None, _id = None):
         self.chrom = chrom
         self.start = start
         self.end = end
         self.id = _id
-    
+
+
 def load_regions(reg_file, reg_type):
-    """
-    @abstract        Get list of regions (1-based) from input file.
-    @param reg_file  Path to input region file [str]
-    @param reg_type  Region type, one of bed|gff|tsv [str]
-    @return          A list of Region objects if success, None otherwise [list]
+    """Get list of regions (1-based) from input file.
+
+    Parameters
+    ----------
+    reg_file : str
+        Path to input region file.
+    reg_type : str
+        Region type, one of bed|gff|tsv.
+
+    Returns
+    -------
+    list
+        A list of Region objects if success, None otherwise.
     """
     if not reg_file or not os.path.isfile(reg_file) or not reg_type:
         return None
@@ -72,37 +88,38 @@ def load_regions(reg_file, reg_type):
 
     return reg_list
 
+
 def bed2reg(bed_file):
-    """
-    @abstract        Get list of regions (1-based) from bed file
-    @param bed_file  Path to bed file [str]
-    @return          A list of Region objects if success, None otherwise [list]
-    """
+    """Get list of regions (1-based) from bed file."""
     return load_regions(bed_file, "bed")
 
+
 def gff2reg(gff_file):
-    """
-    @abstract        Load regions from gff file.
-    @param gff_file  Path to gff file [str]
-    @return          A list of Region objects if success, None otherwise [list]
-    """
-    return load_regions(bed_file, "gff")
+    """Load regions from gff file."""
+    return load_regions(gff_file, "gff")
+
 
 def tsv2reg(tsv_file):
-    """
-    @abstract        Get list of regions (1-based) from tsv file
-    @param tsv_file  Path to tsv file [str]
-    @return          A list of Region objects if success, None otherwise [list]
-    """
+    """Get list of regions (1-based) from tsv file."""
     return load_regions(tsv_file, "tsv")
 
+
 def chr2reg(chrom_name, chrom_len, bin_size):
-    """
-    @abstract         Split the chromosome to several fixed-size bins.
-    @param chrom_name Chromosome name [str]
-    @param chrom_len  Length of the chrom [int]
-    @param bin_size   Size of the bin in bp [int]
-    @return           A list of Region objects if success, None otherwise [list]
+    """Split the chromosome to several fixed-size bins.
+
+    Parameters
+    ----------
+    chrom_name : str
+        Chromosome name.
+    chrom_len : int
+        Length of the chrom.
+    bin_size : int
+        Size of the bin in bp.
+    
+    Returns
+    -------
+    list
+        A list of Region objects if success, None otherwise.
     """
     try:
         chrom_len, bin_size = int(chrom_len), int(bin_size)
@@ -122,12 +139,22 @@ def chr2reg(chrom_name, chrom_len, bin_size):
     
     return reg_list
 
+
 def get_fixsize_reg_from_input_len(chroms, bin_size):
-    """
-    @abstract        Create fixed-size bins for certain chroms acoording to pre-defined chrom length. 
-    @param chroms    Dict with <chrom_name:chrom_len> pairs [dict]
-    @param bin_size  Size of bin in kb [int]
-    @return          A list of Region objects if success, None otherwise [list]
+    """Create fixed-size bins for certain chroms acoording to pre-defined
+    chrom length.
+
+    Parameters
+    ----------
+    chroms : dict
+        Dict with <chrom_name:chrom_len> pairs.
+    bin_size : int
+        Size of bin in kb.
+
+    Returns
+    -------
+    list
+        A list of Region objects if success, None otherwise.
     """
     reg_list = []
     for chrom_name, chrom_len in chroms.items():
@@ -138,13 +165,24 @@ def get_fixsize_reg_from_input_len(chroms, bin_size):
         reg_list.extend(regions)
     return reg_list
 
+
 def get_fixsize_reg_from_sam_header(chr_names, bin_size, sam_file):
-    """
-    @abstract         Create fixed-size bins for certain chroms acoording to chrom length in sam header
-    @param chr_names  A list/tuple/array of chrom names to be splitted into bins [list/tuple/array]
-    @param bin_size   Size of bin in kb [int]
-    @param sam_file   Path to sam/bam/cram file [str]
-    @return           A list of Region objects if success, None otherwise [list]
+    """Create fixed-size bins for certain chroms acoording to chrom length
+    in sam header.
+
+    Parameters
+    ----------
+    chr_names : list/tuple/array
+        A list/tuple/array of chrom names to be splitted into bins.
+    bin_size : int
+        Size of bin in kb.
+    sam_file : str
+        Path to sam/bam/cram file.
+    
+    Returns
+    -------
+    list
+        A list of Region objects if success, None otherwise.
     """
     sam_fp = pysam.AlignmentFile(sam_file, "r")   # file format auto-detected.
     chroms = {}
@@ -158,12 +196,21 @@ def get_fixsize_reg_from_sam_header(chr_names, bin_size, sam_file):
     sam_fp.close()
     return get_fixsize_reg_from_input_len(chroms, bin_size)
 
+
 def get_fixsize_regions(bin_size, hg_ver):
-    """
-    @abstract        Create fixed-size bins for whole genome.
-    @param bin_size  Size of bin in kb [int]
-    @param hg_ver    Version of human genome: 19 or 38 [int]
-    @return          A list of Region objects if success, None otherwise [list]
+    """Create fixed-size bins for whole genome.
+
+    Parameters
+    ----------
+    bin_size : int
+        Size of bin in kb.
+    hg_ver : int
+        Version of human genome: 19 or 38.
+
+    Returns
+    -------    
+    list
+        A list of Region objects if success, None otherwise.
     """
     try:
         hg_ver = int(hg_ver)
@@ -179,13 +226,23 @@ def get_fixsize_regions(bin_size, hg_ver):
         return None
     return get_fixsize_reg_from_input_len(chroms, bin_size)
 
+
 def output_regions(reg_list, fname, ftype):
-    """
-    @abstract        Output Region objects to file
-    @param reg_list  A list of Region objects to be outputed [list]
-    @param fname     Path to the output file, use None for stdout [str]
-    @param ftype     File type, one of bed|tsv [str]
-    @return          0 if success, negative integer if error [int]
+    """Output Region objects to file.
+
+    Parameters
+    ----------
+    reg_list : list
+        A list of Region objects to be outputed.
+    fname : str
+        Path to the output file, use None for stdout.
+    ftype : str
+        File type, one of bed|tsv.
+
+    Returns
+    -------
+    int
+        0 if success, negative integer if error.
     """
     fp = None
     if fname:
@@ -211,21 +268,12 @@ def output_regions(reg_list, fname, ftype):
         fp.close()
     return 0
 
+
 def reg2bed(reg_list, bed_file):
-    """
-    @abstract        Output Region objects to bed file
-    @param reg_list  A list of Region objects to be outputed [list]
-    @param bed_file  Path to the output bed file, use None for stdout [str]
-    @return          0 if success, negative integer if error [int]
-    """
+    """Output Region objects to bed file."""
     return output_regions(reg_list, bed_file, "bed")
 
-def reg2tsv(reg_list, tsv_file):
-    """
-    @abstract        Output Region objects to tsv file
-    @param reg_list  A list of Region objects to be outputed [list]
-    @param tsv_file  Path to the output tsv file, use None for stdout [str]
-    @return          0 if success, negative integer if error [int]
-    """
-    return output_regions(reg_list, tsv_file, "tsv")
 
+def reg2tsv(reg_list, tsv_file):
+    """Output Region objects to tsv file."""
+    return output_regions(reg_list, tsv_file, "tsv")

@@ -7,10 +7,17 @@ import numpy as np
 
 class Region:
     """Region class
-    @param chrom   Chromosome name [str]
-    @param start   1-based start pos, inclusive [int]
-    @param end     1-based end pos, exclusive [int]
-    @param rid     Region ID [str]
+
+    Attrbutes
+    ---------
+    chrom : str
+        Chromosome name.
+    start : int
+        1-based start pos, inclusive.
+    end : int
+        1-based end pos, exclusive.
+    rid : str
+        Region ID.
     """
     def __init__(self, chrom, start, end, rid = None):
         self.chrom = format_chrom(chrom)
@@ -21,11 +28,19 @@ class Region:
 
     def compare(self, region):
         """Compare with another region.
-        @param region   A Region object of the same class.
-        @return         Comparison result represented by [int]
-                          negative integer if self is smaller; 
-                          0 if equal;
-                          positive integer if bigger.
+
+        Parameters
+        ----------
+        region : `Region`
+            The region to be compared with `self`.
+        
+        Returns
+        -------
+        int
+            Comparison result
+            - negative integer if `self` is smaller; 
+            - 0 if equal;
+            - positive integer if bigger.
         """
         if self.chrom == region.chrom:
             if self.start == region.start:
@@ -50,12 +65,21 @@ class Region:
 
 class RegionSet:
     """Region set with payload
-    @param creg    Region list for each chromosome [dict]
-    @param is_sorted If the regions have been sorted for each chromosome [dict]
-    @param ctree   Intervaltree for each chromosome [dict]
-    @param cid     Region id map [dict]
-    @param n       Total number of regions [int]
-    @param is_uniq Whether payloads of duplicate region ids should be discarded [bool]
+
+    Attributes
+    ----------
+    creg : dict
+        Region list for each chromosome.
+    is_sorted : bool
+        Whether the regions have been sorted for each chromosome.
+    ctree : dict
+        Intervaltree for each chromosome.
+    cid : dict
+        Region ID map.
+    n : int
+        Total number of regions.
+    is_uniq : bool
+        Whether payloads of duplicate region ids should be discarded.
     """
     def __init__(self, is_uniq = False):
         self.is_uniq = is_uniq
@@ -79,8 +103,16 @@ class RegionSet:
     
     def add(self, region):
         """Add a new region.
-        @param region  Region-like object.
-        @return        0 success, 1 discarded as duplicate, -1 error [int]
+
+        Parameters
+        ----------
+        region : `Region` object.
+            The region to be added.
+        
+        Returns
+        -------
+        int
+            return code. 0 success, 1 discarded as duplicate, -1 error.
         """
         chrom = format_chrom(region.chrom)
         if chrom not in self.creg:
@@ -110,10 +142,20 @@ class RegionSet:
 
     def fetch(self, chrom, start, end):
         """Fetch overlapping regions.
-        @param chrom  Chromosome name [str]
-        @param start  1-based start pos, inclusive [int]
-        @param end    1-based end pos, exclusive [int]
-        @return       All overlapping regions (not sorted) [list]
+
+        Parameters
+        ----------
+        chrom : str
+            Chromosome name.
+        start : int
+            1-based start pos, inclusive.
+        end : int
+            1-based end pos, exclusive.
+
+        Returns
+        -------
+        list
+            All overlapping regions (not sorted).
         """
         chrom = format_chrom(chrom)
         if chrom not in self.ctree:
@@ -127,9 +169,18 @@ class RegionSet:
 
     def get_regions(self, chrom = None, sort = False):
         """Get regions for chromosome(s).
-        @param chrom  Chromosome name; All chromosomes if None [str]
-        @param sort   Whether to sort the regions [bool]
-        @return       A list of regions [list]
+
+        Parameters
+        ----------
+        chrom : str
+            Chromosome name; set to `None` to use all chromosomes.
+        sort : bool
+            Whether to sort the regions.
+
+        Returns
+        -------
+        list
+            A list of regions.
         """
         ch_list = []
         if chrom is None:
@@ -150,8 +201,16 @@ class RegionSet:
 
     def merge(self, rs):
         """Merge another region set
-        @param rs  RegionSet object.
-        @return    Num of regions merged if success, -1 if error [int]
+
+        Parameters
+        ----------
+        rs : RegionSet object
+            The set of regions to be merged.
+        
+        Returns
+        -------
+        int
+            Number of regions merged if success, -1 if error.
         """
         k = 0
         reg_list = rs.get_regions()
@@ -166,8 +225,16 @@ class RegionSet:
 
     def query(self, rid):
         """Query region(s) given its ID.
-        @param rid  Region ID [str].
-        @return     A list of regions; empty list if region is not in the set.
+
+        Parameters
+        ----------        
+        rid : str
+            Region ID.
+
+        Returns
+        -------
+        list            
+            A list of regions; empty list if region is not in the set.
         """
         if rid in self.cid:
             return(self.cid[rid])

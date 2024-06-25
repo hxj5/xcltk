@@ -59,9 +59,18 @@ def usage(fp = sys.stdout, conf = None):
 
 def fc_main(argv, conf = None):
     """Command-Line interface.
-    @param argv   A list of cmdline parameters [list]
-    @param conf   The fc.Config object.
-    @return       0 if success, -1 otherwise [int]
+
+    Parameters
+    ----------
+    argv : list
+        A list of cmdline parameters.
+    conf : fc::Config object
+        Configuration object.
+    
+    Returns
+    -------
+    int
+        0 if success, -1 otherwise [int]
     """
     if conf is None:
         conf = Config()
@@ -284,9 +293,20 @@ def fc_run(conf):
 
 def prepare_config(conf):
     """Prepare configures for downstream analysis
-    @param conf  A Config object.
-    @return      0 if success, -1 otherwise.
-    @note        This function should be called after cmdline is parsed.
+
+    Parameters
+    ----------
+    conf :  Config object
+        Configuration info.
+
+    Returns
+    -------
+    int
+        0 if success, -1 otherwise.
+
+    Notes
+    -----
+    This function should be called after cmdline is parsed.
     """
     if conf.sam_fn:
         if conf.sam_list_fn:

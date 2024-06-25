@@ -6,7 +6,7 @@ from ...utils.sam import get_query_bases
 class UCount:
     """Counting Unit
 
-    Parameters
+    Attributes
     ----------
     scnt : SCount object
         A SCount object that the UCount object belongs to.
@@ -72,7 +72,7 @@ class UCount:
 class SCount:
     """Counting for single sample
 
-    Parameters
+    Attributes
     ----------
     mcnt : MCount object
         A MCount object that the SCount object belongs to.
@@ -153,7 +153,7 @@ class SCount:
 class MCount:
     """Counting for multiple samples
 
-    Parameters
+    Attributes
     ----------
     samples : list
         A list of cell barcodes or sample IDs [list of str].

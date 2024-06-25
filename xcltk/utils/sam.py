@@ -2,13 +2,21 @@
 
 
 def get_query_bases(read, full_length=False):
-    """
-    @abstract            Return a list of bases in qurey sequence that are within the alignment.
-    @param read          An AlignedSegment object. [AlignedSegment]
-    @param full_length   If full_length is set, None values will be included for any soft-clipped or 
-                         unaligned positions within the read. The returned list will thus be of the 
-                         same length as the read. [bint]
-    @return              A list of bases. [list]
+    """Qurey bases that are within the alignment.
+
+    Parameters
+    ----------
+    read : pysam::AlignedSegment object
+        The alignment to be queried.
+    full_length : bool
+        If full_length is set, `None` values will be included for any 
+        soft-clipped or unaligned positions within the read. 
+        The returned list will thus be of the same length as the read.
+    
+    Returns
+    -------
+    list
+        A list of bases in qurey sequence that are within the alignment.
     """
     cigar_tuples = read.cigartuples
     if not cigar_tuples:
@@ -33,16 +41,24 @@ def get_query_bases(read, full_length=False):
 
 
 def get_query_qualities(read, full_length=False):
-    """
-    @abstract            Return a list of qualities in qurey quality sequence that are within the alignment.
-    @param read          An AlignedSegment object. [AlignedSegment]
-    @param full_length   If full_length is set, None values will be included for any soft-clipped or 
-                         unaligned positions within the read. The returned list will thus be of the 
-                         same length as the read. [bint]
-    @return              A list of qualities. [list]
+    """Qurey qualities that are within the alignment.
 
-    @note                The returned qual values are not ASCII-encoded values typically seen in FASTQ or SAM formatted files,
-                         so no need to substract 33.
+    Parameters
+    ----------
+    read : pysam::AlignedSegment object
+        The alignment to be queried.
+    full_length : bool
+        If full_length is set, `None` values will be included for any 
+        soft-clipped or unaligned positions within the read. 
+        The returned list will thus be of the same length as the read.
+    
+    Returns
+    -------
+    list
+        A list of bases in qurey sequence that are within the alignment.
+        Note that the returned qual values are not ASCII-encoded values 
+        typically seen in FASTQ or SAM formatted files, no need to 
+        substract 33.
     """
     cigar_tuples = read.cigartuples
     if not cigar_tuples:
@@ -69,11 +85,22 @@ def get_query_qualities(read, full_length=False):
 def sam_fetch(sam, chrom, start, end):
     """Provide a wrapper for sam-fetch method that could automatically
        handle chrom with or without "chr" prefix.
-    @param sam    A pysam.AlignmentFile object.
-    @param chrom  Chromosome name [str]
-    @param start  1-based, inclusive [int]
-    @param end    1-based, inclusive [int]
-    @return       Iterator if success, None otherwise. 
+
+    Parameters
+    ----------
+    sam : pysam.AlignmentFile object.
+        The BAM file object.
+    chrom : str
+        Chromosome name.
+    start : int
+        1-based, inclusive.
+    end : int
+        1-based, inclusive.
+
+    Returns
+    -------
+    Iterator
+        Iterator if success, `None` otherwise.
     """
     try:   # sam.fetch(): start and stop denote 0-based, half-open intervals.
         itr = sam.fetch(chrom, start - 1, end) 

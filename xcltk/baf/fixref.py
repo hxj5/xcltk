@@ -25,19 +25,31 @@ COMMAND = "fixref"
 
 
 def __fix_rec(ref0, rec, out, verbose = False):
-    """
-    @abstract       Check & fix ref and corresponding alt & GT for one vcf record
-    @param ref0     Real REF from fasta [chr]
-    @param rec      The vcf record whose ref is to be checked [pysam.VariantRecord]
-    @param out      The output vcf object [pysam.VariantFile]
-    @param verbose  Whether to print detailed log info [bool]
-    @return         A tuple of two elements [tuple<int, pysam.VariantRecord>]: 
-                      the running state and 
-                      the checked vcf record 
-                    The running state: 
-                      -1, if error;
-                      0, if ref == ref0, i.e., no fix is needed
-                      1, if ref != ref0 and the vcf record is successfully fixref-ed.
+    """Check and fix reference for one VCF record.
+    
+    Check and fix reference for one VCF record, updating corresponding 
+    ALT and GT.
+
+    Parameters
+    ----------
+    ref0 : str
+        Real REF from fasta.
+    rec : pysam.VariantRecord
+        The VCF record whose REF is to be checked.
+    out : pysam.VariantFile
+        The output VCF object.
+    verbose : bool
+        Whether to print detailed log info.
+
+    Returns
+    -------
+    int
+        The running state:
+        * -1, if error;
+        * 0, if ref == ref0, i.e., no fix is needed
+        * 1, if ref != ref0 and the VCF record is successfully fixref-ed.
+    pysam.VariantRecord
+        The checked VCF record.
     """
     for a in rec.alleles:
         if len(a) != 1 or a not in "ACGTN":
@@ -147,13 +159,23 @@ def __fix_rec(ref0, rec, out, verbose = False):
 
 
 def __fix_file(in_fn, out_fn, ref_fn, verbose = False):
-    """
-    @abstract       Fix REF, ALT & GT while delete other fields in FORMAT
-    @param in_fn    Input vcf file to be fixed [str]
-    @param out_fn   Output vcf file [str]
-    @param ref_fn   Reference genome fasta file [str]
-    @param verbose  Whether to print detailed log info [bool]
-    @return         0 if success, -1 otherwise
+    """Fix REF, ALT and GT while delete other fields in FORMAT
+
+    Parameters
+    ----------
+    in_fn : str
+        Input VCF file to be fixed.
+    out_fn : str
+        Output VCF file.
+    ref_fn : str
+        Reference genome fasta file.
+    verbose : bool
+        Whether to print detailed log info.
+
+    Returns
+    -------
+    int
+        0 if success, -1 otherwise.
     """
     # load ref fasta 
     FASTA = pysam.FastaFile(ref_fn)   # if .fai file doesnot exist, this command would create one automatically.

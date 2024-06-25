@@ -4,7 +4,7 @@
 class SCount:
     """Counting for single sample
 
-    Parameters
+    Attributes
     ----------
     mcnt : MCount object
         A MCount object that the SCount object belongs to.
@@ -57,7 +57,7 @@ class SCount:
 class MCount:
     """Counting for multiple samples
 
-    Parameters
+    Attributes
     ----------
     samples : list
         A list of cell barcodes or sample IDs [list of str].

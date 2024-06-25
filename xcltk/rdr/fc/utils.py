@@ -9,11 +9,20 @@ from ...utils.zfile import zopen, ZF_F_GZIP, ZF_F_PLAIN
 
 def load_region_from_txt(fn, sep = "\t", verbose = False):
     """Load regions from plain file.
-    @param fn       Path to plain file [str]
-    @param verbose  If print detailed log info [bool]
-    @return    A list of BlockRegion objects if success, None otherwise.
-    @note      The first 4 columns of the plain file should be
-                 chrom, start, end (both 1-based, inclusive), name
+
+    Parameters
+    ----------
+    fn : str
+        Path to header-free plain file listing regions, each per line.
+        The first 4 columns should be
+        <chrom>, <start>, <end> (both 1-based, inclusive), <name>.
+    verbose : bool
+        Whether to print detailed log info.
+
+    Returns
+    -------
+    list
+        A list of `BlockRegion` objects if success, `None` otherwise.    
     """
     func = "load_region_from_txt"
     fp = zopen(fn, "rt")

@@ -5,12 +5,21 @@ from ...utils.grange import Region, RegionSet
 
 class SNP(Region):
     """Phased SNP
-    @param chrom    Chromosome name [str]
-    @param pos      1-based position [int]
-    @param ref      The ref base [str]
-    @param alt      The alt base [str]
-    @param ref_idx  The GT index for ref base, 0 or 1 [int]
-    @param alt_idx  The GT index for alt base, 1 or 0 [int]   
+
+    Attributes
+    ----------
+    chrom : str
+        Chromosome name.
+    pos : int
+        1-based position.
+    ref : str
+        The ref base.
+    alt : str
+        The alt base.
+    ref_idx : int
+        The GT index for ref base, 0 or 1.
+    alt_idx : int
+        The GT index for alt base, 1 or 0.   
     """
     def __init__(self, chrom, pos, ref, alt, ref_idx, alt_idx):
         super().__init__(chrom, pos, pos + 1)
@@ -39,11 +48,19 @@ class SNPSet(RegionSet):
 
 class BlockRegion(Region):
     """Block Region
-    @param chrom    Chromosome name [str]
-    @param start    1-based start pos, inclusive [int]
-    @param end      1-based end pos, exclusive [int]
-    @param name     Name of the block [str]
-    @param snp_list A list of SNPs located within the block [list of SNP objects]
+
+    Attributes
+    ----------
+    chrom : str
+        Chromosome name.
+    start : int
+        1-based start pos, inclusive.
+    end : int
+        1-based end pos, exclusive.
+    name : str
+        Name of the block.
+    snp_list : list
+        A list of SNPs (`SNP` objects) located within the block.
     """
     def __init__(self, chrom, start, end, name = None, snp_list = None):
         super().__init__(chrom, start, end)

@@ -12,12 +12,20 @@ import pysam
 
 
 class ZFile:
-    """Simple File object wrapper that supports plain/gzip/bgzip
-    @param file_name   File name [str]
-    @param mode        File mode [str]
-    @param file_type   File type / format, one of ZF_F_XXX [int]
-    @param is_bytes    If the data is of type `bytes` [bool]
-    @param encoding    Encoding for `bytes` data; set to "utf8" if None [str]
+    """Simple File object wrapper that supports plain/gzip/bgzip.
+
+    Attributes
+    ----------
+    file_name : str
+        File name.
+    mode : str
+        File mode.
+    file_type : int
+        File type / format, one of `ZF_F_XXX`.
+    is_bytes : bool
+        Whether the data is of type `bytes`.
+    encoding : str
+        Encoding for `bytes` data; set to "utf8" if None.
     """
     def __init__(self, file_name, mode, file_type, 
                  is_bytes = False, encoding = None):
@@ -125,4 +133,4 @@ ZF_BUFSIZE = 1048576   # 1M
 
 # TODO: update the debugging codes below
 if __name__ == "__main__":
-    pass     
+    pass

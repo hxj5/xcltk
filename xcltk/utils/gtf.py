@@ -50,6 +50,7 @@ class Transcript:
         if ["-","-1","0",0,-1].count(self.strand) > 0:
             self.seglen = self.seglen[::-1]
 
+
 class Gene:
     def __init__(self, chrom, strand, start, stop, gene_id, gene_name="*",
         biotype="*"):
@@ -168,6 +169,7 @@ def parse_attribute(attStr, default="*",
         else: RV[_att[0]] = _att[1]
 
     return RV
+
 
 def load_genes(anno_file, comments="#,>", geneTag="gene", 
         tranTag="transcript,mRNA", exonTag="exon"):
