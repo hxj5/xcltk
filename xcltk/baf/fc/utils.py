@@ -101,7 +101,7 @@ def load_snp_from_tsv(fn, verbose = False):
                 return None
         else:
             if verbose:
-               sys.stderr.write("[W::%s] invalid GT of line %d.\n" % (func, nl))
+                sys.stderr.write("[W::%s] invalid GT of line %d.\n" % (func, nl))
             continue          
     fp.close()
     return snp_set
@@ -183,7 +183,7 @@ def load_snp_from_vcf(fn, verbose = False):
                 return None
         else:
             if verbose:
-               sys.stderr.write("[W::%s] invalid GT of line %d.\n" % (func, nl))
+                sys.stderr.write("[W::%s] invalid GT of line %d.\n" % (func, nl))
             continue          
     fp.close()
     return snp_set
