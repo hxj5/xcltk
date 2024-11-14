@@ -13,6 +13,28 @@ from ...utils.sam import sam_fetch, \
 from ...utils.zfile import zopen, ZF_F_GZIP
 
 
+def __get_include_len_given_range(r1, r2):
+    # get the length of included part of r1 within r2.
+    # we already know that r1 overlaps with r2.
+    s1, e1 = r1[:2]
+    s2, e2 = r2[:2]
+    if s1 < s2 and e1 > e2:
+        return(0)
+    if s1 < s2:
+        assert e1 >= s2
+        return(e1 - s2)
+    if e1 > e2:
+        assert s1 <= e2
+        return(e2 - s1)
+    return(e1 - s1)
+
+
+def __get_include_len(pos_list, s, e):
+    # all input parameters are 0-based.
+    include_pos_list = [x for x in pos_list if s <= x <= e]
+    return(len(include_pos_list))
+
+
 def check_read(read, conf):
     if read.mapq < conf.min_mapq:
         return(-2)
@@ -126,6 +148,8 @@ def fc_fet1(reg, sam_list, mcnt, conf):
             continue
         for read in itr:
             if check_read(read, conf) < 0:
+                continue
+            if __get_include_len(read.positions, reg.start - 1, reg.end - 2) < conf.min_include:
                 continue
             if conf.use_barcodes():
                 ret = mcnt.push_read(read)

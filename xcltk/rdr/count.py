@@ -51,6 +51,7 @@ def usage(fp = sys.stdout, conf = None):
     s += "                    (when use UMI) or %d (otherwise)]\n" % conf.EXCL_FLAG_XUMI
     s += "  --minLEN INT      Minimum mapped length for read filtering [%d]\n" % conf.MIN_LEN
     s += "  --minMAPQ INT     Minimum MAPQ for read filtering [%d]\n" % conf.MIN_MAPQ
+    s += "  --minINCLUDE INT  Minimum length of included part within specific feature [%d]\n" % conf.MIN_INCLUDE
     s += "  --countORPHAN     If use, do not skip anomalous read pairs.\n"
     s += "\n"
 
@@ -96,7 +97,10 @@ def fc_main(argv, conf = None):
             "cellTAG=", "UMItag=",
             "debug=",
 
-            "inclFLAG=", "exclFLAG=", "minLEN=", "minMAPQ=", "countORPHAN"
+            "inclFLAG=", "exclFLAG=", 
+            "minLEN=", "minMAPQ=", 
+            "minINCLUDE=",
+            "countORPHAN"
         ])
 
     for op, val in opts:
@@ -120,6 +124,7 @@ def fc_main(argv, conf = None):
         elif op in ("--exclflag"): conf.excl_flag = int(val)
         elif op in ("--minlen"): conf.min_len = int(val)
         elif op in ("--minmapq"): conf.min_mapq = float(val)
+        elif op in ("--mininclude"): conf.min_include = int(val)
         elif op in ("--countorphan"): conf.no_orphan = False
 
         else:
@@ -141,6 +146,7 @@ def fc_wrapper(
     cell_tag = "CB", umi_tag = "UB",
     output_all_reg = True,
     min_mapq = 20, min_len = 30,
+    min_include = 30,
     incl_flag = 0, excl_flag = None,
     no_orphan = True
 ):
@@ -162,6 +168,7 @@ def fc_wrapper(
 
     conf.min_mapq = min_mapq
     conf.min_len = min_len
+    conf.min_include = min_include
     conf.incl_flag = incl_flag
     if excl_flag is None:
         conf.excl_flag = -1
