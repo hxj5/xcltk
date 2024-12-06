@@ -2,6 +2,23 @@
 History
 =======
 
+Release v0.4.0 (06/12/2024)
+===========================
+* RDR: add `--minINCLUDE` option for read filtering, which is the minimum 
+  length of included part within specific feature.
+  For example, if the genomic range of a feature is chr1:1000-3000, and one
+  fetched read (100bp) aligned to two locus, chr1:601-660 (60bp) and
+  chr1:3801-3840 (40bp), then no any part of the read is actually included
+  within the feature, hence it will be filtered by `--minINCLUDE=30`, whereas
+  older versions of xcltk may keep the read.
+  Note, as the feature counting in RDR is performmed independently for each
+  feature, so one read filtered by `--minINCLUDE` in one feature may still be
+  fetched and counted by other features.
+* update docstring, using the numpydoc style.
+* add TODO list in `docs/TODO.md`.
+* fix typo.
+
+
 Release v0.3.1 (06/06/2024)
 ===========================
 * BAF: in ref_phasing, use multiprocessing to phase SNPs of one chromosome
