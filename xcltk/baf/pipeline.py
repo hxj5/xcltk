@@ -184,10 +184,13 @@ def pipeline_wrapper(
     # other args will be checked in pileup() and ref_phasing().
     info("run in '%s' mode (genome version '%s')" % (mode, genome))
 
+    step = 1
+
+
     # pileup
     info("start pileup ...")
 
-    pileup_dir = os.path.join(out_dir, "pileup")
+    pileup_dir = os.path.join(out_dir, "%d_pileup" % step)
     if not os.path.exists(pileup_dir):
         os.makedirs(pileup_dir, exist_ok = True)
     pileup_script_dir = os.path.join(script_dir, "pileup")
@@ -213,6 +216,8 @@ def pipeline_wrapper(
     assert_e(pileup_vcf_fn)
 
     info("pileup VCF is '%s'." % pileup_vcf_fn)
+    step += 1
+
 
     # TODO: further filter SNPs given `minMAF` and `minCOUNT`, considering
     # only REF and ALT (AD & DP) alleles, but not OTH alleles.
@@ -222,9 +227,11 @@ def pipeline_wrapper(
     # prepare VCF files for phasing
     info("prepare VCF files for phasing ...")
 
-    phasing_dir = os.path.join(out_dir, "phasing")
+    phasing_dir = os.path.join(out_dir, "%d_phasing" % step)
     if not os.path.exists(phasing_dir):
         os.makedirs(phasing_dir, exist_ok = True)
+    phasing_chrom_dir = os.path.join(phasing_dir, "chrom_phasing")
+    os.makedirs(phasing_chrom_dir, exist_ok = True)
     phasing_script_dir = os.path.join(script_dir, "phasing")
     os.makedirs(phasing_script_dir, exist_ok = True)
     phasing_script_prefix = os.path.join(phasing_script_dir, "run_phasing")
@@ -233,7 +240,7 @@ def pipeline_wrapper(
     # add genotypes
     info("add genotypes ...")
 
-    genotype_vcf_fn = os.path.join(out_dir, "%s.genotype.vcf.gz" % label)
+    genotype_vcf_fn = os.path.join(phasing_dir, "%s.genotype.vcf.gz" % label)
     vcf_add_genotype(
         in_fn = pileup_vcf_fn,
         out_fn = genotype_vcf_fn,
@@ -250,7 +257,7 @@ def pipeline_wrapper(
     target_vcf_list = []
     res = vcf_split_chrom(
         fn = genotype_vcf_fn,
-        out_dir = phasing_dir,
+        out_dir = phasing_chrom_dir,
         label = label,
         chrom_list = ["chr" + str(i) for i in range(1, 23)],
         out_prefix_list = None,
@@ -270,7 +277,7 @@ def pipeline_wrapper(
 
     ref_vcf_list = [os.path.join(panel_dir, "%s.genotypes.bcf" % chrom) \
                     for chrom in valid_chroms]
-    out_prefix_list = [os.path.join(phasing_dir, "%s_%s.phased" % \
+    out_prefix_list = [os.path.join(phasing_chrom_dir, "%s_%s.phased" % \
                     (label, chrom)) for chrom in valid_chroms]
     ref_phasing(
         target_vcf_list = target_vcf_list,
@@ -278,14 +285,14 @@ def pipeline_wrapper(
         out_prefix_list = out_prefix_list,
         gmap_fn = gmap_fn,
         eagle_fn = eagle_fn,
-        out_dir = phasing_dir,
+        out_dir = phasing_chrom_dir,
         ncores = ncores,
         script_fn_prefix = phasing_script_prefix,
         log_fn_prefix = phasing_log_prefix,
         verbose = True
     )
 
-    info("phased VCFs are in dir '%s'." % phasing_dir)
+    info("phased VCFs are in dir '%s'." % phasing_chrom_dir)
 
     # merge phased VCFs
     info("merge phased VCFs ...")
@@ -294,15 +301,17 @@ def pipeline_wrapper(
     for fn in phased_vcf_list:
         assert_e(fn)
 
-    phased_vcf_fn = os.path.join(out_dir, "%s.phased.vcf.gz" % label)
+    phased_vcf_fn = os.path.join(phasing_dir, "%s.phased.vcf.gz" % label)
     vcf_merge(phased_vcf_list, phased_vcf_fn, sort = True)
 
     info("merged VCF is '%s'." % phased_vcf_fn)
+    step += 1
+
 
     # allele-specific feature counting.
     info("BAF feature counting ...")
 
-    fc_dir = os.path.join(out_dir, "baf_fc")
+    fc_dir = os.path.join(out_dir, "%d_baf_fc" % step)
     if not os.path.exists(fc_dir):
         os.makedirs(fc_dir, exist_ok = True)
 
@@ -326,3 +335,5 @@ def pipeline_wrapper(
     )
 
     info("feature BAFs are at '%s'." % fc_dir)
+    step += 1
+
