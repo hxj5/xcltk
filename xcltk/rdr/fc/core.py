@@ -29,6 +29,14 @@ def __get_include_len_given_range(r1, r2):
     return(e1 - s1)
 
 
+def __get_include_frac(pos_list, s, e):
+    n = len(pos_list)
+    if n <= 0:
+        return(None)
+    m = __get_include_len(pos_list, s, e)
+    return(m / float(n))
+
+
 def __get_include_len(pos_list, s, e):
     # all input parameters are 0-based.
     include_pos_list = [x for x in pos_list if s <= x <= e]
@@ -149,8 +157,12 @@ def fc_fet1(reg, sam_list, mcnt, conf):
         for read in itr:
             if check_read(read, conf) < 0:
                 continue
-            if __get_include_len(read.positions, reg.start - 1, reg.end - 2) < conf.min_include:
-                continue
+            if 0 < conf.min_include < 1:
+                if __get_include_frac(read.positions, reg.start - 1, reg.end - 2) < conf.min_include:
+                    continue
+            else:
+                if __get_include_len(read.positions, reg.start - 1, reg.end - 2) < conf.min_include:
+                    continue
             if conf.use_barcodes():
                 ret = mcnt.push_read(read)
             else:
