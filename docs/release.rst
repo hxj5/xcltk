@@ -2,6 +2,16 @@
 History
 =======
 
+
+Release v0.4.1 (10/01/2025)
+===========================
+* RDR: `--minINCLUDE` supports both INT and FLOAT.
+  If INT, the minimum length of included part within specific feature.
+  If FLOAT, the minimum fraction of included part within specific feature.
+* BAF: add index to the output folder of each step, e.g., "1_pileup".
+* docs: update TODO list. 
+
+
 Release v0.4.0 (06/12/2024)
 ===========================
 * RDR: add `--minINCLUDE` option for read filtering, which is the minimum 
