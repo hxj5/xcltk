@@ -18,6 +18,10 @@ It supports data from multiple single-cell sequencing platforms, including
 droplet-based (e.g., 10x Genomics) and well-based (e.g., SMART-seq)
 platforms.
 
+For details of xcltk and XClone, please checkout our paper:
+
+> Huang, R., Huang, X., Tong, Y. et al. Robust analysis of allele-specific copy number alterations from scRNA-seq data with XClone. Nat Commun 15, 6684 (2024). https://doi.org/10.1038/s41467-024-51026-0
+
 
 ## News
 
