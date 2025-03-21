@@ -291,6 +291,7 @@ Finally, matrices of *feature x cell* AD (UMI or read counts of one haplotype)
 and DP (UMI or read counts of both haplotypes) would be outputed
 for downstream analysis.
 
+
 ### RDR part
 
 [xcltk][xcltk repo] computes the RDR signals in each feature and cell by 
@@ -310,12 +311,53 @@ for downstream analysis.
 
 This step is implemented in the `xcltk basefc` command line tool.
 
+#### 1. Gene structure
+
+The `xcltk basefc` is a simple feature counting tool that does not consider
+gene structures when assigning reads to genes.
+Except gene structres, its results are overall close to 
+[htseq-count (v0.11.1)][htseq-count]
+
+```
+    --format  bam        \
+    --order   pos        \
+    --stranded  no       \
+    --a  20              \
+    --type  gene         \
+    --idattr  gene_name  \
+    --mode  union        \
+    --nonunique  all     \
+    --secondary-alignments  ignore
+```
+
+Notably, xcltk basefc has an option `--minINCLUDE` (default 0.9) that require
+the minimum fraction of read length that overlap with one gene.
+This option could deviate from the read assginment of htseq `union` mode, but
+more like the logic of htseq `intersection-strict` mode.
+
+#### 2. Strandness
+
+xcltk basefc does not consider strand information of reads or genes when
+assigning reads to genes, i.e., read assignment is purely based on their
+genomic ranges.
+This strategy is similar to the htseq `--stranded no`.
+
+
+#### 3. Multi-gene reads
+
+One read could be assigned to multiple genes, either because the read is
+mapped to single genomic locus but annotated to multiple genes, or the read is
+mapped multiple genomic loci and annotated to multiple genes.
+xcltk basefc counts multi-gene reads for every involved gene, similar to the
+strategy of htseq `--nonunique all`.
+
 
 
 [bcftools]: https://github.com/samtools/bcftools
 [cellranger]: https://www.10xgenomics.com/support/software/cell-ranger/latest
 [cellsnp-lite]: https://github.com/single-cell-genetics/cellsnp-lite
 [eagle2]: https://alkesgroup.broadinstitute.org/Eagle/
+[htseq-count]: https://htseq.readthedocs.io/en/release_0.11.1/count.html
 [htslib]: https://github.com/samtools/htslib
 [Numbat]: https://github.com/kharchenkolab/numbat/
 [STARsolo]: https://github.com/alexdobin/STAR

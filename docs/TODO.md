@@ -18,12 +18,6 @@
 
 
 ## Docs
-Current xcltk feature counting (basefc) is close to htseq-count `union` mode 
-with `--nonunique all`.
-While counting each feature in parallel, xcltk basefc counts one read for both
-features if the read effectively aligned to both features (i.e., passing all
-read filtering).
-Ref: https://htseq.readthedocs.io/en/release_0.11.1/count.html
 
 
 ## Scripts
