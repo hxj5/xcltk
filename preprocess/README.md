@@ -87,12 +87,16 @@ The pre-compiled files below will be used by Eagle2 as reference panel for
 SNP phasing.
 Credits to the authors of [Numbat][Numbat].
 
+Paste link in browser to download if `wget` isn’t working.
+
 ```
 # hg38
-wget http://pklab.med.harvard.edu/teng/data/1000G_hg38.zip
+#wget http://pklab.med.harvard.edu/teng/data/1000G_hg38.zip
+wget https://pklab.org/teng/data/1000G_hg38.zip
 
 # hg19
-wget http://pklab.med.harvard.edu/teng/data/1000G_hg19.zip
+#wget http://pklab.med.harvard.edu/teng/data/1000G_hg19.zip
+wget https://pklab.org/teng/data/1000G_hg19.zip
 ```
 
 #### Genetic Map
