@@ -15,6 +15,7 @@ from ..utils.vcf import vcf_load, vcf_save, \
     vcf_hdr_check_contig_core
 
 
+
 def pileup(
     sam_fn = None, sam_list_fn = None, 
     barcode_fn = None, sample_id_fn = None,
@@ -78,7 +79,8 @@ def pileup(
 
     Returns
     -------
-    None
+    str
+        The VCF file containing final output SNPs.
 
     Raises
     ------
@@ -133,6 +135,7 @@ def pileup(
     if not log_fn:
         log_fn = os.path.join(out_dir, "pileup.log")
 
+
     # generate pileup script
     cmd  = "cellsnp-lite  \\\n"
     if sam_fn:
@@ -159,6 +162,7 @@ def pileup(
     st = os.stat(script_fn)
     os.chmod(script_fn, st.st_mode | stat.S_IXUSR)
 
+    
     # run pileup
     ret = None
     try:
@@ -177,6 +181,38 @@ def pileup(
         error(str(e))
         error("Error: pileup failed (retcode '%s')." % str(ret))
         sys.exit(1)
+        
+        
+    # further filter SNPs
+    # filter SNPs given `minMAF` and `minCOUNT`, considering
+    # only REF and ALT (AD & DP) alleles, but not OTH alleles.
+    # cellsnp-lite (at least v1.2.3 and before) may keep some SNPs unexpectly,
+    # e.g., SNP with `AD=9;DP=9;OTH=1` when `minMAF=0.1; minCOUNT=10`.
+    fn = os.path.join(out_dir, "cellSNP.base.vcf.gz")
+    assert_e(fn)
+    
+    variants, header = vcf_load(fn)
+    variants.index = [str(i) for i in range(variants.shape[0])]
+    
+    df = variants.copy()
+    df["AD"] = df["INFO"].map(
+        lambda x: int(x.split(";")[0].split("=")[1])
+    )
+    df["DP"] = df["INFO"].map(
+        lambda x: int(x.split(";")[1].split("=")[1])
+    )
+    df = df[df["DP"] >= min_count].copy()
+    df["BAF"] = df["AD"] / df["DP"]
+    df = df[(df["BAF"] >= min_maf) & (df["BAF"] <= 1-min_maf)].copy()
+    
+    
+    # save SNPs.
+    out_vcf_fn = os.path.join(out_dir, "cellSNP.base.refilter.vcf.gz")
+    variants = variants.loc[df.index].copy()
+    vcf_save(variants, header, out_vcf_fn)
+    
+    return(out_vcf_fn)
+
 
 
 def ref_phasing(
@@ -265,6 +301,7 @@ def ref_phasing(
     if log_fn_prefix is None:
         log_fn_prefix = os.path.join(out_dir, "phasing")
 
+        
     # run phasing
     if verbose:
         info("run phasing ...")
@@ -299,6 +336,7 @@ def ref_phasing(
     pool.close()
     pool.join()
 
+    
 
 def ref_phasing1(script_fn, log_fn):
     ret = None
@@ -319,6 +357,7 @@ def ref_phasing1(script_fn, log_fn):
         error("Error: phasing failed (retcode '%s')." % str(ret))
         sys.exit(1)
 
+        
 
 def vcf_add_genotype(
     in_fn, out_fn, 
@@ -369,6 +408,7 @@ def vcf_add_genotype(
     assert len(variants.columns) >= 8
     assert variants.columns[0] == "CHROM"
 
+    
     # add genotype
     if "FORMAT" in variants.columns:
         warn("FORMAT in vcf '%s'." % in_fn)
@@ -379,9 +419,11 @@ def vcf_add_genotype(
     variants["FORMAT"] = "GT"
     variants[sample] = "0/1"
 
+    
     # make sure the vcf header "contig" lines are complete.
     variants, header = vcf_hdr_check_contig_core(variants, header)
 
+    
     # process "chr" prefix
     if chr_prefix is not None:
         if chr_prefix:
@@ -389,6 +431,7 @@ def vcf_add_genotype(
         else:
             variants, header = vcf_remove_chr_prefix_core(variants, header)
 
+            
     # sort SNPs and drop duplicates
     if sort:
         variants = variants.sort_values(by = ["CHROM", "POS", "REF", "ALT"])

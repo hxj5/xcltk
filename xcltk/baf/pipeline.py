@@ -3,6 +3,7 @@
 # TODO:
 # 1. add --minCOUNT and --minMAF options.
 
+
 import getopt
 import os
 import sys
@@ -14,6 +15,7 @@ from ..config import APP, VERSION
 from ..utils.base import assert_e, assert_n
 from ..utils.vcf import vcf_index, vcf_merge, vcf_split_chrom
 from ..utils.xlog import init_logging
+
 
 
 COMMAND = "baf"
@@ -62,6 +64,7 @@ def usage(fp = sys.stdout):
     fp.write(s)
 
 
+    
 def pipeline_main(argv):
     if len(argv) <= 2:
         usage()
@@ -134,6 +137,7 @@ def pipeline_main(argv):
     return(ret)
         
 
+    
 def pipeline_wrapper(
     label,
     sam_fn = None, sam_list_fn = None, 
@@ -198,7 +202,7 @@ def pipeline_wrapper(
     pileup_script = os.path.join(pileup_script_dir, "run_pileup.sh")
     pileup_log_fn = os.path.join(pileup_script_dir, "pileup.log")
 
-    pileup(
+    pileup_vcf_fn = pileup(
         sam_fn = sam_fn, sam_list_fn = sam_list_fn,
         barcode_fn = barcode_fn, sample_id_fn = sample_id_fn, 
         sample_id = sample_id,
@@ -212,17 +216,11 @@ def pipeline_wrapper(
         log_fn = pileup_log_fn
     )
 
-    pileup_vcf_fn = os.path.join(pileup_dir, "cellSNP.base.vcf.gz")
     assert_e(pileup_vcf_fn)
 
     info("pileup VCF is '%s'." % pileup_vcf_fn)
     step += 1
 
-
-    # TODO: further filter SNPs given `minMAF` and `minCOUNT`, considering
-    # only REF and ALT (AD & DP) alleles, but not OTH alleles.
-    # cellsnp-lite (at least v1.2.3 and before) may keep some SNPs unexpectly,
-    # e.g., SNP with `AD=9;DP=9;OTH=1` when `minMAF=0.1; minCOUNT=10`.
 
     # prepare VCF files for phasing
     info("prepare VCF files for phasing ...")
@@ -237,6 +235,7 @@ def pipeline_wrapper(
     phasing_script_prefix = os.path.join(phasing_script_dir, "run_phasing")
     phasing_log_prefix = os.path.join(phasing_script_dir, "phasing")
 
+    
     # add genotypes
     info("add genotypes ...")
 
@@ -250,6 +249,7 @@ def pipeline_wrapper(
         unique = True
     )
 
+    
     # split VCF by chromosomes.
     info("split VCF by chromosomes ...")
 
@@ -272,6 +272,7 @@ def pipeline_wrapper(
     info("%d chromosome VCFs are outputted with variants." % len(valid_chroms))
     #os.remove(genotype_vcf_fn)
 
+    
     # reference phasing
     info("reference phasing ...")
 
@@ -294,6 +295,7 @@ def pipeline_wrapper(
 
     info("phased VCFs are in dir '%s'." % phasing_chrom_dir)
 
+    
     # merge phased VCFs
     info("merge phased VCFs ...")
 
@@ -336,4 +338,3 @@ def pipeline_wrapper(
 
     info("feature BAFs are at '%s'." % fc_dir)
     step += 1
-
