@@ -15,6 +15,7 @@ droplet-based (e.g., 10x Genomics) and well-based (e.g., SMART-seq)
 platforms.
 
 
+
 ## Installation
 
 ### Softwares
@@ -30,6 +31,7 @@ To use the pipeline, please first install the dependencies listed below.
 
 Please install these softwares and add them to the system search path (i.e.,
 the system variable `PATH`).
+
 
 #### Use conda environment (recommended)
 
@@ -65,6 +67,7 @@ wget https://storage.googleapis.com/broad-alkesgroup-public/Eagle/downloads/Eagl
 tar xzvf Eagle_v2.4.1.tar.gz
 ```
 
+
 ### Files
 
 In addition, the pipeline relies on a common SNP VCF (for pileup), 
@@ -73,13 +76,21 @@ You can download the files using following links.
 
 #### 1000G SNP VCF
 
+**Note:**
+Please download from website
+[sourceforge.net/projects/cellsnp/files/SNPlist/](https://sourceforge.net/projects/cellsnp/files/SNPlist/)
+when `wget` is not working.
+
 ```
 # hg38
-wget https://sourceforge.net/projects/cellsnp/files/SNPlist/genome1K.phase3.SNP_AF5e2.chr1toX.hg38.vcf.gz
+#wget https://sourceforge.net/projects/cellsnp/files/SNPlist/genome1K.phase3.SNP_AF5e2.chr1toX.hg38.vcf.gz
+wget -O genome1K.phase3.SNP_AF5e2.chr1toX.hg38.vcf.gz https://master.dl.sourceforge.net/project/cellsnp/SNPlist/genome1K.phase3.SNP_AF5e2.chr1toX.hg38.vcf.gz?viasf=1
 
 # hg19
-wget https://sourceforge.net/projects/cellsnp/files/SNPlist/genome1K.phase3.SNP_AF5e2.chr1toX.hg19.vcf.gz
+#wget https://sourceforge.net/projects/cellsnp/files/SNPlist/genome1K.phase3.SNP_AF5e2.chr1toX.hg19.vcf.gz
+wget -O genome1K.phase3.SNP_AF5e2.chr1toX.hg19.vcf.gz https://master.dl.sourceforge.net/project/cellsnp/SNPlist/genome1K.phase3.SNP_AF5e2.chr1toX.hg19.vcf.gz?viasf=1
 ```
+
 
 #### 1000G Reference Panel
 
@@ -87,23 +98,27 @@ The pre-compiled files below will be used by Eagle2 as reference panel for
 SNP phasing.
 Credits to the authors of [Numbat][Numbat].
 
-Paste link in browser to download if `wget` isn’t working.
+**Note:**
+Please paste the link into browser to download
+when `wget` is not working.
 
 ```
 # hg38
-#wget http://pklab.med.harvard.edu/teng/data/1000G_hg38.zip
-wget https://pklab.org/teng/data/1000G_hg38.zip
+#wget https://pklab.org/teng/data/1000G_hg38.zip
+wget https://pklab.med.harvard.edu/teng/data/1000G_hg38.zip
 
 # hg19
-#wget http://pklab.med.harvard.edu/teng/data/1000G_hg19.zip
-wget https://pklab.org/teng/data/1000G_hg19.zip
+#wget https://pklab.org/teng/data/1000G_hg19.zip
+wget https://pklab.med.harvard.edu/teng/data/1000G_hg19.zip
 ```
+
 
 #### Genetic Map
 
 Use commands in above section to download zipped Eagle2 file.
 After unzip, the genetic map files are in subfolder `tables`,
 e.g., `Eagle_v2.4.1/tables`.
+
 
 #### Feature annotations
 
@@ -118,6 +133,7 @@ wget https://raw.githubusercontent.com/hxj5/xcltk/master/data/anno/annotate_gene
 # hg19
 wget https://raw.githubusercontent.com/hxj5/xcltk/master/data/anno/annotate_genes_hg19_update_20230126.txt
 ```
+
 
 
 ## Quick Start
@@ -158,6 +174,7 @@ xcltk baf  \
     --paneldir     {1000G_hg38}              \
     --ncores       10
 ```
+
 
 #### RDR part
 
@@ -200,6 +217,7 @@ xcltk baf  \
     --UMItag       None         \
     --ncores       10
 ```
+
 
 #### RDR part
 
@@ -257,6 +275,7 @@ you may
    feature counting on the scRNA-seq data.
 
 
+
 ## Pipeline walkthrough
 
 ### BAF part
@@ -275,12 +294,14 @@ By default, it only keeps SNPs with `--minCOUNT 20` and `--minMAF 0.1`.
 This step is implemented in the function `pileup()` in module
 `xcltk.baf.genotype`.
 
+
 #### 2. Reference based SNP phasing
 
 xcltk performs SNP phasing with Eagle2 using 1000G reference panel.
 
 This step is implemented in the function `ref_phasing()` in module
 `xcltk.baf.genotype`.
+
 
 #### 3. BAF calculation for features and single cells
 
@@ -338,6 +359,7 @@ Notably, xcltk basefc has an option `--minINCLUDE` (default 0.9) that require
 the minimum fraction of read length that overlap with one gene.
 This option could deviate from the read assginment of htseq `union` mode, but
 more like the logic of htseq `intersection-strict` mode.
+
 
 #### 2. Strandness
 
