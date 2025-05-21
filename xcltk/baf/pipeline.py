@@ -1,7 +1,5 @@
 # pipeline.py - preprocess the input BAM file to generate reference-phased cell x gene AD & DP matrices.
 
-# TODO:
-# 1. add --minCOUNT and --minMAF options.
 
 
 import getopt
@@ -21,8 +19,11 @@ from ..utils.xlog import init_logging
 COMMAND = "baf"
 
 CELL_TAG = "CB"
-N_CORES = 1
 UMI_TAG = "UB"
+MIN_COUNT = 20
+MIN_MAF = 0.1
+N_CORES = 1
+
 
 
 def usage(fp = sys.stdout):
@@ -52,6 +53,8 @@ def usage(fp = sys.stdout):
     s += "Optional arguments:\n"
     s += "  --cellTAG STR      Cell barcode tag; Set to None if not available [%s]\n" % CELL_TAG
     s += "  --UMItag STR       UMI tag; Set to None if not available [%s]\n" % UMI_TAG
+    s += "  --minCOUNT INT     Mininum aggragated count for SNP [%d]\n" % MIN_COUNT
+    s += "  --minMAF FLOAT     Mininum minor allele fraction for SNP [%f]\n" % MIN_MAF
     s += "  --ncores INT       Number of threads [%d]\n" % N_CORES
     s += "\n"
     s += "Notes:\n"
@@ -79,6 +82,7 @@ def pipeline_main(argv):
     out_dir = None
     gmap_fn = eagle_fn = panel_dir = None
     cell_tag, umi_tag = CELL_TAG, UMI_TAG
+    min_count, min_maf = MIN_COUNT, MIN_MAF
     ncores = N_CORES
 
     opts, args = getopt.getopt(
@@ -94,6 +98,7 @@ def pipeline_main(argv):
             "version", "help",
             
             "cellTAG=", "UMItag=",
+            "minCOUNT=", "minMAF=",
             "ncores="
         ])
 
@@ -116,6 +121,8 @@ def pipeline_main(argv):
 
         elif op in ("--celltag"): cell_tag = val
         elif op in ("--umitag"): umi_tag = val
+        elif op in ("--mincount"): min_count = int(val)
+        elif op in ("--minmaf"): min_maf = float(val)
         elif op in ("--ncores"): ncores = int(val)     # keep it in `str` format.
         else:
             error("invalid option: '%s'." % op)
@@ -129,6 +136,7 @@ def pipeline_main(argv):
         out_dir = out_dir,
         gmap_fn = gmap_fn, eagle_fn = eagle_fn, panel_dir = panel_dir,
         cell_tag = cell_tag, umi_tag = umi_tag,
+        min_count = min_count, min_maf = min_maf,
         ncores = ncores
     )
     
@@ -146,6 +154,7 @@ def pipeline_wrapper(
     out_dir = None,
     gmap_fn = None, eagle_fn = None, panel_dir = None,
     cell_tag = "CB", umi_tag = "UB",
+    min_count = 20, min_maf = 0.1,
     ncores = 1
 ):
     info("xcltk BAF preprocessing starts ...")
@@ -211,7 +220,7 @@ def pipeline_wrapper(
         mode = mode,
         cell_tag = cell_tag, umi_tag = umi_tag,
         ncores = ncores,
-        min_count = 20, min_maf = 0.1,
+        min_count = min_count, min_maf = min_maf,
         script_fn = pileup_script,
         log_fn = pileup_log_fn
     )
