@@ -2,6 +2,7 @@ from . import base
 from . import grange
 from . import gregion
 from . import gtf
+from . import io
 from . import sam
 from . import vcf
 from . import xlog
