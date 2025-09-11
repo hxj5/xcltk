@@ -3,6 +3,7 @@ from . import csp_io
 from . import grange
 from . import gregion
 from . import gtf
+from . import hmm
 from . import sam
 from . import vcf
 from . import xlog
