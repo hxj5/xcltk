@@ -1,14 +1,16 @@
 # xcltk.py - xcltk cmdline interface.
 
+
 import sys
 
-from .baf.count import afc_main as baf_allelefc
+from .baf.fc.main import afc_main as baf_allelefc
 from .baf.fixref import fixref_main as baf_fixref
 from .baf.pipeline import pipeline_main as baf_baf
 from .baf.rpc import rpc_main as baf_rpc
 from .config import APP, VERSION
-from .rdr.count import fc_main as rdr_basefc
+from .rdr.fc.main import fc_main as rdr_basefc
 from .tools.convert import convert_main as tools_convert
+
 
 
 def __usage(fp = sys.stdout):
@@ -38,6 +40,7 @@ def __usage(fp = sys.stdout):
     fp.write(msg)
 
 
+    
 def main():
     argc = len(sys.argv)
     if argc < 2:

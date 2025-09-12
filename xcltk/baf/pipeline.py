@@ -7,8 +7,9 @@ import os
 import sys
 
 from logging import error, info
-from .count import afc_wrapper as baf_fc      # BAF feature counting
-from .genotype import pileup, ref_phasing, vcf_add_genotype
+from .fc.main import afc_wrapper as baf_fc      # BAF feature counting
+from .genotype import pileup, vcf_add_genotype
+from .refphase import ref_phasing
 from ..config import APP, VERSION
 from ..utils.base import assert_e, assert_n
 from ..utils.vcf import vcf_index, vcf_merge, vcf_split_chrom

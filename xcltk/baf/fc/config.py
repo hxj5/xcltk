@@ -1,7 +1,9 @@
 # config.py - configuration
 
+
 import sys
 from ...config import APP
+
 
 class Config:
     def __init__(self):

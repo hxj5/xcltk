@@ -1,4 +1,4 @@
-# count.py - allele-specific feature counting.
+# main.py - allele-specific feature counting.
 
 
 import getopt
@@ -11,20 +11,21 @@ import time
 from logging import debug, error, info
 from logging import warning as warn
 
-from .fc.config import Config
-from .fc.core import fc_features
-from .fc.thread import ThreadData
-from .fc.utils import load_region_from_txt, load_snp_from_vcf, \
+from .config import Config
+from .core import fc_features
+from .thread import ThreadData
+from .utils import load_region_from_txt, load_snp_from_vcf, \
     load_snp_from_tsv, merge_mtx, merge_tsv
 
-from ..config import APP, VERSION
-from ..utils.xlog import init_logging
-from ..utils.zfile import zopen, ZF_F_GZIP, ZF_F_PLAIN
+from ...config import APP, VERSION
+from ...utils.xlog import init_logging
+from ...utils.zfile import zopen, ZF_F_GZIP, ZF_F_PLAIN
 
 
 COMMAND = "allelefc"
 
 
+# mark deprecated.
 def usage(fp = sys.stdout, conf = None):
     s =  "\n"
     s += "Version: %s\n" % VERSION

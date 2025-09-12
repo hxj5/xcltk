@@ -1,8 +1,8 @@
 # rpc.py - reference phasing correction
 
+
 import anndata as ad
 import getopt
-#import matplotlib.pyplot as plt
 import multiprocessing
 import numpy as np
 import os
@@ -14,6 +14,7 @@ import time
 
 from scipy.special import logsumexp
 from ..config import APP, VERSION
+
 
 
 COMMAND = "rpc"
@@ -59,6 +60,7 @@ def format_theta(theta, epsilon = 1e-6, inplace = True):
     theta[idx, 1] = epsilon
     
     return(theta)
+
 
 
 def ref_phasing_correction(A, D, hap, epsilon_hap = 1e-2, 
@@ -185,6 +187,7 @@ def ref_phasing_correction(A, D, hap, epsilon_hap = 1e-2,
         flip = flip, AD_phased = AD_phased, hap_new = hap_new))
 
 
+
 def multi_init_rpc(A, D, hap, epsilon_hap = 1e-2, 
                    max_iter = 1000, epsilon_conv = 1e-6,
                    n_init = 100, verbose = True):
@@ -237,6 +240,7 @@ def multi_init_rpc(A, D, hap, epsilon_hap = 1e-2,
                (func, np.max(all_log_lik), idx_max))
     return(dict(idx_max = idx_max, all_log_lik = all_log_lik, 
                 all_res = all_res))
+
 
 
 def region_rpc(adata,
@@ -322,8 +326,10 @@ def region_rpc(adata,
                 snp_meta = snp_meta))
 
 
+
 def show_progress(res = None):
     return(res)
+
 
 
 # TODO: use region.RegionSet to implement @param gene_set.
@@ -412,6 +418,7 @@ def multi_reg_rpc(
     return((snp_stat, reg_stat))
 
 
+
 class Config:
     def __init__(self):
         self.def_epsilon_hap = 1e-2
@@ -432,6 +439,7 @@ class Config:
         self.n_proc = self.def_n_proc
 
 
+        
 def load_cell_meta(barcode_fn):
     """Load Cell Meta Information
 
@@ -447,6 +455,7 @@ def load_cell_meta(barcode_fn):
     cell_meta = pd.read_csv(barcode_fn, sep = "\t", header = None)
     cell_meta.columns = ["cell"]
     return(cell_meta)
+
 
 
 def load_region_meta(region_fn):
@@ -472,6 +481,7 @@ def load_region_meta(region_fn):
     region_meta["chrom"] = region_meta["chrom"].str.replace(  \
         "^chr", "", regex = True)
     return(region_meta)
+
 
 
 def load_snp_meta(snp_fn):
@@ -506,6 +516,7 @@ def load_snp_meta(snp_fn):
     return(snp_meta)
 
 
+
 def load_AD(AD_mtx_fn):
     AD = sp.io.mmread(AD_mtx_fn).tocsr()
     return(AD)
@@ -514,6 +525,7 @@ def load_AD(AD_mtx_fn):
 def load_DP(DP_mtx_fn):
     DP = sp.io.mmread(DP_mtx_fn).tocsr()
     return(DP)
+
 
 
 def usage(conf, fp = sys.stdout):
@@ -538,6 +550,7 @@ def usage(conf, fp = sys.stdout):
 
     fp.write(s)
 
+    
 
 def check_args(conf):
     func = "check_args"
@@ -571,6 +584,7 @@ def check_args(conf):
     return(0)
 
 
+
 def quit(main_func, cmdline, start_time, state = 0, err_msg = None):
     func = main_func
 
@@ -590,6 +604,7 @@ def quit(main_func, cmdline, start_time, state = 0, err_msg = None):
     sys.stdout.write("\n")
 
 
+    
 def rpc_main(argv):
     func = "rpc_main"
 
