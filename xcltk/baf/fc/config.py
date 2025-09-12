@@ -20,6 +20,8 @@ class Config:
         self.out_dir = None
         self.debug = self.defaults.DEBUG
 
+        self.cellsnp_dir = None
+        self.ref_cell_fn = None
         self.cell_tag = self.defaults.CELL_TAG
         self.umi_tag = self.defaults.UMI_TAG
         self.nproc = self.defaults.NPROC
@@ -34,6 +36,9 @@ class Config:
         self.excl_flag = -1
         self.no_orphan = self.defaults.NO_ORPHAN
 
+
+        # derived parameters.
+        
         self.barcodes = None     # list of barcode strings.
         self.sample_ids = None
         self.reg_list = None     # list of gene/block objects.
@@ -42,6 +47,9 @@ class Config:
         self.sam_fn_list = None
         self.samples = None
 
+
+        # internal parameters
+        
         self.out_prefix = APP + "."
         self.out_region_fn = None
         self.out_sample_fn = None
@@ -49,6 +57,7 @@ class Config:
         self.out_dp_fn = None
         self.out_oth_fn = None   
 
+        
     def show(self, fp = None, prefix = ""):
         if fp is None:
             fp = sys.stderr
@@ -65,6 +74,8 @@ class Config:
         s += "%sdebug_level = %d\n" % (prefix, self.debug)
         s += "%s\n" % prefix
 
+        s += "%scellsnp_dir = %s\n" % (prefix, self.cellsnp_dir)
+        s += "%sref_cell_fn = %s\n" % (prefix, self.ref_cell_fn)
         s += "%scell_tag = %s\n" % (prefix, self.cell_tag)
         s += "%sumi_tag = %s\n" % (prefix, self.umi_tag)
         s += "%snumber_of_processes = %d\n" % (prefix, self.nproc)
@@ -102,11 +113,13 @@ class Config:
 
         fp.write(s)
 
+        
     def use_barcodes(self):
         return self.cell_tag is not None
 
     def use_umi(self):
         return self.umi_tag is not None
+
 
 
 class DefaultConfig:
@@ -127,6 +140,7 @@ class DefaultConfig:
         self.EXCL_FLAG_UMI = 772
         self.EXCL_FLAG_XUMI = 1796
         self.NO_ORPHAN = True
+
 
 
 if __name__ == "__main__":

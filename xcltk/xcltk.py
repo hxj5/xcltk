@@ -3,10 +3,8 @@
 
 import sys
 
-from .baf.fc.main import afc_main as baf_allelefc
 from .baf.fixref import fixref_main as baf_fixref
 from .baf.pipeline import pipeline_main as baf_baf
-from .baf.rpc import rpc_main as baf_rpc
 from .config import APP, VERSION
 from .rdr.fc.main import fc_main as rdr_basefc
 from .tools.convert import convert_main as tools_convert
@@ -22,10 +20,8 @@ def __usage(fp = sys.stdout):
     msg += "\n"                                          \
            "Commands:\n"                                  \
            "  -- BAF calculation\n"                                         \
-           "     allelefc         Allele-specific feature counting.\n"      \
            "     baf              Preprocessing pipeline for XClone BAF.\n"   \
            "     fixref           Fix REF allele mismatches based on reference FASTA.\n"  \
-           "     rpc              Reference phasing correction.\n"            \
            "\n"                                                              \
            "  -- RDR calculation\n"                                          \
            "     basefc           Basic feature counting.\n"                 \
@@ -48,10 +44,8 @@ def main():
         sys.exit(0)
 
     command = sys.argv[1]
-    if command == "allelefc": baf_allelefc(sys.argv)
-    elif command == "baf": baf_baf(sys.argv)
+    if command == "baf": baf_baf(sys.argv)
     elif command == "fixref": baf_fixref(sys.argv)
-    elif command == "rpc": baf_rpc(sys.argv)
     elif command == "basefc": rdr_basefc(sys.argv)
     elif command == "convert": tools_convert(sys.argv)
     elif command in ("-h", "--help"): __usage(); sys.exit(0)

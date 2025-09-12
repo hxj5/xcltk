@@ -22,127 +22,6 @@ from ...utils.xlog import init_logging
 from ...utils.zfile import zopen, ZF_F_GZIP, ZF_F_PLAIN
 
 
-COMMAND = "allelefc"
-
-
-# mark deprecated.
-def usage(fp = sys.stdout, conf = None):
-    s =  "\n"
-    s += "Version: %s\n" % VERSION
-    s += "Usage:   %s %s <options>\n" % (APP, COMMAND)
-    s += "\n" 
-    s += "Options:\n"
-    s += "  -s, --sam FILE         Comma separated indexed sam/bam/cram file.\n"
-    s += "  -S, --samList FILE     A list file containing bam files, each per line.\n"
-    s += "  -b, --barcode FILE     A plain file listing all effective cell barcode.\n"
-    s += "  -R, --region FILE      A TSV file listing target regions. The first 4 columns shoud be:\n"
-    s += "                         chrom, start, end (both 1-based and inclusive), name.\n"
-    s += "  -P, --phasedSNP FILE   A TSV or VCF file listing phased SNPs (i.e., containing phased GT).\n"
-    s += "  -i, --sampleList FILE  A list file containing sample IDs, each per line.\n"
-    s += "  -I, --sampleIDs STR    Comma separated sample IDs.\n"
-    s += "  -O, --outdir DIR       Output directory for sparse matrices.\n"
-    s += "  -h, --help             Print this message and exit.\n"
-    s += "\n"
-    s += "Optional arguments:\n"
-    s += "  -p, --nproc INT        Number of processes [%d]\n" % conf.NPROC
-    s += "      --cellTAG STR      Tag for cell barcodes, set to None when using sample IDs [%s]\n" % conf.CELL_TAG
-    s += "      --UMItag STR       Tag for UMI, set to None when reads only [%s]\n" % conf.UMI_TAG
-    s += "      --minCOUNT INT     Mininum aggragated count for SNP [%d]\n" % conf.MIN_COUNT
-    s += "      --minMAF FLOAT     Mininum minor allele fraction for SNP [%f]\n" % conf.MIN_MAF
-    s += "      --outputAllReg     If set, output all inputted regions.\n"
-    s += "      --countDupHap      If set, UMIs aligned to both haplotypes will be counted.\n"
-    s += "  -D, --debug INT        Used by developer for debugging [%d]\n" % conf.DEBUG
-    s += "\n"
-    s += "Read filtering:\n"
-    s += "  --inclFLAG INT    Required flags: skip reads with all mask bits unset [%d]\n" % conf.INCL_FLAG
-    s += "  --exclFLAG INT    Filter flags: skip reads with any mask bits set [%d\n" % conf.EXCL_FLAG_UMI
-    s += "                    (when use UMI) or %d (otherwise)]\n" % conf.EXCL_FLAG_XUMI
-    s += "  --minLEN INT      Minimum mapped length for read filtering [%d]\n" % conf.MIN_LEN
-    s += "  --minMAPQ INT     Minimum MAPQ for read filtering [%d]\n" % conf.MIN_MAPQ
-    s += "  --countORPHAN     If use, do not skip anomalous read pairs.\n"
-    s += "\n"
-
-    fp.write(s)
-
-
-def afc_main(argv, conf = None):
-    """Command-Line interface.
-
-    Parameters
-    ----------
-    argv : list
-        A list of cmdline parameters.
-    conf : fc::Config object
-        Configuration object.
-    
-    Returns
-    -------
-    int
-        0 if success, -1 otherwise [int]
-    """
-    if conf is None:
-        conf = Config()
-
-    if len(argv) <= 2:
-        usage(sys.stdout, conf.defaults)
-        sys.exit(0)
-
-    conf.argv = argv.copy()
-    init_logging(stream = sys.stderr)
-
-    opts, args = getopt.getopt(
-        args = argv[2:], 
-        shortopts = "-s:-S:-b:-R:-P:-i:-I:-O:-h-p:-D:", 
-        longopts = [
-            "sam=", "samList=", "barcode=",
-            "region=", "phasedSNP=",
-            "sampleList=", "sampleIDs=",
-            "outdir=",
-            "help",
-
-            "nproc=", 
-            "cellTAG=", "UMItag=", 
-            "minCOUNT=", "minMAF=", "outputAllReg", "countDupHap",
-            "debug=",
-
-            "inclFLAG=", "exclFLAG=", "minLEN=", "minMAPQ=", "countORPHAN"
-        ])
-
-    for op, val in opts:
-        if len(op) > 2:
-            op = op.lower()
-        if op in   ("-s", "--sam"): conf.sam_fn = val
-        elif op in ("-S", "--samlist"): conf.sam_list_fn = val
-        elif op in ("-b", "--barcode"): conf.barcode_fn = val
-        elif op in ("-R", "--region"): conf.region_fn = val
-        elif op in ("-P", "--phasedsnp"): conf.snp_fn = val
-        elif op in ("-i", "--samplelist"): conf.sample_id_fn = val
-        elif op in ("-I", "--sampleids"): conf.sample_id_str = val
-        elif op in ("-O", "--outdir"): conf.out_dir = val
-        elif op in ("-h", "--help"): usage(sys.stdout, conf.defaults); sys.exit(0)
-
-        elif op in ("-p", "--nproc"): conf.nproc = int(val)
-        elif op in (      "--celltag"): conf.cell_tag = val
-        elif op in (      "--umitag"): conf.umi_tag = val
-        elif op in (      "--mincount"): conf.min_count = int(val)
-        elif op in (      "--minmaf"): conf.min_maf = float(val)
-        elif op in (      "--outputallreg"): conf.output_all_reg = True
-        elif op in (      "--countduphap"): conf.no_dup_hap = False
-        elif op in ("-D", "--debug"): conf.debug = int(val)
-
-        elif op in ("--inclflag"): conf.incl_flag = int(val)
-        elif op in ("--exclflag"): conf.excl_flag = int(val)
-        elif op in ("--minlen"): conf.min_len = int(val)
-        elif op in ("--minmapq"): conf.min_mapq = float(val)
-        elif op in ("--countorphan"): conf.no_orphan = False
-
-        else:
-            error("invalid option: '%s'." % op)
-            return(-1)
-        
-    ret = afc_run(conf)
-    return(ret)
-
 
 def afc_wrapper(
     sam_fn, barcode_fn,
@@ -187,6 +66,7 @@ def afc_wrapper(
 
     ret = afc_run(conf)
     return(ret)
+
 
 
 def afc_core(conf):
@@ -311,7 +191,8 @@ def afc_core(conf):
         remove = True
     ) < 0:
         raise ValueError("errcode -21")
-    
+
+
 
 def afc_run(conf):
     ret = -1
@@ -346,7 +227,8 @@ def afc_run(conf):
         info("time spent: %.2fs" % (end_time - start_time, ))
 
     return(ret)
-    
+
+
 
 def prepare_config(conf):
     """Prepare configures for downstream analysis
@@ -495,6 +377,7 @@ def prepare_config(conf):
             conf.excl_flag = conf.defaults.EXCL_FLAG_XUMI
 
     return(0)
+
 
 
 def show_progress(rv = None):
