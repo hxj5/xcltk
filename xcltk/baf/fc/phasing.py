@@ -6,8 +6,9 @@ import numpy as np
 import scipy as sp
 from logging import info
 from logging import warning as warn
+from ..localphase import snp_local_phasing
 
-# min_len = 50000, min_n_snps = 2, min_gap = 50000,
+
     
 def reg_local_phasing(
     reg,
@@ -18,8 +19,17 @@ def reg_local_phasing(
     if kws_localphase is None:
         kws_localphase = dict()
 
+    cell_idx = DP.sum(axis = 1) > 0
+    snp_idx = DP.sum(axis = 0) > 0
+    AD, DP = AD[np.ix_(cell_idx, snp_idx)], DP[np.ix_(cell_idx, snp_idx)]
+    reg.snp_list = [s for i, s in zip(snp_idx, reg.snp_list) if i]
+
+    BD = DP - AD
+    flip = np.array([snp.ref_idx == 1 for snp in reg.snp_list])
+    AD_ref_phased = AD * (1 - flip.T) + BD * flip.T
+
     res = snp_local_phasing(
-        AD = AD, 
+        AD = AD_ref_phased, 
         DP = DP,
         positions = np.array([s.pos for s in reg.snp_list]),
         verbose = verbose, 

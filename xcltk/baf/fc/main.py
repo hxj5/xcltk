@@ -1,8 +1,10 @@
 # main.py - allele-specific feature counting.
 
 
+import gc
 import getopt
 import multiprocessing
+import numpy as np
 import os
 import pickle
 import sys
@@ -13,11 +15,15 @@ from logging import warning as warn
 
 from .config import Config
 from .core import fc_features
+from .phasing import reg_local_phasing
 from .thread import ThreadData
 from .utils import load_region_from_txt, load_snp_from_vcf, \
     load_snp_from_tsv, merge_mtx, merge_tsv
 
 from ...config import APP, VERSION
+from ...utils.base import assert_e
+from ...utils.csp_io import load_data as csp_load_data
+from ...utils.grange import format_chrom
 from ...utils.xlog import init_logging
 from ...utils.zfile import zopen, ZF_F_GZIP, ZF_F_PLAIN
 
@@ -31,6 +37,7 @@ def afc_wrapper(
     sample_ids = None, sample_id_fn = None,
     debug_level = 0,
     ncores = 1,
+    cellsnp_dir = None, ref_cell_fn = None,
     cell_tag = "CB", umi_tag = "UB",
     min_count = 1, min_maf = 0,
     output_all_reg = False, no_dup_hap = True,
@@ -50,6 +57,8 @@ def afc_wrapper(
     conf.out_dir = out_dir
     conf.debug = debug_level
 
+    conf.cellsnp_dir = cellsnp_dir
+    conf.ref_cell_fn = ref_cell_fn
     conf.cell_tag = cell_tag
     conf.umi_tag = umi_tag
     conf.nproc = ncores
@@ -75,6 +84,7 @@ def afc_core(conf):
     info("program configuration:")
     conf.show(fp = sys.stderr, prefix = "\t")
 
+    
     # extract SNPs for each region
     if conf.debug > 0:
         debug("extract SNPs for each region.")
@@ -91,6 +101,40 @@ def afc_core(conf):
 
     if not conf.output_all_reg:
         conf.reg_list = reg_list
+        
+        
+    # do local phasing within each region.
+    n_reg_local_phasing = 0
+    if conf.use_local_phasing():
+        adata = conf.snp_adata
+        if conf.ref_cells is not None:
+            adata = adata[~adata.obs['cell'].isin(conf.ref_cells), :]
+        adata.var['chrom'] = adata.var['chrom'].map(format_chrom)
+        for reg in conf.reg_list:
+            if reg.end - reg.start < conf.rlp_min_len:
+                continue
+            if reg.snp_list is None or len(reg.snp_list) < max(1, conf.rlp_min_n_snps):
+                continue
+            if reg.snp_list[-1].pos - reg.snp_list[0].pos + 1 < conf.rlp_min_gap:
+                continue
+            if conf.debug > 0:
+                debug("do local phasing in region '%s' ..." % reg.name)
+            dat = adata[:, (adata.var["chrom"] == reg.chrom) & \
+                            (adata.var["pos"] >= reg.start) & \
+                            (adata.var["pos"] < reg.end)].copy()
+            reg = reg_local_phasing(
+                reg = reg,
+                AD = dat.layers['AD'].copy(),
+                DP = dat.layers['DP'].copy(),
+                kws_localphase = None,
+                verbose = True if conf.debug > 0 else False
+            )
+            n_reg_local_phasing += 1
+        del conf.snp_adata
+        del conf.ref_cells
+        gc.collect()
+    info("local phasing has been done in %d regions." % n_reg_local_phasing)
+    
 
     # split region list and save to file
     m_reg = len(conf.reg_list)
@@ -117,6 +161,8 @@ def afc_core(conf):
     conf.snp_set.destroy()
     conf.snp_set = None
 
+    
+    # multiprocessing, push regions into process pool.
     thdata_list = []
     pool = multiprocessing.Pool(processes = m_thread)
     mp_result = []
@@ -147,6 +193,7 @@ def afc_core(conf):
         debug("returned values of multi-processing:")
         debug("\t%s" % str(retcode_list))
 
+        
     # check running status of each sub-process
     for thdata in thdata_list:         
         if conf.debug > 0:
@@ -155,6 +202,7 @@ def afc_core(conf):
         if thdata.ret < 0:
             raise ValueError("errcode -3")
 
+            
     # merge results
     if merge_tsv(
         [td.out_region_fn for td in thdata_list], ZF_F_GZIP, 
@@ -264,6 +312,7 @@ def prepare_config(conf):
             error("sam file '%s' does not exist." % fn)
             return(-1)
 
+        
     if conf.barcode_fn:
         conf.sample_ids = None
         if conf.sample_id_str or conf.sample_id_fn:
@@ -298,6 +347,7 @@ def prepare_config(conf):
         
     conf.samples = conf.barcodes if conf.barcodes else conf.sample_ids
 
+    
     if not conf.out_dir:
         error("out dir needed!")
         return(-1)
@@ -311,6 +361,7 @@ def prepare_config(conf):
     conf.out_dp_fn = os.path.join(conf.out_dir, conf.out_prefix + "DP.mtx")
     conf.out_oth_fn = os.path.join(conf.out_dir, conf.out_prefix + "OTH.mtx")
 
+    
     if conf.region_fn:
         if os.path.isfile(conf.region_fn): 
             conf.reg_list = load_region_from_txt(
@@ -327,6 +378,7 @@ def prepare_config(conf):
         error("region file needed!")
         return(-1)
 
+    
     if conf.snp_fn:
         if os.path.isfile(conf.snp_fn):
             if conf.snp_fn.endswith(".vcf") or conf.snp_fn.endswith(".vcf.gz")\
@@ -345,7 +397,35 @@ def prepare_config(conf):
     else:
         error("SNP file needed!")
         return(-1)
+    
+    
+    if conf.cellsnp_dir is not None:
+        assert_e(conf.cellsnp_dir)
+        conf.snp_adata = csp_load_data(conf.cellsnp_dir)
+        
+        assert len(conf.samples) == conf.snp_adata.shape[0]
+        for cell in conf.samples:
+            assert cell in conf.snp_adata.obs['cell'].to_numpy()
+        
+        assert conf.snp_adata.shape[1] == conf.snp_set.get_n()
+        for i in range(conf.snp_adata.shape[1]):
+            hits = conf.snp_set.fetch(
+                chrom = conf.snp_adata.var['chrom'].iloc[i],
+                start = conf.snp_adata.var['pos'].iloc[i],
+                end = conf.snp_adata.var['pos'].iloc[i] + 1
+            )
+            assert len(hits) > 0     # SNPs from `snp_adata` are in `snp_set`.
 
+
+    if conf.ref_cell_fn is not None:
+        assert_e(conf.ref_cell_fn)
+        conf.ref_cells = np.genfromtxt(
+            conf.ref_cell_fn, dtype = "str", delimiter = "\t")
+        assert len(conf.ref_cells) <= len(conf.samples)
+        for cell in conf.ref_cells:
+            assert cell in conf.samples
+        
+        
     if conf.cell_tag and conf.cell_tag.upper() == "NONE":
         conf.cell_tag = None
     if conf.cell_tag and conf.barcodes:
@@ -356,6 +436,7 @@ def prepare_config(conf):
     else:
         pass    
 
+    
     if conf.umi_tag:
         if conf.umi_tag.upper() == "AUTO":
             if conf.barcodes is None:
@@ -367,9 +448,11 @@ def prepare_config(conf):
     else:
         pass
 
+    
     with open(conf.out_sample_fn, "w") as fp:
         fp.write("".join([smp + "\n" for smp in conf.samples]))
 
+        
     if conf.excl_flag < 0:
         if conf.use_umi():
             conf.excl_flag = conf.defaults.EXCL_FLAG_UMI

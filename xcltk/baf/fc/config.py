@@ -46,6 +46,9 @@ class Config:
 
         self.sam_fn_list = None
         self.samples = None
+        
+        self.snp_adata = None
+        self.ref_cells = None
 
 
         # internal parameters
@@ -55,7 +58,14 @@ class Config:
         self.out_sample_fn = None
         self.out_ad_fn = None
         self.out_dp_fn = None
-        self.out_oth_fn = None   
+        self.out_oth_fn = None
+        
+        # rlp: region wise local phasing
+        # - requirements below must be meeted before doing local phasing in 
+        #   one region.
+        self.rlp_min_len = 50000       # minimum length of the region.
+        self.rlp_min_n_snps = 2        # minimum number of expressed SNPs.
+        self.rlp_min_gap = 50000       # minimum gap between the first SNP and last SNP.
 
         
     def show(self, fp = None, prefix = ""):
@@ -92,16 +102,20 @@ class Config:
         s += "%sno_orphan = %s\n" % (prefix, self.no_orphan)
         s += "%s\n" % prefix
 
-        s += "%snumber_of_BAMs = %d\n" % (prefix, len(self.sam_fn_list) if \
+        s += "%s#BAMs = %d\n" % (prefix, len(self.sam_fn_list) if \
                 self.sam_fn_list is not None else -1)
-        s += "%snumber_of_barcodes = %d\n" % (prefix, len(self.barcodes) if \
+        s += "%s#barcodes = %d\n" % (prefix, len(self.barcodes) if \
                 self.barcodes is not None else -1)
-        s += "%snumber_of_sample_IDs = %d\n" % (prefix, len(self.sample_ids) \
+        s += "%s#sample IDs = %d\n" % (prefix, len(self.sample_ids) \
                 if self.sample_ids is not None else -1)
-        s += "%snumber_of_regions = %d\n" % (prefix, len(self.reg_list) if \
+        s += "%s#regions = %d\n" % (prefix, len(self.reg_list) if \
                 self.reg_list is not None else -1)
-        s += "%snumber_of_snps = %d\n" % (prefix, self.snp_set.get_n() if \
+        s += "%s#snps = %d\n" % (prefix, self.snp_set.get_n() if \
                 self.snp_set is not None else -1)
+        s += "%sshape of snp adata = %s\n" % (prefix, str(self.snp_adata.shape)\
+                if self.snp_adata is not None else 'None')
+        s += "%s#reference cells = %d\n" % (prefix, len(self.ref_cells) \
+                if self.ref_cells is not None else -1)
         s += "%s\n" % prefix
 
         s += "%soutput_region_file = %s\n" % (prefix, self.out_region_fn)
@@ -110,12 +124,20 @@ class Config:
         s += "%soutput_dp_file = %s\n" % (prefix, self.out_dp_fn)
         s += "%soutput_oth_file = %s\n" % (prefix, self.out_oth_fn)
         s += "%s\n" % prefix
+        
+        s += "%srlp_min_len = %d\n" % (prefix, self.rlp_min_len)
+        s += "%srlp_min_n_snps = %d\n" % (prefix, self.rlp_min_n_snps)
+        s += "%srlp_min_gap = %d\n" % (prefix, self.rlp_min_gap)
+        s += "%s\n" % prefix
 
         fp.write(s)
 
         
     def use_barcodes(self):
         return self.cell_tag is not None
+    
+    def use_local_phasing(self):
+        return self.cellsnp_dir is not None
 
     def use_umi(self):
         return self.umi_tag is not None

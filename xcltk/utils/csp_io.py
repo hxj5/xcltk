@@ -17,10 +17,24 @@ def load_data(data_dir, is_genotype = False, is_gzip = True):
     vcf_suffix = ".gz" if is_gzip else ""
     base_vcf_comment, base_vcf = load_vcf(
         os.path.join(data_dir, "cellSNP.base.vcf" + vcf_suffix))
+    base_vcf = base_vcf.rename(columns = {
+        'CHROM': 'chrom',
+        'POS': 'pos',
+        'REF': 'ref',
+        'ALT': 'alt'
+    })
+    
     cell_vcf, cell_vcf_comment = None, None
     if is_genotype:
         cell_vcf_comment, cell_vcf = load_vcf(
             os.path.join(data_dir, "cellSNP.cells.vcf" + vcf_suffix))
+        cell_vcf = cell_vcf.rename(columns = {
+            'CHROM': 'chrom',
+            'POS': 'pos',
+            'REF': 'ref',
+            'ALT': 'alt'
+        })
+
     cells = load_cells(os.path.join(data_dir, "cellSNP.samples.tsv"))
     AD_mtx = load_matrix(os.path.join(data_dir, "cellSNP.tag.AD.mtx"))
     DP_mtx = load_matrix(os.path.join(data_dir, "cellSNP.tag.DP.mtx"))
