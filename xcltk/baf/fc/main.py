@@ -92,19 +92,23 @@ def afc_core(conf):
     for reg in conf.reg_list:
         snp_list = conf.snp_set.fetch(reg.chrom, reg.start, reg.end)
         if snp_list and len(snp_list) > 0:
-            reg.snp_list = snp_list
+            reg.snp_list = sorted(snp_list, key = lambda s: s.pos)
             reg_list.append(reg)
         else:
-            if conf.debug > 0:
-                debug("no SNP fetched for region '%s'." % reg.name)
-    info("%d regions extracted with SNPs." % len(reg_list))
+            if conf.debug > 2:
+                debug("region '%s': no SNP fetched." % reg.name)
+    info("#regions: total=%d; with_snps=%d." % \
+         (len(conf.reg_list), len(reg_list)))
 
     if not conf.output_all_reg:
         conf.reg_list = reg_list
         
         
     # do local phasing within each region.
-    n_reg_local_phasing = 0
+    n_rlp = 0             # regions that do local phasing.
+    n_rlp_failed = 0
+    n_slp = 0             # SNPs that do local phasing.
+    n_slp_flipped = 0
     if conf.use_local_phasing():
         adata = conf.snp_adata
         if conf.ref_cells is not None:
@@ -117,23 +121,36 @@ def afc_core(conf):
                 continue
             if reg.snp_list[-1].pos - reg.snp_list[0].pos + 1 < conf.rlp_min_gap:
                 continue
-            if conf.debug > 0:
-                debug("do local phasing in region '%s' ..." % reg.name)
+            if conf.debug > 2:
+                debug("region '%s': do local phasing ..." % reg.name)
             dat = adata[:, (adata.var["chrom"] == reg.chrom) & \
                             (adata.var["pos"] >= reg.start) & \
                             (adata.var["pos"] < reg.end)].copy()
-            reg = reg_local_phasing(
+            reg, flip = reg_local_phasing(
                 reg = reg,
                 AD = dat.layers['AD'].copy(),
                 DP = dat.layers['DP'].copy(),
                 kws_localphase = None,
-                verbose = True if conf.debug > 0 else False
+                verbose = True if conf.debug > 2 else False
             )
-            n_reg_local_phasing += 1
+            if flip is None:
+                n_rlp_failed += 1
+                if conf.debug > 1:
+                    debug("region '%s': local phasing failed." % reg.name)
+            else:
+                if conf.debug > 1:
+                    debug("region '%s': #SNPs - total=%d; flipped=%d" % \
+                          (reg.name, len(reg.snp_list), np.sum(flip)))
+                n_slp_flipped += np.sum(flip)
+            n_slp += len(reg.snp_list)
+            n_rlp += 1
         del conf.snp_adata
         del conf.ref_cells
         gc.collect()
-    info("local phasing has been done in %d regions." % n_reg_local_phasing)
+    info("#regions: total=%d; local_phasing=%d; local_phasing_failed=%d." % \
+        (len(conf.reg_list), n_rlp, n_rlp_failed))
+    info("#SNPs: local_phasing=%d; local_phasing_flipped=%d." % \
+        (n_slp, n_slp_flipped))
     
 
     # split region list and save to file

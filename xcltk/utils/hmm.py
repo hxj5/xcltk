@@ -76,4 +76,3 @@ def HMM(emm_p_log, pi=None, A=None, diag_prob=0.99):
     z_post = z_post / np.sum(z_post, axis=1, keepdims=True)
     
     return z_post
-

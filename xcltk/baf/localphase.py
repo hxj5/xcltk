@@ -35,9 +35,9 @@ def snp_local_phasing(
     Parameters
     ----------
     AD : np.array like
-        The cell x snp AD matrix;
+        The cell x snp AD matrix.
     DP : np.array like
-        The cell x snp DP matrix;
+        The cell x snp DP matrix.
     cw_min_expr_snps : int
         Minimum number of expressed SNPs in one cell. 
         Used for cell filtering in each iteration.
@@ -104,7 +104,6 @@ def snp_local_phasing(
             use_gk = use_gk,
             kws_gk = kws_gk,
             verbose = verbose,
-            #verbose = False,
             **kws_local_phasing
         )
         
@@ -121,7 +120,8 @@ def snp_local_phasing(
         
         if i > 0:
             if i >= min_iter and (np.all(flip) or np.all(np.logical_not(flip))):
-                info("%d - flip state converged." % i)
+                if verbose:
+                    info("%d - flip state converged." % i)
                 return flip_final, ad_sum, ad_sum1, dp_sum, Z, thetas, logLik_new
 
         AD = AD * (1 - flip.T) + (DP - AD) * flip.T
@@ -154,9 +154,9 @@ def Local_Phasing(
     Parameters
     ----------
     AD : sparse matrix of integers
-        Read counts for ALT allele in N blocks and M cells
+        Read counts for ALT allele in N blocks and M cells.
     DP : sparse matrix of integers
-        Read counts for REF allele in N blocks and M cells
+        Read counts for REF allele in N blocks and M cells.
     
     Returns
     -------
@@ -320,4 +320,23 @@ def normalize(X, axis = -1):
 
 
 def snp_gk(z, c, b = 10000, a = 0):
+    """SNP haplotype assignment smoothing with gaussian kernel.
+    
+    Parameters
+    ----------
+    z : array-like
+        The probabilities of haplotype assignment to be smoothed.
+    c : array-like
+        The SNP genomic coordinates, same length with `z`.
+    b : float
+        The kernel parameter controling the spread of the Gaussian.
+    a : float
+        An scaling coefficient.
+        The kernel can be reformulated as exp(a)exp((x1-x2)^2 / b^2).
+
+    Returns
+    -------
+    array-like
+        The smoothed values.
+    """
     return gaussian_smoothing_1d(z, c, b = b, a = a)
