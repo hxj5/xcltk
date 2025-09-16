@@ -319,7 +319,8 @@ def normalize(X, axis = -1):
 
 
 
-def snp_smooth_gk(z, c, b = 10000, a = 0):
+# the default value of `b` is estimated in a simulated ST dataset.
+def snp_smooth_gk(z, c, b = 20000, a = 0):
     """SNP haplotype assignment smoothing with gaussian kernel.
     
     Parameters
