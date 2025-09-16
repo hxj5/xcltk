@@ -17,9 +17,9 @@ def snp_local_phasing(
     cw_min_expr_snps = 1,
     cw_low_baf = 0.45, cw_up_baf = 0.55,
     positions = None,
-    use_hmm = False,
+    smooth_hmm = False,
     kws_hmm = None,
-    use_gk = True,
+    smooth_gk = True,
     kws_gk = None,
     kws_local_phasing = None,
     verbose = False
@@ -49,14 +49,14 @@ def snp_local_phasing(
         The cell-wise up bound of aggregated BAF.
     positions : array-like
         The SNP positions.
-    use_hmm : bool
+    smooth_hmm : bool
         Whether to use HMM for haplotype assignment smoothing.
     kws_hmm : dict or None
         Other parameters passed to `HMM()`.
-    use_gk : bool
+    smooth_gk : bool
         Whether to use gaussian kernel for haplotype assignment smoothing.
     kws_gk : dict or None
-        Other parameters passed to `snp_gk()`.
+        Other parameters passed to `snp_smooth_gk()`.
     kws_local_phasing : dict or None
         Other parameters passed to `Local_Phasing()`.
 
@@ -98,10 +98,10 @@ def snp_local_phasing(
         ad_sum, ad_sum1, dp_sum, Z, thetas, logLik_new = Local_Phasing(
             AD = AD.T,
             DP = DP.T,
-            use_hmm = use_hmm,
+            smooth_hmm = smooth_hmm,
             kws_hmm = kws_hmm,
             positions = positions,
-            use_gk = use_gk,
+            smooth_gk = smooth_gk,
             kws_gk = kws_gk,
             verbose = verbose,
             **kws_local_phasing
@@ -137,9 +137,9 @@ def Local_Phasing(
     min_iter = 10, max_iter = 1000, epsilon_conv = 1e-3,
     init_mode = 'warm', 
     positions = None,
-    use_hmm = False,
+    smooth_hmm = False,
     kws_hmm = None,
-    use_gk = False,
+    smooth_gk = False,
     kws_gk = None,
     verbose = False
 ):
@@ -168,9 +168,9 @@ def Local_Phasing(
         thetas[thetas >= 1] = 1 - eps
         return AD @ np.log(thetas) + BD @ np.log(1 - thetas)
 
-    if use_hmm and kws_hmm is None:
+    if smooth_hmm and kws_hmm is None:
         kws_hmm = dict()
-    if use_gk:
+    if smooth_gk:
         if positions is None:
             raise ValueError("[Local_Phasing] coordinates should be specified!")
         if kws_gk is None:
@@ -204,10 +204,10 @@ def Local_Phasing(
         
         # E step: calculate the expecation
         Z = normalize(np.exp(loglik_amplify(np.array(_logLik_mat))))
-        if use_hmm:
+        if smooth_hmm:
             Z = HMM(Z, **kws_hmm)
-        if use_gk:
-            Z[:, 0] = snp_gk(Z[:, 0], positions, **kws_gk)
+        if smooth_gk:
+            Z[:, 0] = snp_smooth_gk(Z[:, 0], positions, **kws_gk)
             Z[:, 1] = 1 - Z[:, 0]
         
         # M step: maximise the likihood over thetas
@@ -319,7 +319,7 @@ def normalize(X, axis = -1):
 
 
 
-def snp_gk(z, c, b = 10000, a = 0):
+def snp_smooth_gk(z, c, b = 10000, a = 0):
     """SNP haplotype assignment smoothing with gaussian kernel.
     
     Parameters
