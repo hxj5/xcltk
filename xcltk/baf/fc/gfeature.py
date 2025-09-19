@@ -1,6 +1,8 @@
 # gfeature.py - genomic features, supporting interval query.
 
+
 from ...utils.grange import Region, RegionSet
+
 
 
 class SNP(Region):
@@ -37,6 +39,7 @@ class SNP(Region):
         return self.gt[base] if base in self.gt else -1
 
 
+    
 class SNPSet(RegionSet):
     """A set of phased SNPs"""
     def __init__(self, is_uniq = False):
@@ -46,6 +49,7 @@ class SNPSet(RegionSet):
         return super().add(snp)
 
 
+    
 class BlockRegion(Region):
     """Block Region
 

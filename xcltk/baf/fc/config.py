@@ -1,7 +1,9 @@
 # config.py - configuration
 
+
 import sys
 from ...config import APP
+
 
 class Config:
     def __init__(self):
@@ -18,6 +20,8 @@ class Config:
         self.out_dir = None
         self.debug = self.defaults.DEBUG
 
+        self.cellsnp_dir = None
+        self.ref_cell_fn = None
         self.cell_tag = self.defaults.CELL_TAG
         self.umi_tag = self.defaults.UMI_TAG
         self.nproc = self.defaults.NPROC
@@ -32,6 +36,9 @@ class Config:
         self.excl_flag = -1
         self.no_orphan = self.defaults.NO_ORPHAN
 
+
+        # derived parameters.
+        
         self.barcodes = None     # list of barcode strings.
         self.sample_ids = None
         self.reg_list = None     # list of gene/block objects.
@@ -39,14 +46,28 @@ class Config:
 
         self.sam_fn_list = None
         self.samples = None
+        
+        self.snp_adata = None
+        self.ref_cells = None
 
+
+        # internal parameters
+        
         self.out_prefix = APP + "."
         self.out_region_fn = None
         self.out_sample_fn = None
         self.out_ad_fn = None
         self.out_dp_fn = None
-        self.out_oth_fn = None   
+        self.out_oth_fn = None
+        
+        # rlp: region wise local phasing
+        # - requirements below must be meeted before doing local phasing in 
+        #   one region.
+        self.rlp_min_len = 50000       # minimum length of the region.
+        self.rlp_min_n_snps = 2        # minimum number of expressed SNPs.
+        self.rlp_min_gap = 50000       # minimum gap between the first SNP and last SNP.
 
+        
     def show(self, fp = None, prefix = ""):
         if fp is None:
             fp = sys.stderr
@@ -63,6 +84,8 @@ class Config:
         s += "%sdebug_level = %d\n" % (prefix, self.debug)
         s += "%s\n" % prefix
 
+        s += "%scellsnp_dir = %s\n" % (prefix, self.cellsnp_dir)
+        s += "%sref_cell_fn = %s\n" % (prefix, self.ref_cell_fn)
         s += "%scell_tag = %s\n" % (prefix, self.cell_tag)
         s += "%sumi_tag = %s\n" % (prefix, self.umi_tag)
         s += "%snumber_of_processes = %d\n" % (prefix, self.nproc)
@@ -79,16 +102,20 @@ class Config:
         s += "%sno_orphan = %s\n" % (prefix, self.no_orphan)
         s += "%s\n" % prefix
 
-        s += "%snumber_of_BAMs = %d\n" % (prefix, len(self.sam_fn_list) if \
+        s += "%s#BAMs = %d\n" % (prefix, len(self.sam_fn_list) if \
                 self.sam_fn_list is not None else -1)
-        s += "%snumber_of_barcodes = %d\n" % (prefix, len(self.barcodes) if \
+        s += "%s#barcodes = %d\n" % (prefix, len(self.barcodes) if \
                 self.barcodes is not None else -1)
-        s += "%snumber_of_sample_IDs = %d\n" % (prefix, len(self.sample_ids) \
+        s += "%s#sample IDs = %d\n" % (prefix, len(self.sample_ids) \
                 if self.sample_ids is not None else -1)
-        s += "%snumber_of_regions = %d\n" % (prefix, len(self.reg_list) if \
+        s += "%s#regions = %d\n" % (prefix, len(self.reg_list) if \
                 self.reg_list is not None else -1)
-        s += "%snumber_of_snps = %d\n" % (prefix, self.snp_set.get_n() if \
+        s += "%s#snps = %d\n" % (prefix, self.snp_set.get_n() if \
                 self.snp_set is not None else -1)
+        s += "%sshape of snp adata = %s\n" % (prefix, str(self.snp_adata.shape)\
+                if self.snp_adata is not None else 'None')
+        s += "%s#reference cells = %d\n" % (prefix, len(self.ref_cells) \
+                if self.ref_cells is not None else -1)
         s += "%s\n" % prefix
 
         s += "%soutput_region_file = %s\n" % (prefix, self.out_region_fn)
@@ -97,14 +124,24 @@ class Config:
         s += "%soutput_dp_file = %s\n" % (prefix, self.out_dp_fn)
         s += "%soutput_oth_file = %s\n" % (prefix, self.out_oth_fn)
         s += "%s\n" % prefix
+        
+        s += "%srlp_min_len = %d\n" % (prefix, self.rlp_min_len)
+        s += "%srlp_min_n_snps = %d\n" % (prefix, self.rlp_min_n_snps)
+        s += "%srlp_min_gap = %d\n" % (prefix, self.rlp_min_gap)
+        s += "%s\n" % prefix
 
         fp.write(s)
 
+        
     def use_barcodes(self):
         return self.cell_tag is not None
+    
+    def use_local_phasing(self):
+        return self.cellsnp_dir is not None
 
     def use_umi(self):
         return self.umi_tag is not None
+
 
 
 class DefaultConfig:
@@ -125,6 +162,7 @@ class DefaultConfig:
         self.EXCL_FLAG_UMI = 772
         self.EXCL_FLAG_XUMI = 1796
         self.NO_ORPHAN = True
+
 
 
 if __name__ == "__main__":

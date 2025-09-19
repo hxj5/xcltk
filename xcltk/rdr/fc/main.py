@@ -1,4 +1,4 @@
-# count.py - allele-specific feature counting.
+# main.py - basic feature counting.
 
 
 import getopt
@@ -11,18 +11,16 @@ import time
 from logging import debug, error, info
 from logging import warning as warn
 
-from .fc.config import Config
-from .fc.core import fc_features
-from .fc.thread import ThreadData
-from .fc.utils import load_region_from_txt, load_snp_from_vcf, \
-    load_snp_from_tsv, merge_mtx, merge_tsv
+from .config import Config
+from .core import fc_features
+from .thread import ThreadData
+from .utils import load_region_from_txt, merge_mtx, merge_tsv
 
-from ..config import APP, VERSION
-from ..utils.xlog import init_logging
-from ..utils.zfile import zopen, ZF_F_GZIP, ZF_F_PLAIN
+from ...config import APP, VERSION
+from ...utils.xlog import init_logging
+from ...utils.zfile import zopen, ZF_F_GZIP, ZF_F_PLAIN
 
-
-COMMAND = "allelefc"
+COMMAND = "basefc"
 
 
 def usage(fp = sys.stdout, conf = None):
@@ -36,35 +34,31 @@ def usage(fp = sys.stdout, conf = None):
     s += "  -b, --barcode FILE     A plain file listing all effective cell barcode.\n"
     s += "  -R, --region FILE      A TSV file listing target regions. The first 4 columns shoud be:\n"
     s += "                         chrom, start, end (both 1-based and inclusive), name.\n"
-    s += "  -P, --phasedSNP FILE   A TSV or VCF file listing phased SNPs (i.e., containing phased GT).\n"
     s += "  -i, --sampleList FILE  A list file containing sample IDs, each per line.\n"
     s += "  -I, --sampleIDs STR    Comma separated sample IDs.\n"
     s += "  -O, --outdir DIR       Output directory for sparse matrices.\n"
     s += "  -h, --help             Print this message and exit.\n"
     s += "\n"
     s += "Optional arguments:\n"
-    s += "  -p, --nproc INT        Number of processes [%d]\n" % conf.NPROC
+    s += "  -p, --ncores INT       Number of processes [%d]\n" % conf.NPROC
     s += "      --cellTAG STR      Tag for cell barcodes, set to None when using sample IDs [%s]\n" % conf.CELL_TAG
     s += "      --UMItag STR       Tag for UMI, set to None when reads only [%s]\n" % conf.UMI_TAG
-    s += "      --minCOUNT INT     Mininum aggragated count for SNP [%d]\n" % conf.MIN_COUNT
-    s += "      --minMAF FLOAT     Mininum minor allele fraction for SNP [%f]\n" % conf.MIN_MAF
-    s += "      --outputAllReg     If set, output all inputted regions.\n"
-    s += "      --countDupHap      If set, UMIs aligned to both haplotypes will be counted.\n"
     s += "  -D, --debug INT        Used by developer for debugging [%d]\n" % conf.DEBUG
     s += "\n"
     s += "Read filtering:\n"
-    s += "  --inclFLAG INT    Required flags: skip reads with all mask bits unset [%d]\n" % conf.INCL_FLAG
-    s += "  --exclFLAG INT    Filter flags: skip reads with any mask bits set [%d\n" % conf.EXCL_FLAG_UMI
-    s += "                    (when use UMI) or %d (otherwise)]\n" % conf.EXCL_FLAG_XUMI
-    s += "  --minLEN INT      Minimum mapped length for read filtering [%d]\n" % conf.MIN_LEN
-    s += "  --minMAPQ INT     Minimum MAPQ for read filtering [%d]\n" % conf.MIN_MAPQ
-    s += "  --countORPHAN     If use, do not skip anomalous read pairs.\n"
+    s += "  --inclFLAG INT          Required flags: skip reads with all mask bits unset [%d]\n" % conf.INCL_FLAG
+    s += "  --exclFLAG INT          Filter flags: skip reads with any mask bits set [%d\n" % conf.EXCL_FLAG_UMI
+    s += "                          (when use UMI) or %d (otherwise)]\n" % conf.EXCL_FLAG_XUMI
+    s += "  --minLEN INT            Minimum mapped length for read filtering [%d]\n" % conf.MIN_LEN
+    s += "  --minMAPQ INT           Minimum MAPQ for read filtering [%d]\n" % conf.MIN_MAPQ
+    s += "  --minINCLUDE FLOAT|INT  Minimum fraction or length of included part within specific feature [%f]\n" % conf.MIN_INCLUDE
+    s += "  --countORPHAN           If use, do not skip anomalous read pairs.\n"
     s += "\n"
 
     fp.write(s)
 
 
-def afc_main(argv, conf = None):
+def fc_main(argv, conf = None):
     """Command-Line interface.
 
     Parameters
@@ -91,20 +85,22 @@ def afc_main(argv, conf = None):
 
     opts, args = getopt.getopt(
         args = argv[2:], 
-        shortopts = "-s:-S:-b:-R:-P:-i:-I:-O:-h-p:-D:", 
+        shortopts = "-s:-S:-b:-R:-i:-I:-O:-h-p:-D:",
         longopts = [
             "sam=", "samList=", "barcode=",
-            "region=", "phasedSNP=",
+            "region=",
             "sampleList=", "sampleIDs=",
             "outdir=",
             "help",
 
-            "nproc=", 
-            "cellTAG=", "UMItag=", 
-            "minCOUNT=", "minMAF=", "outputAllReg", "countDupHap",
+            "ncores=",
+            "cellTAG=", "UMItag=",
             "debug=",
 
-            "inclFLAG=", "exclFLAG=", "minLEN=", "minMAPQ=", "countORPHAN"
+            "inclFLAG=", "exclFLAG=", 
+            "minLEN=", "minMAPQ=", 
+            "minINCLUDE=",
+            "countORPHAN"
         ])
 
     for op, val in opts:
@@ -114,47 +110,47 @@ def afc_main(argv, conf = None):
         elif op in ("-S", "--samlist"): conf.sam_list_fn = val
         elif op in ("-b", "--barcode"): conf.barcode_fn = val
         elif op in ("-R", "--region"): conf.region_fn = val
-        elif op in ("-P", "--phasedsnp"): conf.snp_fn = val
         elif op in ("-i", "--samplelist"): conf.sample_id_fn = val
         elif op in ("-I", "--sampleids"): conf.sample_id_str = val
         elif op in ("-O", "--outdir"): conf.out_dir = val
         elif op in ("-h", "--help"): usage(sys.stdout, conf.defaults); sys.exit(0)
 
-        elif op in ("-p", "--nproc"): conf.nproc = int(val)
+        elif op in ("-p", "--ncores"): conf.nproc = int(val)
         elif op in (      "--celltag"): conf.cell_tag = val
         elif op in (      "--umitag"): conf.umi_tag = val
-        elif op in (      "--mincount"): conf.min_count = int(val)
-        elif op in (      "--minmaf"): conf.min_maf = float(val)
-        elif op in (      "--outputallreg"): conf.output_all_reg = True
-        elif op in (      "--countduphap"): conf.no_dup_hap = False
         elif op in ("-D", "--debug"): conf.debug = int(val)
 
         elif op in ("--inclflag"): conf.incl_flag = int(val)
         elif op in ("--exclflag"): conf.excl_flag = int(val)
         elif op in ("--minlen"): conf.min_len = int(val)
         elif op in ("--minmapq"): conf.min_mapq = float(val)
+        elif op in ("--mininclude"):
+            if "." in val:
+                conf.min_include = float(val)
+            else:
+                conf.min_include = int(val)
         elif op in ("--countorphan"): conf.no_orphan = False
 
         else:
             error("invalid option: '%s'." % op)
             return(-1)
         
-    ret = afc_run(conf)
+    ret = fc_run(conf)
     return(ret)
 
 
-def afc_wrapper(
+def fc_wrapper(
     sam_fn, barcode_fn,
-    region_fn, phased_snp_fn, 
+    region_fn,
     out_dir,
     sam_list_fn = None,
     sample_ids = None, sample_id_fn = None,
     debug_level = 0,
     ncores = 1,
     cell_tag = "CB", umi_tag = "UB",
-    min_count = 1, min_maf = 0,
-    output_all_reg = False, no_dup_hap = True,
+    output_all_reg = True,
     min_mapq = 20, min_len = 30,
+    min_include = 0.9,
     incl_flag = 0, excl_flag = None,
     no_orphan = True
 ):
@@ -164,7 +160,6 @@ def afc_wrapper(
     conf.sam_list_fn = sam_list_fn
     conf.barcode_fn = barcode_fn
     conf.region_fn = region_fn
-    conf.snp_fn = phased_snp_fn
     conf.sample_id_str = sample_ids
     conf.sample_id_fn = sample_id_fn
     conf.out_dir = out_dir
@@ -173,43 +168,25 @@ def afc_wrapper(
     conf.cell_tag = cell_tag
     conf.umi_tag = umi_tag
     conf.nproc = ncores
-    conf.min_count = min_count
-    conf.min_maf = min_maf
     conf.output_all_reg = output_all_reg
-    conf.no_dup_hap = no_dup_hap
 
     conf.min_mapq = min_mapq
     conf.min_len = min_len
+    conf.min_include = min_include
     conf.incl_flag = incl_flag
-    conf.excl_flag = -1 if excl_flag is None else excl_flag
+    if excl_flag is None:
+        conf.excl_flag = -1
     conf.no_orphan = no_orphan
 
-    ret = afc_run(conf)
+    ret = fc_run(conf)
     return(ret)
 
 
-def afc_core(conf):
+def fc_core(conf):
     if prepare_config(conf) < 0:
         raise ValueError("errcode -2")
     info("program configuration:")
     conf.show(fp = sys.stderr, prefix = "\t")
-
-    # extract SNPs for each region
-    if conf.debug > 0:
-        debug("extract SNPs for each region.")
-    reg_list = []
-    for reg in conf.reg_list:
-        snp_list = conf.snp_set.fetch(reg.chrom, reg.start, reg.end)
-        if snp_list and len(snp_list) > 0:
-            reg.snp_list = snp_list
-            reg_list.append(reg)
-        else:
-            if conf.debug > 0:
-                debug("no SNP fetched for region '%s'." % reg.name)
-    info("%d regions extracted with SNPs." % len(reg_list))
-
-    if not conf.output_all_reg:
-        conf.reg_list = reg_list
 
     # split region list and save to file
     m_reg = len(conf.reg_list)
@@ -233,8 +210,6 @@ def afc_core(conf):
         del reg
     conf.reg_list.clear()
     conf.reg_list = None
-    conf.snp_set.destroy()
-    conf.snp_set = None
 
     thdata_list = []
     pool = multiprocessing.Pool(processes = m_thread)
@@ -244,9 +219,7 @@ def afc_core(conf):
             idx = i, conf = conf,
             reg_obj = reg_fn_list[i], is_reg_pickle = True,
             out_region_fn = conf.out_region_fn + "." + str(i),
-            out_ad_fn = conf.out_ad_fn + "." + str(i),
-            out_dp_fn = conf.out_dp_fn + "." + str(i),
-            out_oth_fn = conf.out_oth_fn + "." + str(i),
+            out_mtx_fn = conf.out_mtx_fn + "." + str(i),
             out_fn = None
         )
         thdata_list.append(thdata)
@@ -285,34 +258,16 @@ def afc_core(conf):
     nr_reg_list = [td.nr_reg for td in thdata_list]
 
     if merge_mtx(
-        [td.out_ad_fn for td in thdata_list], ZF_F_GZIP, 
-        conf.out_ad_fn, "w", ZF_F_PLAIN,
+        [td.out_mtx_fn for td in thdata_list], ZF_F_GZIP,
+        conf.out_mtx_fn, "w", ZF_F_PLAIN,
         nr_reg_list, len(conf.samples),
-        sum([td.nr_ad for td in thdata_list]),
+        sum([td.nr_mtx for td in thdata_list]),
         remove = True
     ) < 0:
         raise ValueError("errcode -17")
-
-    if merge_mtx(
-        [td.out_dp_fn for td in thdata_list], ZF_F_GZIP, 
-        conf.out_dp_fn, "w", ZF_F_PLAIN,
-        nr_reg_list, len(conf.samples), 
-        sum([td.nr_dp for td in thdata_list]),
-        remove = True
-    ) < 0:
-        raise ValueError("errcode -19")
-
-    if merge_mtx(
-        [td.out_oth_fn for td in thdata_list], ZF_F_GZIP, 
-        conf.out_oth_fn, "w", ZF_F_PLAIN,
-        nr_reg_list, len(conf.samples),
-        sum([td.nr_oth for td in thdata_list]),
-        remove = True
-    ) < 0:
-        raise ValueError("errcode -21")
     
 
-def afc_run(conf):
+def fc_run(conf):
     ret = -1
     cmdline = None
 
@@ -326,7 +281,7 @@ def afc_run(conf):
         info("CMD: %s" % cmdline)
 
     try:
-        ret = afc_core(conf)
+        ret = fc_core(conf)
     except ValueError as e:
         error(str(e))
         error("Running program failed.")
@@ -421,12 +376,11 @@ def prepare_config(conf):
     if not os.path.isdir(conf.out_dir):
         os.mkdir(conf.out_dir)
     conf.out_region_fn = os.path.join(
-        conf.out_dir, conf.out_prefix + "region.tsv")
+        conf.out_dir, conf.out_prefix + "features.tsv")
     conf.out_sample_fn = os.path.join(
-        conf.out_dir, conf.out_prefix + "samples.tsv")
-    conf.out_ad_fn = os.path.join(conf.out_dir, conf.out_prefix + "AD.mtx")
-    conf.out_dp_fn = os.path.join(conf.out_dir, conf.out_prefix + "DP.mtx")
-    conf.out_oth_fn = os.path.join(conf.out_dir, conf.out_prefix + "OTH.mtx")
+        conf.out_dir, conf.out_prefix + "barcodes.tsv")
+    conf.out_mtx_fn = os.path.join(
+        conf.out_dir, conf.out_prefix + "matrix.mtx")
 
     if conf.region_fn:
         if os.path.isfile(conf.region_fn): 
@@ -442,25 +396,6 @@ def prepare_config(conf):
             return(-1)
     else:
         error("region file needed!")
-        return(-1)
-
-    if conf.snp_fn:
-        if os.path.isfile(conf.snp_fn):
-            if conf.snp_fn.endswith(".vcf") or conf.snp_fn.endswith(".vcf.gz")\
-                    or conf.snp_fn.endswith(".vcf.bgz"):
-                conf.snp_set = load_snp_from_vcf(conf.snp_fn, verbose = True)
-            else:
-                conf.snp_set = load_snp_from_tsv(conf.snp_fn, verbose = True)
-            if not conf.snp_set or conf.snp_set.get_n() <= 0:
-                error("failed to load snp file.")
-                return(-1)
-            else:
-                info("%d SNPs loaded." % conf.snp_set.get_n())       
-        else:
-            error("snp file '%s' does not exist." % conf.snp_fn)
-            return(-1)      
-    else:
-        error("SNP file needed!")
         return(-1)
 
     if conf.cell_tag and conf.cell_tag.upper() == "NONE":

@@ -7,6 +7,7 @@
 
 
 ## BAF
+### Add `xf` tag for filtering 10x reads.
 ### Add --minINCLUDE for read filtering
 
 
@@ -14,6 +15,7 @@
 
 
 ## Implementation
+### Add `xf` tag for filtering 10x reads.
 ### Use logging to replace `stdout.write()` and `stderr.write()`.
 
 

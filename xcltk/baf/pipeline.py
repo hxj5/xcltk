@@ -7,8 +7,9 @@ import os
 import sys
 
 from logging import error, info
-from .count import afc_wrapper as baf_fc      # BAF feature counting
-from .genotype import pileup, ref_phasing, vcf_add_genotype
+from .fc.main import afc_wrapper as baf_fc      # BAF feature counting
+from .genotype import pileup, vcf_add_genotype
+from .refphase import ref_phasing
 from ..config import APP, VERSION
 from ..utils.base import assert_e, assert_n
 from ..utils.vcf import vcf_index, vcf_merge, vcf_split_chrom
@@ -51,6 +52,7 @@ def usage(fp = sys.stdout):
     s += "  --help             Print this message and exit.\n"
     s += "\n"
     s += "Optional arguments:\n"
+    s += "  --refCell FILE     A plain file listing reference cells, one per line.\n"
     s += "  --cellTAG STR      Cell barcode tag; Set to None if not available [%s]\n" % CELL_TAG
     s += "  --UMItag STR       UMI tag; Set to None if not available [%s]\n" % UMI_TAG
     s += "  --minCOUNT INT     Mininum aggragated count for SNP [%d]\n" % MIN_COUNT
@@ -81,6 +83,7 @@ def pipeline_main(argv):
     snp_vcf_fn = region_fn = None
     out_dir = None
     gmap_fn = eagle_fn = panel_dir = None
+    ref_cell_fn = None
     cell_tag, umi_tag = CELL_TAG, UMI_TAG
     min_count, min_maf = MIN_COUNT, MIN_MAF
     ncores = N_CORES
@@ -96,7 +99,8 @@ def pipeline_main(argv):
             "outdir=",
             "gmap=", "eagle=", "paneldir=",
             "version", "help",
-            
+
+            "refCell=",
             "cellTAG=", "UMItag=",
             "minCOUNT=", "minMAF=",
             "ncores="
@@ -119,6 +123,7 @@ def pipeline_main(argv):
         elif op in ("--version"): sys.stdout.write(VERSION + "\n"); sys.exit(0)
         elif op in ("--help"): usage(); sys.exit(0)
 
+        elif op in ("--refcell"): ref_cell_fn = val
         elif op in ("--celltag"): cell_tag = val
         elif op in ("--umitag"): umi_tag = val
         elif op in ("--mincount"): min_count = int(val)
@@ -135,6 +140,7 @@ def pipeline_main(argv):
         snp_vcf_fn = snp_vcf_fn, region_fn = region_fn,
         out_dir = out_dir,
         gmap_fn = gmap_fn, eagle_fn = eagle_fn, panel_dir = panel_dir,
+        ref_cell_fn = ref_cell_fn,
         cell_tag = cell_tag, umi_tag = umi_tag,
         min_count = min_count, min_maf = min_maf,
         ncores = ncores
@@ -153,6 +159,7 @@ def pipeline_wrapper(
     snp_vcf_fn = None, region_fn = None,
     out_dir = None,
     gmap_fn = None, eagle_fn = None, panel_dir = None,
+    ref_cell_fn = None,
     cell_tag = "CB", umi_tag = "UB",
     min_count = 20, min_maf = 0.1,
     ncores = 1
@@ -191,6 +198,9 @@ def pipeline_wrapper(
     for chrom in range(1, 23):
         assert_e(os.path.join(panel_dir, "chr%d.genotypes.bcf" % chrom))
         assert_e(os.path.join(panel_dir, "chr%d.genotypes.bcf.csi" % chrom))
+        
+    if ref_cell_fn is not None:
+        assert_e(ref_cell_fn)
 
     genome = "hg19" if "hg19" in gmap_fn else "hg38"
 
@@ -337,6 +347,8 @@ def pipeline_wrapper(
         sample_id_fn = sample_id_fn,
         debug_level = 0,
         ncores = ncores,
+        cellsnp_dir = pileup_dir, 
+        ref_cell_fn = ref_cell_fn,
         cell_tag = cell_tag, umi_tag = umi_tag,
         min_count = 1, min_maf = 0,
         output_all_reg = True, no_dup_hap = True,

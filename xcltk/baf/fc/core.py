@@ -1,5 +1,6 @@
 # core.py - core part of feature counting.
 
+
 import math
 import os
 import pickle
@@ -11,6 +12,7 @@ from .mcount import MCount
 from ...utils.sam import sam_fetch, \
     BAM_FPAIRED, BAM_FPROPER_PAIR
 from ...utils.zfile import zopen, ZF_F_GZIP
+
 
 
 def check_read(read, conf):
@@ -30,6 +32,7 @@ def check_read(read, conf):
     if len(read.positions) < conf.min_len:
         return(-21)
     return(0)
+
 
 
 # TODO: use clever IPC (Inter-process communication) instead of naive `raise Error`.
@@ -136,6 +139,7 @@ def fc_features(thdata):
     return((0, thdata))
 
 
+
 def fc_fet1(reg, sam_list, mcnt, conf):
     reg_ref_umi = {smp:set() for smp in conf.samples}
     reg_alt_umi = {smp:set() for smp in conf.samples}
@@ -188,6 +192,7 @@ def fc_fet1(reg, sam_list, mcnt, conf):
             reg_dp_cnt[smp] = reg_ref_cnt[smp] + reg_alt_cnt[smp]
     
     return((0, reg_ref_cnt, reg_alt_cnt, reg_oth_cnt, reg_dp_cnt))
+
 
 
 def plp_snp(snp, sam_list, mcnt, conf):

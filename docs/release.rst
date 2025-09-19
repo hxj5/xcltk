@@ -3,6 +3,59 @@ History
 =======
 
 
+Release v0.5.0 (17/09/2025)
+===========================
+This version mainly adds local phasing into the BAF module to fix the
+errors of reference phasing in long genes.
+
+Specifically, it modifies the local phasing function in XClone by updating
+the probabilities of haplotype assignment in the EM iterations with 
+Gaussian smoothing (default) or HMM smoothing along all SNPs within the gene,
+considering the strong correlation between the haolotype assignment of closly 
+adjacent SNPs (kind of to balance of prior biological knowledge and
+data-driven evidence).
+
+Notably, to balance reference phasing and local phasing, only a few long genes
+(filtering with ``rlp_min_len``, ``rlp_min_n_snps``, and ``rlp_min_gap``)
+will be considered for local phasing.
+
+Additionally, preliminary analysis has shown that removing reference cells can
+improve the local phasing results.
+Generally, gene BAFs in reference cells are near 0.5, which has little 
+information about local phasing and can be treated as noise.
+A new optional parameter ``ref_cell_fn`` is added to specify the barcodes
+of reference cells.
+
+
+BAF module
+
+* post-genotype filtering SNPs given ``min_count`` and ``min_maf``: 
+  considering only REF and ALT (AD & DP) alleles, but not OTH alleles.
+  Cellsnp-lite (at least v1.2.3 and before) may keep some SNPs unexpectly,
+  e.g., SNP with ``AD=9;DP=9;OTH=1`` when ``minMAF=0.1; minCOUNT=10``.
+* baf.pipeline: add options ``--minCOUNT`` and ``--minMAF``.
+* afc: sort SNP list in ``reg.snp_list``.
+* baf: delete afc cmdline interface and remove ``afc`` and ``rpc`` from 
+  xcltk subcommand.
+* restructure: move the ``baf.count`` to ``baf.fc.main``.
+
+
+RDR module
+
+* restructure: move the ``rdr.count`` to ``rdr.fc.main``.
+
+
+Others
+
+* utils: add sub-module ``csp_io`` for loading and saving cellsnp-lite outputs.
+* restructure: move the ``rdr.count`` to ``rdr.fc.main``.
+* preprocess: update file download links.
+* docs: add brief summary of xcltk basefc and link it to the ``htseq-count``.
+* docs: update TODO list.
+* README: add citation.
+
+
+
 Release v0.4.1 (10/01/2025)
 ===========================
 * RDR: `--minINCLUDE` supports both INT and FLOAT.
