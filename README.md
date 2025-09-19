@@ -58,16 +58,14 @@ You can check the full parameters with `xcltk -h`.
 
 ```
 Program: xcltk (Toolkit for XClone Preprocessing)
-Version: 0.4.1
+Version: 0.5.0
 
 Usage:   xcltk <command> [options]
 
 Commands:
   -- BAF calculation
-     allelefc         Allele-specific feature counting.
      baf              Preprocessing pipeline for XClone BAF.
      fixref           Fix REF allele mismatches based on reference FASTA.
-     rpc              Reference phasing correction.
 
   -- RDR calculation
      basefc           Basic feature counting.
