@@ -238,7 +238,7 @@ def pipeline_wrapper(
     assert_e(pileup_vcf_fn)
 
     info("pileup VCF is '%s'." % pileup_vcf_fn)
-    step += 1
+    step += 1 
 
 
     # prepare VCF files for phasing

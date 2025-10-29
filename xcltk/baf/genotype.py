@@ -9,6 +9,8 @@ import sys
 from logging import error, info
 from logging import warning as warn
 from ..utils.base import assert_e, assert_n
+from ..utils.csp_io import load_data as csp_load_data
+from ..utils.csp_io import save_data as csp_save_data
 from ..utils.vcf import vcf_load, vcf_save, \
     vcf_add_chr_prefix_core, vcf_remove_chr_prefix_core, \
     vcf_hdr_check_contig_core
@@ -128,6 +130,9 @@ def pileup(
 
     if not os.path.exists(out_dir):
         os.makedirs(out_dir, exist_ok = True)
+    raw_dir = os.path.join(out_dir, 'raw')
+    if not os.path.exists(raw_dir):
+        os.makedirs(raw_dir, exist_ok = True)
     
     if not script_fn:
         script_fn = os.path.join(out_dir, "run_pileup.sh")
@@ -147,7 +152,7 @@ def pileup(
         cmd += "    -i  %s  \\\n" % sample_id_fn
     else:
         cmd += "    -I  %s  \\\n" % sample_id
-    cmd += "    -O  %s  \\\n" % out_dir
+    cmd += "    -O  %s  \\\n" % raw_dir
     cmd += "    -R  %s  \\\n" % snp_vcf_fn
     cmd += "    -p  %s  \\\n" % str(ncores)
     cmd += "    --minCOUNT  %s  \\\n" % str(min_count)
@@ -180,20 +185,30 @@ def pileup(
         error(str(e))
         error("Error: pileup failed (retcode '%s')." % str(ret))
         sys.exit(1)
+
+
+    out_vcf_fn = filter_snps(
+        in_dir = raw_dir,
+        out_dir = out_dir,
+        min_count = min_count,
+        min_maf = min_maf
+    )
+    return(out_vcf_fn)
+
         
-        
-    # further filter SNPs
-    # filter SNPs given `minMAF` and `minCOUNT`, considering
-    # only REF and ALT (AD & DP) alleles, but not OTH alleles.
-    # cellsnp-lite (at least v1.2.3 and before) may keep some SNPs unexpectly,
-    # e.g., SNP with `AD=9;DP=9;OTH=1` when `minMAF=0.1; minCOUNT=10`.
-    fn = os.path.join(out_dir, "cellSNP.base.vcf.gz")
-    assert_e(fn)
+
+def filter_snps(in_dir, out_dir, min_count, min_maf):
+    """Further filter SNPs.
     
-    variants, header = vcf_load(fn)
-    variants.index = [str(i) for i in range(variants.shape[0])]
+    Filter SNPs given `minMAF` and `minCOUNT`, considering only REF and ALT
+    (AD & DP) alleles, but not OTH alleles.
+    Cellsnp-lite (at least v1.2.3 and before) may keep some SNPs unexpectly,
+    e.g., SNP with `AD=9;DP=9;OTH=1` when `minMAF=0.1; minCOUNT=10`.
+    """
+    adata = csp_load_data(in_dir)
+    adata.var.index = [str(i) for i in range(adata.shape[1])]
     
-    df = variants.copy()
+    df = adata.var.copy()
     df["AD"] = df["INFO"].map(
         lambda x: int(x.split(";")[0].split("=")[1])
     )
@@ -204,12 +219,11 @@ def pileup(
     df["BAF"] = df["AD"] / df["DP"]
     df = df[(df["BAF"] >= min_maf) & (df["BAF"] <= 1-min_maf)].copy()
     
+    adata = adata[:, df.index].copy()
     
     # save SNPs.
-    out_vcf_fn = os.path.join(out_dir, "cellSNP.base.refilter.vcf.gz")
-    variants = variants.loc[df.index].copy()
-    vcf_save(variants, header, out_vcf_fn)
-    
+    csp_save_data(adata, out_dir)
+    out_vcf_fn = os.path.join(out_dir, "cellSNP.base.vcf.gz")
     return(out_vcf_fn)
 
 
