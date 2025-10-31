@@ -418,20 +418,35 @@ def prepare_config(conf):
     
     if conf.cellsnp_dir is not None:
         assert_e(conf.cellsnp_dir)
-        conf.snp_adata = csp_load_data(conf.cellsnp_dir)
+        snp_adata = csp_load_data(conf.cellsnp_dir)
+        info("cellsnp adata shape = %s." % str(snp_adata.shape))
         
-        assert len(conf.samples) == conf.snp_adata.shape[0]
+        assert len(conf.samples) == snp_adata.shape[0]
         for cell in conf.samples:
-            assert cell in conf.snp_adata.obs['cell'].to_numpy()
+            assert cell in snp_adata.obs['cell'].to_numpy()
         
-        assert conf.snp_adata.shape[1] == conf.snp_set.get_n()
-        for i in range(conf.snp_adata.shape[1]):
+        if snp_adata.shape[1] != conf.snp_set.get_n():
+            warn("n_snp: snp_adata=%d; snp_set=%d!" % \
+                (snp_adata.shape[1], conf.snp_set.get_n()))
+            assert snp_adata.shape[1] >= conf.snp_set.get_n()
+            
+        idx_lst = []
+        for i in range(snp_adata.shape[1]):
+            chrom = snp_adata.var['chrom'].iloc[i]
+            pos = snp_adata.var['pos'].iloc[i]
             hits = conf.snp_set.fetch(
-                chrom = conf.snp_adata.var['chrom'].iloc[i],
-                start = conf.snp_adata.var['pos'].iloc[i],
-                end = conf.snp_adata.var['pos'].iloc[i] + 1
+                chrom = chrom,
+                start = pos,
+                end = pos + 1
             )
-            assert len(hits) > 0     # SNPs from `snp_adata` are in `snp_set`.
+            if len(hits) > 0:     # in case SNPs were filtered in phasing.
+                idx_lst.append(i)
+            else:
+                warn("SNP '%s:%d' was filtered before!" % (chrom, pos))
+                
+        if len(idx_lst) < snp_adata.shape[1]:
+            snp_adata = snp_adata[:, snp_adata.var.index.iloc[idx_lst]].copy()
+        conf.snp_adata = snp_adata.copy()
 
 
     if conf.ref_cell_fn is not None:

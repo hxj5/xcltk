@@ -187,13 +187,13 @@ def pileup(
         sys.exit(1)
 
 
-    out_vcf_fn = filter_snps(
+    out_vcf_fn, p_raw, p_new = filter_snps(
         in_dir = raw_dir,
         out_dir = out_dir,
         min_count = min_count,
         min_maf = min_maf
     )
-    return(out_vcf_fn)
+    return(out_vcf_fn, p_raw, p_new)
 
         
 
@@ -206,7 +206,8 @@ def filter_snps(in_dir, out_dir, min_count, min_maf):
     e.g., SNP with `AD=9;DP=9;OTH=1` when `minMAF=0.1; minCOUNT=10`.
     """
     adata = csp_load_data(in_dir)
-    adata.var.index = [str(i) for i in range(adata.shape[1])]
+    n, p = adata.shape
+    adata.var.index = [str(i) for i in range(p)]
     
     df = adata.var.copy()
     df["AD"] = df["INFO"].map(
@@ -220,11 +221,12 @@ def filter_snps(in_dir, out_dir, min_count, min_maf):
     df = df[(df["BAF"] >= min_maf) & (df["BAF"] <= 1-min_maf)].copy()
     
     adata = adata[:, df.index].copy()
+    n_new, p_new = adata.shape
     
     # save SNPs.
     csp_save_data(adata, out_dir)
     out_vcf_fn = os.path.join(out_dir, "cellSNP.base.vcf.gz")
-    return(out_vcf_fn)
+    return(out_vcf_fn, p, p_new)
 
 
 

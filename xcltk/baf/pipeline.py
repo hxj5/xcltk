@@ -221,7 +221,7 @@ def pipeline_wrapper(
     pileup_script = os.path.join(pileup_script_dir, "run_pileup.sh")
     pileup_log_fn = os.path.join(pileup_script_dir, "pileup.log")
 
-    pileup_vcf_fn = pileup(
+    pileup_vcf_fn, p_raw, p_new = pileup(
         sam_fn = sam_fn, sam_list_fn = sam_list_fn,
         barcode_fn = barcode_fn, sample_id_fn = sample_id_fn, 
         sample_id = sample_id,
@@ -234,11 +234,13 @@ def pipeline_wrapper(
         script_fn = pileup_script,
         log_fn = pileup_log_fn
     )
+    
+    info("pileup #SNP raw=%d; post-filtering=%d." % (p_raw, p_new))
 
     assert_e(pileup_vcf_fn)
 
     info("pileup VCF is '%s'." % pileup_vcf_fn)
-    step += 1 
+    step += 1
 
 
     # prepare VCF files for phasing

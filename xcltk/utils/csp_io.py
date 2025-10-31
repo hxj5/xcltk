@@ -70,17 +70,19 @@ def save_data(adata, out_dir):
     is_gzip = adata.uns["is_gzip"]
     is_genotype = adata.uns["is_genotype"]
     
-    save_cells(adata.obs, os.path.join(out_dir, "cellSNP.samples.tsv"))
+    adata = adata.transpose()        # to yield feature x cell adata.
+    
+    save_cells(adata.var, os.path.join(out_dir, "cellSNP.samples.tsv"))
     vcf_suffix = ".gz" if is_gzip else ""
     save_vcf(
-        adata.var, 
+        adata.obs, 
         comment = adata.uns["base_vcf_comment"], 
         fn = os.path.join(out_dir, "cellSNP.base.vcf" + vcf_suffix),
         is_gzip = is_gzip
     )
     if is_genotype:
         save_vcf(
-            adata.varm["cell_vcf"], 
+            adata.obsm["cell_vcf"],
             comment = adata.uns["cell_vcf_comment"],
             fn = os.path.join(out_dir, "cellSNP.cells.vcf" + vcf_suffix),
             is_gzip = is_gzip
