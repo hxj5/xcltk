@@ -445,7 +445,10 @@ def prepare_config(conf):
                 warn("SNP '%s:%d' was filtered before!" % (chrom, pos))
                 
         if len(idx_lst) < snp_adata.shape[1]:
-            snp_adata = snp_adata[:, snp_adata.var.index.iloc[idx_lst]].copy()
+            try:
+                snp_adata = snp_adata[:, snp_adata.var.index.iloc[idx_lst]].copy()
+            except:
+                snp_adata = snp_adata[:, snp_adata.var.index.take(idx_lst)].copy()
         conf.snp_adata = snp_adata.copy()
 
 
