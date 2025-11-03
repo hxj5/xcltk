@@ -419,7 +419,7 @@ def prepare_config(conf):
     if conf.cellsnp_dir is not None:
         assert_e(conf.cellsnp_dir)
         snp_adata = csp_load_data(conf.cellsnp_dir)
-        info("cellsnp adata shape = %s." % str(snp_adata.shape))
+        info("cellsnp SNP adata shape = %s." % str(snp_adata.shape))
         
         assert len(conf.samples) == snp_adata.shape[0]
         for cell in conf.samples:
@@ -442,13 +442,15 @@ def prepare_config(conf):
             if len(hits) > 0:     # in case SNPs were filtered in phasing.
                 idx_lst.append(i)
             else:
-                warn("SNP '%s:%d' was filtered before!" % (chrom, pos))
+                if conf.debug > 0:
+                    warn("SNP '%s:%d' was filtered before!" % (chrom, pos))
                 
         if len(idx_lst) < snp_adata.shape[1]:
             try:
                 snp_adata = snp_adata[:, snp_adata.var.index.iloc[idx_lst]].copy()
             except:
                 snp_adata = snp_adata[:, snp_adata.var.index.take(idx_lst)].copy()
+            info("SNP adata shape after subset: %s." % str(snp_adata.shape))
         conf.snp_adata = snp_adata.copy()
 
 
