@@ -58,7 +58,7 @@ You can check the full parameters with `xcltk -h`.
 
 ```
 Program: xcltk (Toolkit for XClone Preprocessing)
-Version: 0.5.0
+Version: 0.5.1
 
 Usage:   xcltk <command> [options]
 

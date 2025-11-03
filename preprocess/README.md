@@ -27,7 +27,7 @@ To use the pipeline, please first install the dependencies listed below.
 - [cellsnp-lite >= 1.2.0][cellsnp-lite]
 - [eagle2][eagle2]
 - [python >= 3.11](https://www.python.org/)
-- [xcltk >= 0.5.0][xcltk repo]
+- [xcltk >= 0.5.1][xcltk repo]
 
 Please install these softwares and add them to the system search path (i.e.,
 the system variable `PATH`).
@@ -50,7 +50,7 @@ then install the softwares in the env.
 conda create -n xcltk python=3.11
 conda activate xcltk
 conda install -c conda-forge -c bioconda bcftools cellsnp-lite
-pip install 'xcltk>=0.5.0'
+pip install 'xcltk>=0.5.1'
 ```
 
 Importantly, [eagle2][eagle2] has to be manually installed since there is not 

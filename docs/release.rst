@@ -3,6 +3,17 @@ History
 =======
 
 
+
+Release v0.5.1 (03/11/2025)
+===========================
+Fix bug (related to issue #13).
+
+* baf.afc: filter SNPs in the input adata to match the input phased SNPs, 
+  since the phasing step may filter some SNPs.
+* utils.csp_io: transpose adata to save into standard feature x cell matrices.
+
+
+
 Release v0.5.0 (17/09/2025)
 ===========================
 This version mainly adds local phasing into the BAF module to fix the
