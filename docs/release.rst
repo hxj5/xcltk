@@ -3,6 +3,11 @@ History
 =======
 
 
+Release v0.5.2 (18/11/2025)
+===========================
+* baf: by default use ``min_count=11`` and ``min_maf=0.1`` for SNP filtering.
+
+
 
 Release v0.5.1 (03/11/2025)
 ===========================

@@ -27,7 +27,7 @@ To use the pipeline, please first install the dependencies listed below.
 - [cellsnp-lite >= 1.2.0][cellsnp-lite]
 - [eagle2][eagle2]
 - [python >= 3.11](https://www.python.org/)
-- [xcltk >= 0.5.1][xcltk repo]
+- [xcltk >= 0.5.2][xcltk repo]
 
 Please install these softwares and add them to the system search path (i.e.,
 the system variable `PATH`).
@@ -50,7 +50,7 @@ then install the softwares in the env.
 conda create -n xcltk python=3.11
 conda activate xcltk
 conda install -c conda-forge -c bioconda bcftools cellsnp-lite
-pip install 'xcltk>=0.5.1'
+pip install 'xcltk>=0.5.2'
 ```
 
 Importantly, [eagle2][eagle2] has to be manually installed since there is not 
@@ -289,7 +289,7 @@ specific function.
 
 xcltk calls germline heterozygous SNPs using a pseudo-bulk strategy, i.e.,
 by aggregating UMIs/reads of all cells as one bulk sample.
-By default, it only keeps SNPs with `--minCOUNT 20` and `--minMAF 0.1`.
+By default, it only keeps SNPs with `--minCOUNT 11` and `--minMAF 0.1`.
 
 This step is implemented in the function `pileup()` in module
 `xcltk.baf.genotype`.
