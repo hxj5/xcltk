@@ -21,7 +21,7 @@ COMMAND = "baf"
 
 CELL_TAG = "CB"
 UMI_TAG = "UB"
-MIN_COUNT = 20
+MIN_COUNT = 11
 MIN_MAF = 0.1
 N_CORES = 1
 
@@ -161,7 +161,7 @@ def pipeline_wrapper(
     gmap_fn = None, eagle_fn = None, panel_dir = None,
     ref_cell_fn = None,
     cell_tag = "CB", umi_tag = "UB",
-    min_count = 20, min_maf = 0.1,
+    min_count = 11, min_maf = 0.1,
     ncores = 1
 ):
     info("xcltk BAF preprocessing starts ...")

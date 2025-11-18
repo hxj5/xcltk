@@ -26,7 +26,7 @@ def pileup(
     mode = "droplet",
     cell_tag = "CB", umi_tag = "UB",
     ncores = 1,
-    min_count = 20, min_maf = 0.1,
+    min_count = 11, min_maf = 0.1,
     script_fn = None, log_fn = None
 ):
     """Pileup indexed BAM file, supporting both single-cell and bulk data.
