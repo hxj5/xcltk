@@ -63,9 +63,11 @@ class Config:
         # rlp: region wise local phasing
         # - requirements below must be meeted before doing local phasing in 
         #   one region.
-        self.rlp_min_len = 50000       # minimum length of the region.
-        self.rlp_min_n_snps = 2        # minimum number of expressed SNPs.
-        self.rlp_min_gap = 50000       # minimum gap between the first SNP and last SNP.
+        self.rlp_min_len = 0                 # minimum length of the region.
+        self.rlp_min_DP = 20                 # minimum pseudo-bulk DP of this gene.
+        self.rlp_snp_min_n = 2               # minimum number of expressed SNPs.
+        self.rlp_snp_min_range = 0           # minimum range between the first SNP and last SNP.
+        self.rlp_snp_min_max_gap = 10000     # minimum max gap between any adjacent SNPs.
 
         
     def show(self, fp = None, prefix = ""):
@@ -126,8 +128,10 @@ class Config:
         s += "%s\n" % prefix
         
         s += "%srlp_min_len = %d\n" % (prefix, self.rlp_min_len)
-        s += "%srlp_min_n_snps = %d\n" % (prefix, self.rlp_min_n_snps)
-        s += "%srlp_min_gap = %d\n" % (prefix, self.rlp_min_gap)
+        s += "%srlp_min_DP = %d\n" % (prefix, self.rlp_min_DP)
+        s += "%srlp_snp_min_n = %d\n" % (prefix, self.rlp_snp_min_n)
+        s += "%srlp_snp_min_range = %d\n" % (prefix, self.rlp_snp_min_range)
+        s += "%srlp_snp_min_max_gap = %d\n" % (prefix, self.rlp_snp_min_max_gap)
         s += "%s\n" % prefix
 
         fp.write(s)

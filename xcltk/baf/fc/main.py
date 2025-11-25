@@ -117,15 +117,22 @@ def afc_core(conf):
         for reg in conf.reg_list:
             if reg.end - reg.start < conf.rlp_min_len:
                 continue
-            if reg.snp_list is None or len(reg.snp_list) < max(1, conf.rlp_min_n_snps):
+            if reg.snp_list is None or len(reg.snp_list) < max(2, conf.rlp_snp_min_n):
                 continue
-            if reg.snp_list[-1].pos - reg.snp_list[0].pos + 1 < conf.rlp_min_gap:
+            if reg.snp_list[-1].pos - reg.snp_list[0].pos + 1 < conf.rlp_snp_min_range:
                 continue
-            if conf.debug > 2:
-                debug("region '%s': do local phasing ..." % reg.name)
+            pos_array = np.array([s.pos for s in reg.snp_list])
+            max_gap = np.max(pos_array[1:] - pos_array[:-1])
+            if max_gap < conf.rlp_snp_min_max_gap:
+                continue
             dat = adata[:, (adata.var["chrom"] == reg.chrom) & \
                             (adata.var["pos"] >= reg.start) & \
                             (adata.var["pos"] < reg.end)].copy()
+            DP = dat.layers['DP'].sum()
+            if DP < conf.rlp_min_DP:
+                continue
+            if conf.debug > 2:
+                debug("region '%s': do local phasing ..." % reg.name)
             reg, flip = reg_local_phasing(
                 reg = reg,
                 AD = dat.layers['AD'].copy(),
